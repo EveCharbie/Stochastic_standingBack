@@ -88,26 +88,29 @@ def stochastic_forward_dynamics(
     mass_matrix = nlp.model.mass_matrix(q)
     non_linear_effects = nlp.model.non_linear_effects(q, qdot)
 
-    # constraint_jacobian = nlp.model.markers_jacobian(q)[0]
-    # constraint_jacobian_transpose = constraint_jacobian.T
+    Q_sym = cas.MX.sym("Q", n_q)
+    marker_jac = cas.jacobian(nlp.model.markers(Q_sym)[0][1:], Q_sym)
+    func_marker_jac = cas.Function("marker_jac", [Q_sym], [marker_jac])
 
-    # # compute the matrix DAE
-    # mass_matrix_augmented = cas.horzcat(mass_matrix, constraint_jacobian_transpose)
-    # mass_matrix_augmented = cas.vertcat(
-    #     mass_matrix_augmented,
-    #     cas.horzcat(
-    #         constraint_jacobian,
-    #         cas.MX.zeros((constraint_jacobian_transpose.shape[1], constraint_jacobian_transpose.shape[1])),
-    #     ),
-    # )
+    constraint_jacobian = func_marker_jac(q)
+    constraint_jacobian_transpose = constraint_jacobian.T
+
+    # compute the matrix DAE
+    mass_matrix_augmented = cas.horzcat(mass_matrix, constraint_jacobian_transpose)
+    mass_matrix_augmented = cas.vertcat(
+        mass_matrix_augmented,
+        cas.horzcat(
+            constraint_jacobian,
+            cas.MX.zeros((constraint_jacobian_transpose.shape[1], constraint_jacobian_transpose.shape[1])),
+        ),
+    )
 
     tau_augmented = (torques_computed - non_linear_effects - friction @ qdot)
 
-    # bias = -constraint_jacobian @ qdot
+    # Not sure I understand this part k = -Kdot * qdot -> Kdot = d(func_marker_jac(q))/dt
+    bias = - func_marker_jac(qdot) @ qdot
+    tau_augmented = cas.vertcat(tau_augmented, bias)
 
-    # tau_augmented = cas.vertcat(tau_augmented, bias)
-
-    mass_matrix_augmented = mass_matrix
     x = cas.solve(mass_matrix_augmented, tau_augmented, "symbolicqr")
 
     dqdot_computed = x[: n_q]
