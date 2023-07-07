@@ -42,6 +42,7 @@ from bioptim import (
 def get_excitation_with_feedback(K, EE, EE_ref, wS):
     return K @ ((EE - EE_ref) + wS)
 
+
 def stochastic_forward_dynamics(
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
@@ -50,75 +51,39 @@ def stochastic_forward_dynamics(
     nlp: NonLinearProgram,
     wM,
     wS,
-    with_gains=True,
+    with_gains,
 ) -> DynamicsEvaluation:
 
+    biorbd_model = biorbd.Model("2segments_1(2)contact.bioMod")
     q = DynamicsFunctions.get(nlp.states["q"], states)
     qdot = DynamicsFunctions.get(nlp.states["qdot"], states)
-    tau_unmapped = DynamicsFunctions.get(nlp.controls["tau"], controls)
-    tau = nlp.variable_mappings["tau"].to_first.map(tau_unmapped)
-
-    n_q = nlp.states['q'].cx.shape[0]
+    tau = DynamicsFunctions.get(nlp.controls["tau"], controls)
 
     tau_fb = tau
     if with_gains:
         ee_ref = DynamicsFunctions.get(nlp.stochastic_variables["ee_ref"], stochastic_variables)
         k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
-        n_controls = nlp.controls.cx_start.shape[0]
-        n_q = nlp.states['q'].cx.shape[0]
-        n_qdot = nlp.states['qdot'].cx.shape[0]
-        n_root = nlp.model.nb_root
+        K_matrix = cas.MX(2, 1)
+        for s0 in range(2):
+            for s1 in range(1):
+                K_matrix[s0, s1] = k[s0*1 + s1]
+        K_matrix = K_matrix.T
 
-        K_matrix = cas.MX(n_controls, n_q-n_root+n_qdot-n_root)
-        for s0 in range(n_controls):
-            for s1 in range(n_q-n_root+n_qdot-n_root):
-                K_matrix[s0, s1] = k[s0*(n_q-n_root+n_qdot-n_root) + s1]
+        ee = cas.vertcat(q[3], q[3])
 
-        ee = cas.vertcat(q[3], qdot[3])
+        tau_fb += get_excitation_with_feedback(K_matrix, ee, ee_ref, wS) + wM
 
-        tau_fb += get_excitation_with_feedback(K_matrix, ee, ee_ref, wS)
+    dq_computed = qdot
 
-    torques_computed = tau_fb + wM
-    dq_computed = qdot  ### Do not use "DynamicsFunctions.compute_qdot(nlp, q, qdot)" it introduces errors!!
-
-    friction = np.zeros((4, 4))  # No friction on the root DoFs
+    friction = cas.MX.zeros(4, 4)
     friction[3, 3] = 0.05
-    # np.array([[0.05, 0.025], [0.025, 0.05]])
 
-    mass_matrix = nlp.model.mass_matrix(q)
-    non_linear_effects = nlp.model.non_linear_effects(q, qdot)
-
-    Q_sym = cas.MX.sym("Q", n_q)
-    marker_jac = cas.jacobian(nlp.model.markers(Q_sym)[0][1:], Q_sym)
-    func_marker_jac = cas.Function("marker_jac", [Q_sym], [marker_jac])
-
-    constraint_jacobian = func_marker_jac(q)
-    constraint_jacobian_transpose = constraint_jacobian.T
-
-    # compute the matrix DAE
-    mass_matrix_augmented = cas.horzcat(mass_matrix, constraint_jacobian_transpose)
-    mass_matrix_augmented = cas.vertcat(
-        mass_matrix_augmented,
-        cas.horzcat(
-            constraint_jacobian,
-            cas.MX.zeros((constraint_jacobian_transpose.shape[1], constraint_jacobian_transpose.shape[1])),
-        ),
-    )
-
-    tau_augmented = (torques_computed - non_linear_effects - friction @ qdot)
-
-    # Not sure I understand this part k = -Kdot * qdot -> Kdot = d(func_marker_jac(q))/dt
-    bias = - func_marker_jac(qdot) @ qdot
-    tau_augmented = cas.vertcat(tau_augmented, bias)
-
-    x = cas.solve(mass_matrix_augmented, tau_augmented, "symbolicqr")
-
-    dqdot_computed = x[: n_q]
+    dqdot_computed = biorbd_model.ForwardDynamics(q, qdot, tau_fb + friction @ qdot).to_mx()
 
     return DynamicsEvaluation(dxdt=cas.vertcat(dq_computed, dqdot_computed), defects=None)
 
 
-def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp: NonLinearProgram, dynamic_function: callable, wM, wS):
+def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp: NonLinearProgram, wM, wS):
 
     ConfigureProblem.configure_q(ocp, nlp, True, False, False)
     ConfigureProblem.configure_qdot(ocp, nlp, True, False, True)
@@ -131,29 +96,9 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_m(ocp, nlp, n_noised_states=8)
     mat_p_init = cas.DM_eye(8) * np.array([1e-4, 1e-4, 1e-4, 1e-4, 1e-7, 1e-7, 1e-7, 1e-7])  # P
     ConfigureProblem.configure_cov(ocp, nlp, n_noised_states=8, initial_matrix=mat_p_init)
-    ConfigureProblem.configure_dynamics_function(ocp, nlp, dyn_func=lambda states, controls, parameters,
-                                                                stochastic_variables, nlp, wM, wS: dynamic_function(states,
-                                                                                            controls,
-                                                                                            parameters,
-                                                                                            stochastic_variables,
-                                                                                            nlp,
-                                                                                            wM,
-                                                                                            wS,
-                                                                                            with_gains=False),
-                                                 wM=wM, wS=wS, expand=False)
-
-# def minimize_uncertainty(controllers: list[PenaltyController], key: str) -> cas.MX:
-#     """
-#     Minimize the uncertainty (covariance matrix) of the states.
-#     """
-#     dt = controllers[0].tf / controllers[0].ns
-#     out = 0
-#     for i, ctrl in enumerate(controllers):
-#         P_matrix = ctrl.restore_matrix_from_vector(ctrl.update_values, ctrl.states.cx.shape[0],
-#                                                          ctrl.states.cx.shape[0], Node.START, "cov")
-#         P_partial = P_matrix[ctrl.states[key].index, ctrl.states[key].index]
-#         out += cas.trace(P_partial) * dt
-#     return out
+    ConfigureProblem.configure_dynamics_function(ocp, nlp,
+                                                 dyn_func=nlp.dynamics_type.dynamic_function,
+                                                 wM=wM, wS=wS, with_gains=False, expand=False)
 
 def states_equals_ref_kinematics(controller: PenaltyController) -> cas.MX:
     q = controller.states["q"].cx_start
@@ -171,22 +116,21 @@ def pelvis_equals_pelvis_ref(controller: PenaltyController) -> cas.MX:
 
 def get_p_mat(nlp, node_index, wM_magnitude, wS_magnitude):
 
+    dt = nlp.tf / nlp.ns
+
     nlp.states.node_index = node_index - 1
     nlp.controls.node_index = node_index - 1
     nlp.stochastic_variables.node_index = node_index - 1
     nlp.update_values.node_index = node_index - 1
 
     nx = nlp.states.cx_start.shape[0]
+    n_tau = nlp.controls['tau'].cx_start.shape[0]
+
     M_matrix = nlp.restore_matrix_from_vector(nlp.stochastic_variables, nx, nx, Node.START, "m")
 
-    dt = nlp.tf / nlp.ns
-    n_tau = nlp.controls['tau'].cx_start.shape[0]
-    n_q = nlp.states['q'].cx_start.shape[0]
-    n_qdot = nlp.states['qdot'].cx_start.shape[0]
-    n_root = nlp.model.nb_root
     wM = cas.MX.sym("wM", n_tau)
     wS = cas.MX.sym("wS", 2)
-    sigma_w = cas.vertcat(wS, wM) * cas.MX_eye(n_tau + 2)
+    sigma_w = cas.vertcat(wS, wM) * cas.MX_eye(cas.vertcat(wS, wM).shape[0])
     cov_sym = cas.MX.sym("cov", nlp.update_values.cx_start.shape[0])
     cov_sym_dict = {"cov": cov_sym}
     cov_sym_dict["cov"].cx_start = cov_sym
@@ -202,13 +146,14 @@ def get_p_mat(nlp, node_index, wM_magnitude, wS_magnitude):
     dg_dx = - (ddx_dx * dt / 2 + cas.MX_eye(ddx_dx.shape[0]))
 
     p_next = M_matrix @ (dg_dx @ cov_matrix @ dg_dx.T + dg_dw @ sigma_w @ dg_dw.T) @ M_matrix.T
+
     func_eval = cas.Function("p_next", [nlp.states.cx_start, nlp.controls.cx_start,
                                           nlp.parameters, nlp.stochastic_variables.cx_start, cov_sym,
                                           wM, wS], [p_next])(nlp.states.cx_start,
                                                                           nlp.controls.cx_start,
                                                                           nlp.parameters,
                                                                           nlp.stochastic_variables.cx_start,
-                                                                          nlp.update_values.cx_start,
+                                                                          nlp.update_values["cov"].cx_start,  # Should be the right shape to work
                                                                           wM_magnitude,
                                                                           wS_magnitude)
     p_vector = nlp.restore_vector_from_matrix(func_eval)
@@ -272,26 +217,26 @@ def expected_feedback_effort(controllers: list[PenaltyController], wS_magnitude:
     ...
     """
 
-    dt = controllers[0].tf / controllers[0].ns
-    sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
-
-    # create the casadi function to be evaluated
-    # Get the symbolic variables
     n_q = controllers[0].model.nb_q
     n_root = controllers[0].model.nb_root
     n_joints = n_q - n_root
     n_states = n_q*2
+
+    dt = controllers[0].tf / controllers[0].ns
+    sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
 
     states_ref = controllers[0].stochastic_variables["ee_ref"].cx_start
     cov_sym = cas.MX.sym("cov", controllers[0].update_values.cx_start.shape[0])
     cov_sym_dict = {"cov": cov_sym}
     cov_sym_dict["cov"].cx_start = cov_sym
     cov_matrix = controllers[0].restore_matrix_from_vector(cov_sym_dict, n_states, n_states, Node.START, "cov")
-    K_matrix = controllers[0].restore_matrix_from_vector(controllers[0].stochastic_variables,
-                                               controllers[0].controls["tau"].cx.shape[0],
-                                               2 * n_joints,
-                                               Node.START,
-                                               "k")
+
+    k = controllers[0].stochastic_variables["k"].cx_start
+    K_matrix = cas.MX(2, 1)
+    for s0 in range(2):
+        for s1 in range(1):
+            K_matrix[s0, s1] = k[s0 * 1 + s1]
+    K_matrix = K_matrix.T
 
     # Compute the expected effort
     trace_k_sensor_k = cas.trace(K_matrix @ sensory_noise_matrix @ K_matrix.T)
@@ -423,7 +368,7 @@ def prepare_socp(
                                          with_gains: stochastic_forward_dynamics(states, controls, parameters,
                                                                              stochastic_variables, nlp, wM, wS,
                                                                              with_gains=with_gains),
-                 wM=np.zeros((1, 1)), wS=np.zeros((2, 1)))
+                 wM=np.zeros((1, 1)), wS=np.zeros((2, 1)), expand=False)
 
     states_min = np.ones((n_states, n_shooting+1)) * -cas.inf
     states_max = np.ones((n_states, n_shooting+1)) * cas.inf
@@ -492,6 +437,8 @@ def prepare_socp(
     s_bounds = BoundsList()
     s_bounds.add(bounds=Bounds(stochastic_min, stochastic_max, interpolation=InterpolationType.EACH_FRAME))
 
+    update_value_functions = {"cov": lambda nlp, node_index: get_p_mat(nlp, node_index, wM_magnitude=wM_magnitude, wS_magnitude=wS_magnitude)}
+
     return OptimalControlProgram(
         bio_model,
         dynamics,
@@ -513,7 +460,7 @@ def prepare_socp(
         n_threads=1,
         assume_phase_dynamics=False,
         problem_type=OcpType.SOCP_EXPLICIT(wM_magnitude, wS_magnitude),
-        update_value_function=lambda nlp, node_index: get_p_mat(nlp, node_index, wM_magnitude=wM_magnitude, wS_magnitude=wS_magnitude),
+        update_value_functions=update_value_functions,
     )
 
 def main():
