@@ -16,8 +16,8 @@ import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
-    Bounds,
-    InitialGuess,
+    StochasticOptimalControlProgram,
+    InitialGuessList,
     ObjectiveFcn,
     Solver,
     BiorbdModel,
@@ -78,7 +78,8 @@ def stochastic_forward_dynamics(
     friction = cas.MX.zeros(4, 4)
     friction[3, 3] = 0.05
 
-    dqdot_computed = biorbd_model.ForwardDynamics(q, qdot, tau_fb + friction @ qdot).to_mx()
+    # dqdot_computed = biorbd_model.ForwardDynamics(q, qdot, tau_fb + friction @ qdot).to_mx()
+    dqdot_computed = biorbd_model.ForwardDynamicsConstraintsDirect(q, qdot, tau_fb + friction @ qdot).to_mx()
 
     return DynamicsEvaluation(dxdt=cas.vertcat(dq_computed, dqdot_computed), defects=None)
 
@@ -91,11 +92,11 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_tau(ocp, nlp, False, True)
 
     # Stochastic variables
-    ConfigureProblem.configure_k(ocp, nlp, n_noised_controls=1, n_feedbacks=2)  # Actuated states + vestibular eventually
-    ConfigureProblem.configure_ee_ref(ocp, nlp, n_references=2)  # Hip position & velocity + vestibular eventually
-    ConfigureProblem.configure_m(ocp, nlp, n_noised_states=8)
+    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=1, n_feedbacks=2)  # Actuated states + vestibular eventually
+    ConfigureProblem.configure_stochastic_ee_ref(ocp, nlp, n_references=2)  # Hip position & velocity + vestibular eventually
+    ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=8)
     mat_p_init = cas.DM_eye(8) * np.array([1e-4, 1e-4, 1e-4, 1e-4, 1e-7, 1e-7, 1e-7, 1e-7])  # P
-    ConfigureProblem.configure_cov(ocp, nlp, n_noised_states=8, initial_matrix=mat_p_init)
+    ConfigureProblem.configure_stochastic_cov(ocp, nlp, n_noised_states=8, initial_matrix=mat_p_init)
     ConfigureProblem.configure_dynamics_function(ocp, nlp,
                                                  dyn_func=nlp.dynamics_type.dynamic_function,
                                                  wM=wM, wS=wS, with_gains=False, expand=False)
@@ -121,20 +122,20 @@ def get_p_mat(nlp, node_index, wM_magnitude, wS_magnitude):
     nlp.states.node_index = node_index - 1
     nlp.controls.node_index = node_index - 1
     nlp.stochastic_variables.node_index = node_index - 1
-    nlp.update_values.node_index = node_index - 1
+    nlp.integrated_values.node_index = node_index - 1
 
     nx = nlp.states.cx_start.shape[0]
     n_tau = nlp.controls['tau'].cx_start.shape[0]
 
-    M_matrix = nlp.restore_matrix_from_vector(nlp.stochastic_variables, nx, nx, Node.START, "m")
+    M_matrix = nlp.stochastic_variables["m"].reshape_to_matrix(nlp.stochastic_variables, nx, nx, Node.START, "m")
 
     wM = cas.MX.sym("wM", n_tau)
     wS = cas.MX.sym("wS", 2)
     sigma_w = cas.vertcat(wS, wM) * cas.MX_eye(cas.vertcat(wS, wM).shape[0])
-    cov_sym = cas.MX.sym("cov", nlp.update_values.cx_start.shape[0])
+    cov_sym = cas.MX.sym("cov", nlp.integrated_values.cx_start.shape[0])
     cov_sym_dict = {"cov": cov_sym}
     cov_sym_dict["cov"].cx_start = cov_sym
-    cov_matrix = nlp.restore_matrix_from_vector(cov_sym_dict, nx, nx, Node.START, "cov")
+    cov_matrix = nlp.integrated_values["cov"].reshape_to_matrix(cov_sym_dict, nx, nx, Node.START, "cov")
 
     dx = stochastic_forward_dynamics(nlp.states.cx_start, nlp.controls.cx_start,
                                      nlp.parameters, nlp.stochastic_variables.cx_start,
@@ -153,10 +154,10 @@ def get_p_mat(nlp, node_index, wM_magnitude, wS_magnitude):
                                                                           nlp.controls.cx_start,
                                                                           nlp.parameters,
                                                                           nlp.stochastic_variables.cx_start,
-                                                                          nlp.update_values["cov"].cx_start,  # Should be the right shape to work
+                                                                          nlp.integrated_values["cov"].cx_start,  # Should be the right shape to work
                                                                           wM_magnitude,
                                                                           wS_magnitude)
-    p_vector = nlp.restore_vector_from_matrix(func_eval)
+    p_vector = nlp.integrated_values["cov"].reshape_to_vector(func_eval)
     return p_vector
 
 def reach_standing_position_consistantly(controllers: list[PenaltyController]) -> cas.MX:
@@ -174,10 +175,10 @@ def reach_standing_position_consistantly(controllers: list[PenaltyController]) -
     Qdot_joints = cas.MX.sym("qdot_joints", n_joints)
     n_states = n_q * 2
 
-    cov_sym = cas.MX.sym("cov", controllers[-1].update_values.cx_start.shape[0])
+    cov_sym = cas.MX.sym("cov", controllers[-1].integrated_values.cx_start.shape[0])
     cov_sym_dict = {"cov": cov_sym}
     cov_sym_dict["cov"].cx_start = cov_sym
-    cov_matrix = controllers[-1].restore_matrix_from_vector(cov_sym_dict, n_states, n_states, Node.START, "cov")
+    cov_matrix = controllers[-1].integrated_values["cov"].reshape_to_matrix(cov_sym_dict, n_states, n_states, Node.START, "cov")
 
     CoM_pos = get_CoM(controllers[-1].model, cas.vertcat(Q_root, Q_joints))[1]
     CoM_vel = get_CoMdot(controllers[-1].model, cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[1]
@@ -198,7 +199,7 @@ def reach_standing_position_consistantly(controllers: list[PenaltyController]) -
               controllers[-1].states["q"].cx_start[n_root:n_root+n_joints],
               controllers[-1].states["qdot"].cx_start[:n_root],
               controllers[-1].states["qdot"].cx_start[n_root:n_root+n_joints],
-              controllers[-1].update_values.cx_start)
+              controllers[-1].integrated_values.cx_start)
     # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
 
     return val
@@ -226,10 +227,10 @@ def expected_feedback_effort(controllers: list[PenaltyController], wS_magnitude:
     sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
 
     states_ref = controllers[0].stochastic_variables["ee_ref"].cx_start
-    cov_sym = cas.MX.sym("cov", controllers[0].update_values.cx_start.shape[0])
+    cov_sym = cas.MX.sym("cov", controllers[0].integrated_values.cx_start.shape[0])
     cov_sym_dict = {"cov": cov_sym}
     cov_sym_dict["cov"].cx_start = cov_sym
-    cov_matrix = controllers[0].restore_matrix_from_vector(cov_sym_dict, n_states, n_states, Node.START, "cov")
+    cov_matrix = controllers[0].integrated_values.reshape_to_matrix(cov_sym_dict, n_states, n_states, Node.START, "cov")
 
     k = controllers[0].stochastic_variables["k"].cx_start
     K_matrix = cas.MX(2, 1)
@@ -252,7 +253,7 @@ def expected_feedback_effort(controllers: list[PenaltyController], wS_magnitude:
 
     f_expectedEffort_fb = 0
     for i, ctrl in enumerate(controllers):
-        P_vector = ctrl.update_values.cx_start
+        P_vector = ctrl.integrated_values.cx_start
         out = func(ctrl.states.cx_start, ctrl.stochastic_variables.cx_start, P_vector)
         f_expectedEffort_fb += out * dt
 
@@ -299,7 +300,7 @@ def prepare_socp(
     n_shooting: int,
     wM_magnitude: cas.DM,
     wS_magnitude: cas.DM,
-) -> OptimalControlProgram:
+) -> StochasticOptimalControlProgram:
     """
     The initialization of an ocp
 
@@ -327,7 +328,7 @@ def prepare_socp(
     n_trans = 2  # 2D model
 
     variable_mappings = BiMappingList()
-    variable_mappings.add("tau", [None, None, None, 0], [3])
+    variable_mappings.add("tau", to_second=[None, None, None, 0], to_first=[3])
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -386,12 +387,14 @@ def prepare_socp(
     states_max[n_q:, 1:] = 10*np.pi
 
     x_bounds = BoundsList()
-    x_bounds.add(bounds=Bounds(states_min, states_max, interpolation=InterpolationType.EACH_FRAME))
+    x_bounds.add("q", min_bound=states_min[:n_q, :], max_bound=states_max[:n_q, :], interpolation=InterpolationType.EACH_FRAME)
+    x_bounds.add("qdot", min_bound=states_min[n_q:n_q*2, :], max_bound=states_max[n_q:n_q*2, :], interpolation=InterpolationType.EACH_FRAME)
 
-    u_bounds = BoundsList()
     controls_min = np.ones((n_tau-n_root, 3)) * -100
     controls_max = np.ones((n_tau-n_root, 3)) * 100
-    u_bounds.add(bounds=Bounds(controls_min, controls_max))
+
+    u_bounds = BoundsList()
+    u_bounds.add("tau", min_bound=controls_min, max_bound=controls_max)
 
     # Initial guesses
     states_init = np.zeros((n_states, n_shooting + 1))
@@ -400,10 +403,13 @@ def prepare_socp(
     states_init[3, :-1] = np.linspace(1.2843, 0, n_shooting)
     states_init[3, -1] = 0
 
-    x_init = InitialGuess(states_init, interpolation=InterpolationType.EACH_FRAME)
+    x_init = InitialGuessList()
+    x_init.add("q", initial_guess=states_init[:n_q, :], interpolation=InterpolationType.EACH_FRAME)
+    x_init.add("qdot", initial_guess=states_init[n_q:2*n_q, :], interpolation=InterpolationType.EACH_FRAME)
 
     controls_init = np.ones((n_q-n_root, n_shooting))
-    u_init = InitialGuess(controls_init, interpolation=InterpolationType.EACH_FRAME)
+    u_init = InitialGuessList()
+    u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME)
 
     # TODO: This should probably be done automatically, not defined by the user
     n_stochastic = n_q-n_root + n_qdot-n_root + n_q-n_root + n_qdot-n_root + n_states**2  # K(1x2) + ee_ref(2x1) + M(8x8)
@@ -411,12 +417,18 @@ def prepare_socp(
     stochastic_min = np.ones((n_stochastic, n_shooting + 1))
     stochastic_max = np.ones((n_stochastic, n_shooting + 1))
 
+    s_init = InitialGuessList()
+    s_bounds = BoundsList()
     curent_index = 0
     stochastic_init[:n_q-n_root + n_qdot-n_root, :] = 0.01  # K
     stochastic_min[:n_q-n_root + n_qdot-n_root, :] = -500
     stochastic_max[:n_q-n_root + n_qdot-n_root, :] = 500
+    s_init.add("k", initial_guess=stochastic_init[:n_q-n_root + n_qdot-n_root, :],
+               interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add("k", min_bound=stochastic_min[:n_q-n_root + n_qdot-n_root, :],
+                 max_bound=stochastic_max[:n_q-n_root + n_qdot-n_root, :],
+                 interpolation=InterpolationType.EACH_FRAME)
     curent_index += n_q-n_root + n_qdot-n_root
-    stochastic_init[curent_index: curent_index + n_q-n_root + n_qdot-n_root, :] = 0.01  # ee_ref
     # stochastic_init[curent_index : curent_index + n_q+n_qdot, 0] = np.array([ee_initial_position[0], ee_initial_position[1], 0, 0])  # ee_ref
     # stochastic_init[curent_index : curent_index + n_q+n_qdot, 1] = np.array([ee_final_position[0], ee_final_position[1], 0, 0])
     stochastic_min[curent_index, :] = -np.pi/2
@@ -427,19 +439,23 @@ def prepare_socp(
     stochastic_max[curent_index+2, :] = 10*np.pi
     stochastic_min[curent_index+3, :] = -10*np.pi
     stochastic_max[curent_index+3, :] = 10*np.pi
+    stochastic_init[curent_index: curent_index + n_q - n_root + n_qdot - n_root, :] = 0.01  # ee_ref
+    s_init.add("ee_ref", initial_guess=stochastic_init[curent_index: curent_index + n_q - n_root + n_qdot - n_root, :],
+               interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add("ee_ref", min_bound=stochastic_min[curent_index: curent_index + n_q - n_root + n_qdot - n_root, :],
+                 max_bound=stochastic_max[curent_index: curent_index + n_q - n_root + n_qdot - n_root, :],
+                 interpolation=InterpolationType.EACH_FRAME)
     curent_index += n_q-n_root + n_qdot-n_root
     stochastic_init[curent_index:, :] = 0.01  # M
     stochastic_min[curent_index:, :] = -50
     stochastic_max[curent_index:, :] = 50
+    s_init.add("m", initial_guess=stochastic_init[curent_index:, :], interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add("m", min_bound=stochastic_min[curent_index:, :], max_bound=stochastic_max[curent_index:, :],
+                    interpolation=InterpolationType.EACH_FRAME)
 
-    s_init = InitialGuess(stochastic_init, interpolation=InterpolationType.EACH_FRAME)
+    integrated_value_functions = {"cov": lambda nlp, node_index: get_p_mat(nlp, node_index, wM_magnitude=wM_magnitude, wS_magnitude=wS_magnitude)}
 
-    s_bounds = BoundsList()
-    s_bounds.add(bounds=Bounds(stochastic_min, stochastic_max, interpolation=InterpolationType.EACH_FRAME))
-
-    update_value_functions = {"cov": lambda nlp, node_index: get_p_mat(nlp, node_index, wM_magnitude=wM_magnitude, wS_magnitude=wS_magnitude)}
-
-    return OptimalControlProgram(
+    return StochasticOptimalControlProgram(
         bio_model,
         dynamics,
         n_shooting,
@@ -460,7 +476,7 @@ def prepare_socp(
         n_threads=1,
         assume_phase_dynamics=False,
         problem_type=OcpType.SOCP_EXPLICIT(wM_magnitude, wS_magnitude),
-        update_value_functions=update_value_functions,
+        integrated_value_functions=integrated_value_functions,
     )
 
 def main():
@@ -491,8 +507,8 @@ def main():
 
     # Solver parameters
     solver = Solver.IPOPT(show_online_optim=False)
-    solver.set_linear_solver('mumps')
-    # solver.set_linear_solver('ma57')
+    # solver.set_linear_solver('mumps')
+    solver.set_linear_solver('ma57')
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
@@ -515,7 +531,7 @@ def main():
         k_sol = sol_socp.stochastic_variables["k"]
         ee_ref_sol = sol_socp.stochastic_variables["ee_ref"]
         m_sol = sol_socp.stochastic_variables["m"]
-        # cov_sol = sol_socp.update_values["cov"]
+        # cov_sol = sol_socp.integrated_values["cov"]
         stochastic_variables_sol = np.vstack((k_sol, ee_ref_sol, m_sol))  # , cov_sol))
         data = {"q_sol": q_sol,
                 "qdot_sol": qdot_sol,
