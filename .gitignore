@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 
 2segments_torque_driven_tempo.py
+
+results/
+
+videos/
