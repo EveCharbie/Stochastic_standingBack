@@ -11,6 +11,8 @@ import casadi as cas
 import numpy as np
 import scipy
 
+import sys
+sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
     StochasticOptimalControlProgram,
@@ -91,6 +93,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
 
     n_q = ocp.nlp[0].model.nb_q
     n_root = ocp.nlp[0].model.nb_root
+    nu = n_q - n_root
 
     ConfigureProblem.configure_q(ocp, nlp, True, False, False)
     ConfigureProblem.configure_qdot(ocp, nlp, True, False, True)
@@ -98,12 +101,12 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_tau(ocp, nlp, False, True)
 
     # Stochastic variables
-    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=n_q-n_root, n_feedbacks=2*(n_q-n_root))  # Actuated states + vestibular eventually
-    ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=2*(n_q-n_root))  # Hip position & velocity + vestibular eventually
-    ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*(n_q-n_root))
-    ConfigureProblem.configure_stochastic_cov_implicit(ocp, nlp, n_noised_states=2*(n_q-n_root))
-    ConfigureProblem.configure_stochastic_a(ocp, nlp, n_noised_states=2*(n_q-n_root))
-    ConfigureProblem.configure_stochastic_c(ocp, nlp, n_feedbacks=2*(n_q-n_root), n_noise=3*(n_q-n_root))
+    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=nu, n_feedbacks=2*nu)  # Actuated states + vestibular eventually
+    ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=2*nu)  # Hip position & velocity + vestibular eventually
+    ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*nu)
+    ConfigureProblem.configure_stochastic_cov_implicit(ocp, nlp, n_noised_states=2*nu)
+    ConfigureProblem.configure_stochastic_a(ocp, nlp, n_noised_states=2*nu)
+    ConfigureProblem.configure_stochastic_c(ocp, nlp, n_feedbacks=2*nu, n_noise=3*nu)
     ConfigureProblem.configure_dynamics_function(ocp, nlp,
                                                  dyn_func=nlp.dynamics_type.dynamic_function,
                                                  wM=wM, wS=wS, with_gains=False, expand=False)
@@ -312,6 +315,7 @@ def prepare_socp(
     n_tau = bio_model.nb_tau
     n_states = n_q + n_qdot
     n_root = bio_model.nb_root
+    nu = n_q - n_root
     n_trans = 2  # 2D model
 
     variable_mappings = BiMappingList()
@@ -389,8 +393,8 @@ def prepare_socp(
     x_bounds["qdot"].max[:, 0] = 0
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_tau-n_root, 3)) * -1000
-    tau_max = np.ones((n_tau-n_root, 3)) * 1000
+    tau_min = np.ones((nu, 3)) * -1000
+    tau_max = np.ones((nu, 3)) * 1000
     tau_min[:, 0] = 0
     tau_max[:, 0] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, phase=0)
@@ -412,12 +416,12 @@ def prepare_socp(
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    n_k = (n_q-n_root) * (n_q-n_root + n_qdot-n_root)  # K(4x8)
-    n_ref = n_q-n_root + n_qdot-n_root  # ref(4x1)
-    n_m = n_states**2  # M(7x7)
-    n_cov = n_states**2  # Cov(7x7)
-    n_a = n_states**2  # A(7x7)
-    n_c = n_states**2  # C(7x7)
+    n_k = nu * (nu + nu)  # K(4x8)
+    n_ref = nu + nu  # ref(8x1)
+    n_m = (2*nu)**2  # M(8x8)
+    n_cov = (2*nu)**2  # Cov(8x8)
+    n_a = (2*nu)**2  # A(8x8)
+    n_c = (2*nu) * (3*nu)  # C(8x12)
     n_stochastic = n_k + n_ref + n_m + n_cov + n_a + n_c
 
     s_init = InitialGuessList()
@@ -448,8 +452,8 @@ def prepare_socp(
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.EACH_FRAME)
 
     m_init = np.ones((n_m, n_shooting + 1)) * 0.01
-    m_min = np.ones((n_m, n_shooting + 1)) * -500
-    m_max = np.ones((n_m, n_shooting + 1)) * 500
+    m_min = np.ones((n_m, n_shooting + 1)) * -50
+    m_max = np.ones((n_m, n_shooting + 1)) * 50
 
     s_init.add("m", initial_guess=m_init, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=m_min, max_bound=m_max, interpolation=InterpolationType.EACH_FRAME)
@@ -457,11 +461,11 @@ def prepare_socp(
     cov_init = np.ones((n_cov, n_shooting + 1)) * 0.01
     cov_min = np.ones((n_cov, n_shooting + 1)) * -500
     cov_max = np.ones((n_cov, n_shooting + 1)) * 500
-    P_0 = cas.DM_eye(2*n_q) * np.hstack((np.ones((n_q, )) * 1e-4, np.ones((n_q, )) * 1e-7))  # P
+    P_0 = cas.DM_eye(2*nu) * np.hstack((np.ones((nu, )) * 1e-4, np.ones((nu, )) * 1e-7))  # P
     cov_vector = np.zeros((n_cov, ))
-    for i in range(n_states):
-        for j in range(n_states):
-            cov_vector[i*n_states+j] = P_0[i, j]
+    for i in range(nu):
+        for j in range(nu):
+            cov_vector[i*nu+j] = P_0[i, j]
     cov_min[:, 0] = cov_vector
     cov_max[:, 0] = cov_vector
 
@@ -543,7 +547,7 @@ def main():
     solver.set_constr_viol_tol(1e-7)
     solver.set_maximum_iterations(10000)
     solver.set_hessian_approximation('limited-memory')
-    solver.set_nlp_scaling_method = "none"
+    solver._nlp_scaling_method = "none"
 
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
                         final_time=final_time,
