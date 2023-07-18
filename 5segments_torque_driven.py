@@ -12,8 +12,6 @@ import numpy as np
 from IPython import embed
 import scipy
 
-import sys
-sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
     StochasticOptimalControlProgram,
