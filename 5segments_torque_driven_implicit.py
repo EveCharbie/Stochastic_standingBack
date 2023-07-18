@@ -55,13 +55,12 @@ def stochastic_forward_dynamics(
     with_gains,
 ) -> DynamicsEvaluation:
 
-    biorbd_model = biorbd.Model("models/Model2D_7Dof_1C_3M.bioMod")
     q = DynamicsFunctions.get(nlp.states["q"], states)
     qdot = DynamicsFunctions.get(nlp.states["qdot"], states)
     tau = DynamicsFunctions.get(nlp.controls["tau"], controls)
 
-    n_q = biorbd_model.nbQ()
-    n_root = biorbd_model.nbRoot()
+    n_q = nlp.model.nb_q
+    n_root = nlp.model.nb_root
 
     tau_fb = tau[n_root:]
     if with_gains:
@@ -84,7 +83,7 @@ def stochastic_forward_dynamics(
         friction[i, i] = 0.05
 
     tau_full = cas.vertcat(cas.MX.zeros(n_root), tau_fb)
-    dqdot_computed = biorbd_model.ForwardDynamicsConstraintsDirect(q, qdot, tau_full + friction @ qdot).to_mx()
+    dqdot_computed = nlp.model.constrained_forward_dynamics(q, qdot, tau_full + friction @ qdot)
 
     return DynamicsEvaluation(dxdt=cas.vertcat(dq_computed, dqdot_computed), defects=None)
 
@@ -534,7 +533,7 @@ def main():
     # --- Prepare the ocp --- #
     dt = 0.01  # 0.03
     final_time = 0.3
-    n_shooting = int(final_time/dt)  # There is no U on the last node (I do not hack it here)
+    n_shooting = int(final_time/dt) + 1  # There is no U on the last node (I do not hack it here)
     final_time += dt
 
     # TODO: How do we choose the values?

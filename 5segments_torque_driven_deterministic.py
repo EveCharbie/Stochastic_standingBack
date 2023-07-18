@@ -201,7 +201,7 @@ def prepare_ocp(
 def main():
 
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
-    save_path = f"results/{biorbd_model_path[8:-7]}_torque_driven_1phase_socp.pkl"
+    save_path = f"results/{biorbd_model_path[8:-7]}_torque_driven_1phase_ocp.pkl"
 
     # import bioviz
     # b = bioviz.Viz(biorbd_model_path)
@@ -209,7 +209,7 @@ def main():
 
     # --- Prepare the ocp --- #
     dt = 0.01
-    final_time = 0.4
+    final_time = 0.3
     n_shooting = int(final_time/dt) + 1
     final_time += dt
 
