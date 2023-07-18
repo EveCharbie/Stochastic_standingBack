@@ -301,6 +301,9 @@ def prepare_socp(
     wM_magnitude: cas.DM,
     wPq_magnitude: cas.DM,
     wPqdot_magnitude: cas.DM,
+    q_deterministic: np.ndarray,
+    qdot_deterministic: np.ndarray,
+    tau_deterministic: np.ndarray,
 ) -> StochasticOptimalControlProgram:
     """
     ...
@@ -312,8 +315,6 @@ def prepare_socp(
 
     n_q = bio_model.nb_q
     n_qdot = bio_model.nb_qdot
-    n_tau = bio_model.nb_tau
-    n_states = n_q + n_qdot
     n_root = bio_model.nb_root
     nu = n_q - n_root
     n_trans = 2  # 2D model
@@ -326,21 +327,20 @@ def prepare_socp(
     # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=1e3/2,
     #                         quadratic=True, phase=0)  # Do I really need this one? (expected_feedback_effort does it)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_VELOCITY, node=Node.END, weight=-10000, quadratic=False,
-                            axes=Axis.Z, phase=0, expand=False)  # Temporary while in 1 phase ?
+                            axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.1, min_bound=0.1, max_bound=0.3, phase=0)
     objective_functions.add(expected_feedback_effort,
                             custom_type=ObjectiveFcn.Lagrange,
                             node=Node.ALL_SHOOTING,
                             weight=1e3 / 2,
-                            quadratic=False,
+                            quadratic=True,
                             wS_magnitude=wS_magnitude,
-                            phase=0,
-                            expand=False)
+                            phase=0)
 
     # Constraints
     constraints = ConstraintList()
-    constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING, expand=False)
-    constraints.add(CoM_over_ankle, node=Node.END, phase=0, expand=False)
+    constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING)
+    constraints.add(CoM_over_ankle, node=Node.END, phase=0)
     # constraints.add(
     #     ConstraintFcn.TRACK_CONTACT_FORCES,
     #     min_bound=5,
@@ -350,19 +350,17 @@ def prepare_socp(
     #     phase=0
     # )
     constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.5,
-                    max_bound=np.inf, phase=0, expand=False)
+                    max_bound=np.inf, phase=0)
     constraints.add(reach_standing_position_consistantly,
                               node=Node.PENULTIMATE,
                               min_bound=np.array([-cas.inf, -cas.inf]),
-                              max_bound=np.array([0.004**2, 0.05**2]),
-                              expand=False)  # constrain only the CoM in Y (don't give a **** about CoM height)
+                              max_bound=np.array([0.004**2, 0.05**2]))  # constrain only the CoM in Y (don't give a **** about CoM height)
 
     multinode_constraints = MultinodeConstraintList()
     for i in range(n_shooting-1):
         multinode_constraints.add(leuven_trapezoidal,
                                   nodes_phase=[0, 0],
-                                  nodes=[i, i+1],
-                                  expand=False)
+                                  nodes=[i, i+1])
 
     # Dynamics
     dynamics = DynamicsList()
@@ -400,19 +398,22 @@ def prepare_socp(
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, phase=0)
 
     # Initial guesses
-    q_init = np.zeros((n_q, n_shooting + 1))
+    # q_init = np.zeros((n_q, n_shooting + 1))
     # q_init[2, :-1] = np.linspace(-1.0471, 0, n_shooting)
     # q_init[2, -1] = 0
     # q_init[3, :-1] = np.linspace(1.4861, 0, n_shooting)
     # q_init[3, -1] = 0
+    q_init = q_deterministic
 
-    qdot_init = np.ones((n_qdot, n_shooting + 1))
+    # qdot_init = np.ones((n_qdot, n_shooting + 1))
+    qdot_init = qdot_deterministic
 
     x_init = InitialGuessList()
     x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
     x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    controls_init = np.ones((n_q-n_root, n_shooting))
+    # controls_init = np.ones((n_q-n_root, n_shooting))
+    controls_init = tau_deterministic[:, :-1]
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
@@ -522,6 +523,14 @@ def main():
     # b = bioviz.Viz(biorbd_model_path)
     # b.exec()
 
+    # Load the deterministic solution to warm-start
+    path_to_results = "/home/charbie/Documents/Programmation/Stochastic_standingBack/results/odel2D_7Dof_1C_3M_torque_driven_1phase_ocp.pkl"
+    with open(path_to_results, 'rb') as file:
+        data = pickle.load(file)
+        q_deterministic = data['q_sol']
+        qdot_deterministic = data['qdot_sol']
+        tau_deterministic = data['tau_sol']
+
     # --- Prepare the ocp --- #
     dt = 0.01  # 0.03
     final_time = 0.3
@@ -554,7 +563,10 @@ def main():
                         n_shooting=n_shooting,
                         wM_magnitude=wM_magnitude,
                         wPq_magnitude=wPq_magnitude,
-                        wPqdot_magnitude=wPqdot_magnitude,)
+                        wPqdot_magnitude=wPqdot_magnitude,
+                        q_deterministic=q_deterministic,
+                        qdot_deterministic=qdot_deterministic,
+                        tau_deterministic=tau_deterministic,)
 
     if RUN_OPTIM_FLAG:
         sol_socp = socp.solve(solver)
