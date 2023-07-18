@@ -184,11 +184,11 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
 
     n_q = controller.model.nb_q
     n_root = controller.model.nb_root
-    n_states = n_q*2
+    nu = n_q - n_root
     sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
 
     states_ref = controller.stochastic_variables["ref"].cx_start
-    cov_matrix = controller.stochastic_variables.reshape_to_matrix(controller.stochastic_variables.cx_start, n_states, n_states, Node.START, "cov")
+    cov_matrix = controller.stochastic_variables.reshape_to_matrix(controller.stochastic_variables, 2*nu, 2*nu, Node.START, "cov")
 
     k = controller.stochastic_variables["k"].cx_start
     K_matrix = cas.MX(2*(n_q-n_root), n_q-n_root)
@@ -197,19 +197,27 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
             K_matrix[s0, s1] = k[s0 * (n_q-n_root) + s1]
     K_matrix = K_matrix.T
 
+    q_joints = cas.MX.sym("q_joints", nu, 1)
+    qdot_joints = cas.MX.sym("qdot_joints", nu, 1)
+
     # Compute the expected effort
     trace_k_sensor_k = cas.trace(K_matrix @ sensory_noise_matrix @ K_matrix.T)
     # pelvis_pos_velo = cas.vertcat(controllers[0].states["q"].cx_start[2], controllers[0].states["qot"].cx_start[2])  # Pelvis pos + velo should be used as a feedback for all the joints eventually
-    states_pos_velo = cas.vertcat(controller.states["q"].cx_start[n_root:], controller.states["qdot"].cx_start[n_root:])
+    states_pos_velo = cas.vertcat(q_joints, qdot_joints)
+
     T_fb = K_matrix @ ((states_pos_velo - states_ref) + wS_magnitude)
-    jac_T_fb_x = cas.jacobian(T_fb, controller.states.cx_start)
+    jac_T_fb_x = cas.jacobian(T_fb, cas.vertcat(q_joints, qdot_joints))
     trace_jac_p_jack = cas.trace(jac_T_fb_x @ cov_matrix @ jac_T_fb_x.T)
     expectedEffort_fb_mx = trace_jac_p_jack + trace_k_sensor_k
     func = cas.Function('f_expectedEffort_fb',
-                                       [controller.states.cx_start, controller.stochastic_variables.cx_start],
+                                       [q_joints,
+                                        qdot_joints,
+                                        controller.stochastic_variables.cx_start],
                                        [expectedEffort_fb_mx])
 
-    out = func(controller.states.cx_start, controller.stochastic_variables.cx_start)
+    out = func(controller.states["q"].cx_start[n_root:],
+               controller.states["qdot"].cx_start[n_root:],
+               controller.stochastic_variables.cx_start)
     return out
 
 
@@ -511,7 +519,7 @@ def main():
     # b.exec()
 
     # --- Prepare the ocp --- #
-    dt = 0.03
+    dt = 0.01  # 0.03
     final_time = 0.3
     n_shooting = int(final_time/dt)  # There is no U on the last node (I do not hack it here)
     final_time += dt
