@@ -146,16 +146,16 @@ def reach_standing_position_consistantly(controller: PenaltyController) -> cas.M
     Qdot_joints = cas.MX.sym("qdot_joints", n_joints)
     n_states = n_q * 2
 
-    if "cholesky_cov" in controllers[0].stochastic_variables.keys():
-        cov_sym = cas.MX.sym("cov", controllers[0].stochastic_variables["cholesky_cov"].cx_start.shape[0])
+    if "cholesky_cov" in controller.stochastic_variables.keys():
+        cov_sym = cas.MX.sym("cov", controller.stochastic_variables["cholesky_cov"].cx_start.shape[0])
         cov_sym_dict = {"cholesky_cov": cov_sym}
         cov_sym_dict["cholesky_cov"].cx_start = cov_sym
         l_cov_matrix = (
-            controllers[0]
+            controller
             .stochastic_variables["cholesky_cov"]
             .reshape_to_cholesky_matrix(
                 cov_sym_dict,
-                controllers[0].states.cx_start.shape[0],
+                2 * n_joints,
                 Node.START,
                 "cholesky_cov",
             )
@@ -165,16 +165,16 @@ def reach_standing_position_consistantly(controller: PenaltyController) -> cas.M
         cov_sym = cas.MX.sym("cov", controller.stochastic_variables.cx_start.shape[0])
         cov_sym_dict = {"cov": cov_sym}
         cov_sym_dict["cov"].cx_start = cov_sym
-        cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(cov_sym_dict, n_states, n_states, Node.START, "cov")
+        cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(cov_sym_dict, 2*n_joints, 2*n_joints, Node.START, "cov")
 
     CoM_pos = get_CoM(controller.model, cas.vertcat(Q_root, Q_joints))[1]
     CoM_vel = get_CoMdot(controller.model, cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[1]
 
-    jac_CoM_q = cas.jacobian(CoM_pos, cas.vertcat(Q_root, Q_joints))
-    jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
+    jac_CoM_q = cas.jacobian(CoM_pos, cas.vertcat(Q_joints))
+    jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_joints, Qdot_joints))
 
-    P_matrix_q = cov_matrix[:n_q, :n_q]
-    P_matrix_qdot = cov_matrix[:n_q*2, :n_q*2]
+    P_matrix_q = cov_matrix[:n_joints, :n_joints]
+    P_matrix_qdot = cov_matrix[:, :]
 
     pos_constraint = jac_CoM_q @ P_matrix_q @ jac_CoM_q.T
     vel_constraint = jac_CoM_qdot @ P_matrix_qdot @ jac_CoM_qdot.T
@@ -186,7 +186,10 @@ def reach_standing_position_consistantly(controller: PenaltyController) -> cas.M
               controller.states["q"].cx_start[n_root:n_root+n_joints],
               controller.states["qdot"].cx_start[:n_root],
               controller.states["qdot"].cx_start[n_root:n_root+n_joints],
-              controller.stochastic_variables.cx_start)
+              controller.stochastic_variables["cholesky_cov"].cx_start
+                  if "cholesky_cov" in controller.stochastic_variables.keys()
+                  else controller.stochastic_variables["cov"].cx_start
+              )
     # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
 
     return val
@@ -215,7 +218,7 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     if "cholesky_cov" in controller.stochastic_variables.keys():
         l_cov_matrix = controller.stochastic_variables["cholesky_cov"].reshape_to_cholesky_matrix(
             controller.stochastic_variables,
-            controller.states.cx_start.shape[0],
+            2*nu,
             Node.START,
             "cholesky_cov",
         )
@@ -223,8 +226,8 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     else:
         cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(
             controller.stochastic_variables,
-            controller.states.cx_start.shape[0],
-            controller.states.cx_start.shape[0],
+            2*nu,
+            2*nu,
             Node.START,
             "cov",
         )
@@ -340,6 +343,7 @@ def prepare_socp(
     q_deterministic: np.ndarray,
     qdot_deterministic: np.ndarray,
     tau_deterministic: np.ndarray,
+    cholesky_flag: bool = False,
 ) -> StochasticOptimalControlProgram:
     """
     ...
@@ -458,13 +462,13 @@ def prepare_socp(
     n_m = (2*nu)**2  # M(8x8)
     n_a = (2*nu)**2  # A(8x8)
     n_c = (2*nu) * (3*nu)  # C(8x12)
+    n_cov = (2 * nu) ** 2  # Cov(8x8)
     n_stochastic = n_k + n_ref + n_m + n_a + n_c
     if not cholesky_flag:
-        n_cov = (2 * nu) ** 2  # Cov(8x8)
         n_stochastic += n_cov  # + cov(4, 4)
     else:
         n_cholesky_cov = 0
-        for i in range(n_states):
+        for i in range(nu):
             for j in range(i + 1):
                 n_cholesky_cov += 1
         n_stochastic += n_cholesky_cov  # + cholesky_cov(10)
@@ -635,7 +639,7 @@ def main():
                         qdot_deterministic=qdot_deterministic,
                         tau_deterministic=tau_deterministic,
                         cholesky_flag=cholesky_flag)
-    socp.add_plot_penalty(CostType.ALL)
+    # socp.add_plot_penalty(CostType.ALL)
 
     if RUN_OPTIM_FLAG:
         sol_socp = socp.solve(solver)
