@@ -221,7 +221,7 @@ def main():
     # solver.set_dual_inf_tol(3e-4)
     # solver.set_constr_viol_tol(1e-7)
     # solver.set_maximum_iterations(10000)
-    # solver.set_hessian_approximation('limited-memory')
+    solver.set_hessian_approximation('limited-memory')
 
     ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
                         final_time=final_time,

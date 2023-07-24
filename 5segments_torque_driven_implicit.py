@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import casadi as cas
 import numpy as np
 import scipy
+from IPython import embed
 
 import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
@@ -39,6 +40,7 @@ from bioptim import (
     Axis,
     OdeSolver,
     SocpType,
+    CostType,
 )
 
 def get_excitation_with_feedback(K, EE, ref, wS):
@@ -597,7 +599,7 @@ def main():
         tau_deterministic = data['tau_sol']
 
     # --- Prepare the ocp --- #
-    dt = 0.01  # 0.03
+    dt = 0.01
     final_time = 0.3
     n_shooting = int(final_time/dt) + 1  # There is no U on the last node (I do not hack it here)
     final_time += dt
@@ -613,15 +615,15 @@ def main():
     wPqdot_magnitude = cas.DM(np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
 
     # Solver parameters
-    solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+    solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
     # solver.set_linear_solver('mumps')
     solver.set_linear_solver('ma57')
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
-    solver.set_maximum_iterations(10000)
-    solver.set_hessian_approximation('limited-memory')
-    solver._nlp_scaling_method = "none"
+    solver.set_maximum_iterations(0) # 1000
+    solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
+    # solver._nlp_scaling_method = "none"
 
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
                         final_time=final_time,
@@ -633,9 +635,11 @@ def main():
                         qdot_deterministic=qdot_deterministic,
                         tau_deterministic=tau_deterministic,
                         cholesky_flag=cholesky_flag)
+    socp.add_plot_penalty(CostType.ALL)
 
     if RUN_OPTIM_FLAG:
         sol_socp = socp.solve(solver)
+        sol_socp.graphs()
 
         q_sol = sol_socp.states["q"]
         qdot_sol = sol_socp.states["qdot"]
