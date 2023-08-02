@@ -41,6 +41,7 @@ from bioptim import (
     OdeSolver,
     SocpType,
     CostType,
+    VariableScalingList,
 )
 
 def get_excitation_with_feedback(K, EE, ref, wS):
@@ -113,7 +114,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_stochastic_c(ocp, nlp, n_feedbacks=2*nu, n_noise=3*nu)
     ConfigureProblem.configure_dynamics_function(ocp, nlp,
                                                  dyn_func=nlp.dynamics_type.dynamic_function,
-                                                 wM=wM, wS=wS, with_gains=False, expand=False)
+                                                 wM=wM, wS=wS, with_gains=False)
 
 
 def states_equals_ref_kinematics(controller: PenaltyController) -> cas.MX:
@@ -211,13 +212,22 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     n_q = controller.model.nb_q
     n_root = controller.model.nb_root
     nu = n_q - n_root
+    n_stochastic = controller.stochastic_variables.shape
+
+
+    stochastic_sym = cas.MX.sym("stochastic_sym", n_stochastic, 1)
     sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
 
-    states_ref = controller.stochastic_variables["ref"].cx_start
+    stochastic_sym_dict = {
+        key: stochastic_sym[controller.stochastic_variables[key].index]
+        for key in controller.stochastic_variables.keys()
+    }
+    for key in controller.stochastic_variables.keys():
+        stochastic_sym_dict[key].cx_start = stochastic_sym_dict[key]
 
-    if "cholesky_cov" in controller.stochastic_variables.keys():
+    if "cholesky_cov" in stochastic_sym_dict.keys():
         l_cov_matrix = controller.stochastic_variables["cholesky_cov"].reshape_to_cholesky_matrix(
-            controller.stochastic_variables,
+            stochastic_sym_dict,
             2*nu,
             Node.START,
             "cholesky_cov",
@@ -225,14 +235,16 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
         cov_matrix = l_cov_matrix @ l_cov_matrix.T
     else:
         cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(
-            controller.stochastic_variables,
+            stochastic_sym_dict,
             2*nu,
             2*nu,
             Node.START,
             "cov",
         )
 
-    k = controller.stochastic_variables["k"].cx_start
+    states_ref = stochastic_sym_dict["ref"].cx_start
+
+    k = stochastic_sym_dict["k"].cx_start
     K_matrix = cas.MX(2*(n_q-n_root), n_q-n_root)
     for s0 in range(2*(n_q-n_root)):
         for s1 in range(n_q-n_root):
@@ -254,7 +266,7 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     func = cas.Function('f_expectedEffort_fb',
                                        [q_joints,
                                         qdot_joints,
-                                        controller.stochastic_variables.cx_start],
+                                        stochastic_sym],
                                        [expectedEffort_fb_mx])
 
     out = func(controller.states["q"].cx_start[n_root:],
@@ -368,6 +380,8 @@ def prepare_socp(
     #                         quadratic=True, phase=0)  # Do I really need this one? (expected_feedback_effort does it)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_VELOCITY, node=Node.END, weight=-10000, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
+                            axes=Axis.Z, phase=0)  # Temporary while in 1 phase ? ### was not there before
     # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.1, min_bound=0.1, max_bound=0.3, phase=0)
     objective_functions.add(expected_feedback_effort,
                             custom_type=ObjectiveFcn.Lagrange,
@@ -380,7 +394,7 @@ def prepare_socp(
     # Constraints
     constraints = ConstraintList()
     constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING)
-    constraints.add(CoM_over_ankle, node=Node.END, phase=0)
+    # constraints.add(CoM_over_ankle, node=Node.END, phase=0)  ### was there before
     # constraints.add(
     #     ConstraintFcn.TRACK_CONTACT_FORCES,
     #     min_bound=5,
@@ -557,6 +571,21 @@ def prepare_socp(
         s_init.add("cov", initial_guess=cov_init, interpolation=InterpolationType.EACH_FRAME)
         s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.EACH_FRAME)
 
+    # Vaiables scaling
+    u_scaling = VariableScalingList()
+    u_scaling["tau"] = [10] * nu
+
+    s_scaling = VariableScalingList()
+    s_scaling["k"] = [100] * n_k
+    s_scaling["ref"] = [1] * n_ref
+    s_scaling["m"] = [1] * n_m
+    s_scaling["a"] = [10] * n_a
+    s_scaling["c"] = [1] * n_c
+    if not cholesky_flag:
+        s_scaling["cholesky_cov"] = [0.01] * n_cholesky_cov # should be 0.01 for q, and 0.05 for qdot
+    else:
+        s_scaling["cov"] = [0.01] * n_cov
+
     return StochasticOptimalControlProgram(
         bio_model,
         dynamics,
@@ -568,6 +597,8 @@ def prepare_socp(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         s_bounds=s_bounds,
+        u_scaling=u_scaling,
+        s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
         multinode_constraints=multinode_constraints,
@@ -625,9 +656,9 @@ def main():
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
-    solver.set_maximum_iterations(0) # 1000
+    solver.set_maximum_iterations(1000) # 1000
     solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
-    # solver._nlp_scaling_method = "none"
+    solver._nlp_scaling_method = "none"
 
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
                         final_time=final_time,
@@ -640,6 +671,7 @@ def main():
                         tau_deterministic=tau_deterministic,
                         cholesky_flag=cholesky_flag)
     # socp.add_plot_penalty(CostType.ALL)
+    # socp.check_conditioning()
 
     if RUN_OPTIM_FLAG:
         sol_socp = socp.solve(solver)
@@ -683,76 +715,6 @@ def main():
     b = bioviz.Viz(model_path=biorbd_model_path)
     b.load_movement(q_sol[:, :-1])
     b.exec()
-
-    # --- Plot the results --- #
-    embed()
-    states = socp.nlp[0].states.cx_start
-    controls = socp.nlp[0].controls.cx_start
-    parameters = socp.nlp[0].parameters.cx_start
-    stochastic_variables = socp.nlp[0].stochastic_variables.cx_start
-    nlp = socp.nlp[0]
-    n_q = 5
-    n_root = 3
-    n_tau = n_q - n_root
-    wM_sym = cas.MX.sym('wM', n_tau, 1)
-    wS_sym = cas.MX.sym('wS', n_tau*2, 1)
-    out = stochastic_forward_dynamics(states, controls, parameters, stochastic_variables, nlp, wM_sym, wS_sym, with_gains=True)
-    dyn_fun = cas.Function("dyn_fun", [states, controls, parameters, stochastic_variables, wM_sym, wS_sym], [out.dxdt])
-
-    fig, axs = plt.subplots(3, 2)
-    n_simulations = 30
-    q_simulated = np.zeros((n_simulations, n_q, n_shooting + 1))
-    qdot_simulated = np.zeros((n_simulations, n_q, n_shooting + 1))
-    for i_simulation in range(n_simulations):
-        wM = np.random.normal(0, wM_std, (2, n_shooting + 1))
-        wPq = np.random.normal(0, wPq_std, (2, n_shooting + 1))
-        wPqdot = np.random.normal(0, wPqdot_std, (2, n_shooting + 1))
-        q_simulated[i_simulation, :, 0] = q_sol[:, 0]
-        qdot_simulated[i_simulation, :, 0] = qdot_sol[:, 0]
-        mus_activation_simulated[i_simulation, :, 0] = activations_sol[:, 0]
-        for i_node in range(n_shooting):
-            x_prev = cas.vertcat(q_simulated[i_simulation, :, i_node], qdot_simulated[i_simulation, :, i_node], mus_activation_simulated[i_simulation, :, i_node])
-            hand_pos_simulated[i_simulation, :, i_node] = np.reshape(hand_pos_fcn(x_prev[:2])[:2], (2,))
-            hand_vel_simulated[i_simulation, :, i_node] = np.reshape(hand_vel_fcn(x_prev[:2], x_prev[2:4])[:2], (2,))
-            u = excitations_sol[:, i_node]
-            s = stochastic_variables_sol[:, i_node]
-            k1 = dyn_fun(x_prev, u, [], s, wM[:, i_node], wPq[:, i_node], wPqdot[:, i_node])
-            x_next = x_prev + dt * dyn_fun(x_prev + dt / 2 * k1, u, [], s, wM[:, i_node], wPq[:, i_node], wPqdot[:, i_node])
-            q_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[:2], (2, ))
-            qdot_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[2:4], (2, ))
-            mus_activation_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[4:], (6, ))
-        hand_pos_simulated[i_simulation, :, i_node + 1] = np.reshape(hand_pos_fcn(x_next[:2])[:2], (2,))
-        hand_vel_simulated[i_simulation, :, i_node + 1] = np.reshape(hand_vel_fcn(x_next[:2], x_next[2:4])[:2], (2, ))
-        axs[0, 0].plot(hand_pos_simulated[i_simulation, 0, :], hand_pos_simulated[i_simulation, 1, :], color="tab:red")
-        axs[1, 0].plot(np.linspace(0, final_time, n_shooting + 1), q_simulated[i_simulation, 0, :], color="k")
-        axs[2, 0].plot(np.linspace(0, final_time, n_shooting + 1), q_simulated[i_simulation, 1, :], color="k")
-        axs[0, 1].plot(hand_vel_simulated[i_simulation, 0, :], hand_vel_simulated[i_simulation, 1, :], color="tab:red")
-        axs[1, 1].plot(np.linspace(0, final_time, n_shooting + 1), qdot_simulated[i_simulation, 0, :], color="k")
-        axs[2, 1].plot(np.linspace(0, final_time, n_shooting + 1), qdot_simulated[i_simulation, 1, :], color="k")
-    hand_pos_without_noise = np.zeros((2, n_shooting + 1))
-    for i_node in range(n_shooting + 1):
-        hand_pos_without_noise[:, i_node] = np.reshape(hand_pos_fcn(q_sol[:, i_node])[:2], (2,))
-    axs[0, 0].plot(hand_pos_without_noise[0, :], hand_pos_without_noise[1, :], color="k")
-    axs[0, 0].plot(ee_initial_position[0], ee_initial_position[1], color="tab:green", marker="o")
-    axs[0, 0].plot(ee_final_position[0], ee_final_position[1], color="tab:red", marker="o")
-    axs[0, 0].set_xlabel("X [m]")
-    axs[0, 0].set_ylabel("Y [m]")
-    axs[0, 0].set_title("Hand position simulated")
-    axs[1, 0].set_xlabel("Time [s]")
-    axs[1, 0].set_ylabel("Shoulder angle [rad]")
-    axs[2, 0].set_xlabel("Time [s]")
-    axs[2, 0].set_ylabel("Elbow angle [rad]")
-    axs[0, 1].set_xlabel("X velocity [m/s]")
-    axs[0, 1].set_ylabel("Y velocity [m/s]")
-    axs[0, 1].set_title("Hand velocity simulated")
-    axs[1, 1].set_xlabel("Time [s]")
-    axs[1, 1].set_ylabel("Shoulder velocity [rad/s]")
-    axs[2, 1].set_xlabel("Time [s]")
-    axs[2, 1].set_ylabel("Elbow velocity [rad/s]")
-    axs[0, 0].axis("equal")
-    plt.tight_layout()
-    plt.savefig("simulated_results.png", dpi=300)
-    plt.show()
 
 if __name__ == "__main__":
     main()
