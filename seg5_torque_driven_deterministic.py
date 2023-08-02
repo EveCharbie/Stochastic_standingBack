@@ -56,19 +56,19 @@ def Custom_track_markers(controller: PenaltyController) -> cas.MX:
     markers = controller.model.markers(q)
     markers_pos = markers[0]
     return markers_pos[0] ** 2 + markers_pos[1] ** 2 + markers_pos[2] ** 2
-
-def leuven_trapezoidal_deterministic(controllers: list[PenaltyController]) -> cas.MX:
-
-    dt = controllers[0].tf / controllers[0].ns
-
-    dX_i = controllers[0].dynamics(controllers[0].states.cx_start, controllers[0].controls.cx_start,
-                                        controllers[0].parameters.cx_start, controllers[0].stochastic_variables.cx_start)
-    dX_i_plus = controllers[1].dynamics(controllers[1].states.cx_start, controllers[1].controls.cx_start,
-                                        controllers[1].parameters.cx_start, controllers[1].stochastic_variables.cx_start)
-
-    out = controllers[1].states.cx_start - (controllers[0].states.cx_start + (dX_i + dX_i_plus) / 2 * dt)
-
-    return out * 1e3
+#
+# def leuven_trapezoidal_deterministic(controllers: list[PenaltyController]) -> cas.MX:
+#
+#     dt = controllers[0].tf / controllers[0].ns
+#
+#     dX_i = controllers[0].dynamics(controllers[0].states.cx_start, controllers[0].controls.cx_start,
+#                                         controllers[0].parameters.cx_start, controllers[0].stochastic_variables.cx_start)
+#     dX_i_plus = controllers[1].dynamics(controllers[1].states.cx_start, controllers[1].controls.cx_start,
+#                                         controllers[1].parameters.cx_start, controllers[1].stochastic_variables.cx_start)
+#
+#     out = controllers[1].states.cx_start - (controllers[0].states.cx_start + (dX_i + dX_i_plus) / 2 * dt)
+#
+#     return out * 1e3
 
 def prepare_ocp(
     biorbd_model_path: str,
@@ -128,11 +128,11 @@ def prepare_ocp(
         phase=0
     )
 
-    multinode_constraints = MultinodeConstraintList()
-    for i in range(n_shooting - 1):
-        multinode_constraints.add(leuven_trapezoidal_deterministic,
-                                  nodes_phase=[0, 0],
-                                  nodes=[i, i + 1])
+    # multinode_constraints = MultinodeConstraintList()
+    # for i in range(n_shooting - 1):
+    #     multinode_constraints.add(leuven_trapezoidal_deterministic,
+    #                               nodes_phase=[0, 0],
+    #                               nodes=[i, i + 1])
 
     # Dynamics
     dynamics = DynamicsList()
@@ -194,10 +194,10 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        multinode_constraints=multinode_constraints,
+        # multinode_constraints=multinode_constraints,
         variable_mappings=variable_mappings,
-        ode_solver=None,
-        skip_continuity=True,
+        # ode_solver=None,
+        # skip_continuity=True,
         n_threads=1,
         assume_phase_dynamics=False,
     )
@@ -205,7 +205,7 @@ def prepare_ocp(
 def main():
 
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
-    save_path = f"results/{biorbd_model_path[8:-7]}_torque_driven_1phase_ocp.pkl"
+    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_ocp.pkl"
 
     # import bioviz
     # b = bioviz.Viz(biorbd_model_path)

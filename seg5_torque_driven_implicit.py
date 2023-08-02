@@ -604,7 +604,7 @@ def main():
     n_q = 7
     n_root = 3
 
-    save_path = f"results/{biorbd_model_path[8:-7]}_torque_driven_1phase_socp_implicit.pkl"
+    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_socp_implicit.pkl"
 
     # import bioviz
     # b = bioviz.Viz(biorbd_model_path)
