@@ -366,49 +366,42 @@ def prepare_socp(
     bio_model = BiorbdModel(biorbd_model_path)
 
     n_q = bio_model.nb_q
-    n_qdot = bio_model.nb_qdot
     n_root = bio_model.nb_root
     nu = n_q - n_root
-    n_trans = 2  # 2D model
 
     variable_mappings = BiMappingList()
     variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2, 3], to_first=[3, 4, 5, 6])
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=1e3/2,
-    #                         quadratic=True, phase=0)  # Do I really need this one? (expected_feedback_effort does it)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_VELOCITY, node=Node.END, weight=-10000, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ? ### was not there before
-    # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.1, min_bound=0.1, max_bound=0.3, phase=0)
-    objective_functions.add(expected_feedback_effort,
-                            custom_type=ObjectiveFcn.Lagrange,
-                            node=Node.ALL_SHOOTING,
-                            weight=1e3 / 2,
-                            quadratic=True,
-                            wS_magnitude=wS_magnitude,
-                            phase=0)
+    objective_functions.add(reach_standing_position_consistantly,
+                    custom_type=ObjectiveFcn.Mayer,
+                    node=Node.PENULTIMATE,
+                    weight=1e3,
+                    phase=0,
+                    quadratic=True)# constrain only the CoM in Y (don't give a **** about CoM height)
+    # objective_functions.add(expected_feedback_effort,
+    #                         custom_type=ObjectiveFcn.Lagrange,
+    #                         node=Node.ALL_SHOOTING,
+    #                         weight=10,
+    #                         quadratic=True,
+    #                         wS_magnitude=wS_magnitude,
+    #                         phase=0)
 
     # Constraints
     constraints = ConstraintList()
     constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING)
     # constraints.add(CoM_over_ankle, node=Node.END, phase=0)  ### was there before
-    # constraints.add(
-    #     ConstraintFcn.TRACK_CONTACT_FORCES,
-    #     min_bound=5,
-    #     max_bound=np.inf,
-    #     node=Node.ALL_SHOOTING,
-    #     contact_index=0,
-    #     phase=0
-    # )
-    constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.5,
+    constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.1,
                     max_bound=np.inf, phase=0)
-    constraints.add(reach_standing_position_consistantly,
-                              node=Node.PENULTIMATE,
-                              min_bound=np.array([-cas.inf, -cas.inf]),
-                              max_bound=np.array([0.004**2, 0.05**2]))  # constrain only the CoM in Y (don't give a **** about CoM height)
+    # constraints.add(reach_standing_position_consistantly,
+    #                           node=Node.PENULTIMATE,
+    #                           min_bound=np.array([-cas.inf, -cas.inf]),
+    #                           max_bound=np.array([0.004**2, 0.05**2]))  # constrain only the CoM in Y (don't give a **** about CoM height)
 
     multinode_constraints = MultinodeConstraintList()
     for i in range(n_shooting-1):
@@ -445,28 +438,20 @@ def prepare_socp(
     x_bounds["qdot"].max[:, 0] = 0
 
     u_bounds = BoundsList()
-    tau_min = np.ones((nu, 3)) * -1000
-    tau_max = np.ones((nu, 3)) * 1000
-    tau_min[:, 0] = 0
-    tau_max[:, 0] = 0
+    tau_min = np.ones((nu, 3)) * -500
+    tau_max = np.ones((nu, 3)) * 500
+    # tau_min[:, 0] = 0
+    # tau_max[:, 0] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, phase=0)
 
     # Initial guesses
-    # q_init = np.zeros((n_q, n_shooting + 1))
-    # q_init[2, :-1] = np.linspace(-1.0471, 0, n_shooting)
-    # q_init[2, -1] = 0
-    # q_init[3, :-1] = np.linspace(1.4861, 0, n_shooting)
-    # q_init[3, -1] = 0
     q_init = q_deterministic
-
-    # qdot_init = np.ones((n_qdot, n_shooting + 1))
     qdot_init = qdot_deterministic
 
     x_init = InitialGuessList()
     x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
     x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    # controls_init = np.ones((n_q-n_root, n_shooting))
     controls_init = tau_deterministic[:, :-1]
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
@@ -635,7 +620,7 @@ def main():
 
     # --- Prepare the ocp --- #
     dt = 0.01
-    final_time = 0.3
+    final_time = 0.5
     n_shooting = int(final_time/dt) + 1  # There is no U on the last node (I do not hack it here)
     final_time += dt
 
