@@ -97,21 +97,19 @@ def prepare_ocp(
     n_q = bio_model.nb_q
     n_qdot = bio_model.nb_qdot
     n_tau = bio_model.nb_tau
-    n_states = n_q + n_qdot
     n_root = bio_model.nb_root
-    n_trans = 2  # 2D model
 
     variable_mappings = BiMappingList()
     variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2, 3], to_first=[3, 4, 5, 6])
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=1e3/2,
-    #                         quadratic=True, phase=0)  # Do I really need this one? (expected_feedback_effort does it)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_VELOCITY, node=Node.END, weight=-10000, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
+    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
+    #                         quadratic=True, phase=0)
     # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=1, min_bound=0.1, max_bound=0.3, phase=0)
 
     # Constraints
@@ -126,7 +124,7 @@ def prepare_ocp(
         min_bound=0.1,
         max_bound=np.inf,
         node=Node.ALL_SHOOTING,
-        contact_index=0,
+        contact_index=1,
         phase=0
     )
 
@@ -150,6 +148,16 @@ def prepare_ocp(
         0.6999990764981876,
     ])  # Initial position approx from Anais bioviz
 
+    pose_at_last_node = np.array([
+        -0.1136,
+        0.2089,
+        0.0545,
+        2.931,
+        0.0932,
+        -0.0433,
+        -0.7
+    ])
+
     x_bounds = BoundsList()
     x_bounds["q"] = bio_model.bounds_from_ranges("q")
     x_bounds["q"].min[:, 0] = pose_at_first_node - 0.05
@@ -159,15 +167,12 @@ def prepare_ocp(
     x_bounds["qdot"].max[:, 0] = 0
 
     u_bounds = BoundsList()
-    u_bounds.add("tau", min_bound=[-1000] * (n_tau-n_root), max_bound=[1000] * (n_tau-n_root), phase=0)
+    u_bounds.add("tau", min_bound=[-500] * (n_tau-n_root), max_bound=[500] * (n_tau-n_root), phase=0)
 
     # Initial guesses
     q_init = np.zeros((n_q, n_shooting + 1))
-    # q_init[2, :-1] = np.linspace(-1.0471, 0, n_shooting)
-    # q_init[2, -1] = 0
-    # q_init[3, :-1] = np.linspace(1.4861, 0, n_shooting)
-    # q_init[3, -1] = 0
-
+    for dof in range(n_q):
+        q_init[dof, :] = np.linspace(pose_at_first_node[dof], pose_at_last_node[dof], n_shooting + 1)
     qdot_init = np.ones((n_qdot, n_shooting + 1))
 
     x_init = InitialGuessList()
@@ -191,7 +196,6 @@ def prepare_ocp(
         constraints=constraints,
         multinode_constraints=multinode_constraints,
         variable_mappings=variable_mappings,
-        # ode_solver=OdeSolver.RK8(n_integration_steps=10),
         ode_solver=None,
         skip_continuity=True,
         n_threads=1,
@@ -209,7 +213,7 @@ def main():
 
     # --- Prepare the ocp --- #
     dt = 0.01
-    final_time = 0.3
+    final_time = 0.5
     n_shooting = int(final_time/dt) + 1
     final_time += dt
 
@@ -245,77 +249,6 @@ def main():
     b.load_movement(q_sol[:, :-1])
     b.exec()
 
-    # --- Plot the results --- #
-    embed()
-    states = socp.nlp[0].states.cx_start
-    controls = socp.nlp[0].controls.cx_start
-    parameters = socp.nlp[0].parameters.cx_start
-    stochastic_variables = socp.nlp[0].stochastic_variables.cx_start
-    nlp = socp.nlp[0]
-    n_q = 5
-    n_root = 3
-    n_tau = n_q - n_root
-    wM_sym = cas.MX.sym('wM', n_tau, 1)
-    wS_sym = cas.MX.sym('wS', n_tau*2, 1)
-    out = stochastic_forward_dynamics(states, controls, parameters, stochastic_variables, nlp, wM_sym, wS_sym, with_gains=True)
-    dyn_fun = cas.Function("dyn_fun", [states, controls, parameters, stochastic_variables, wM_sym, wS_sym], [out.dxdt])
-
-    fig, axs = plt.subplots(3, 2)
-    n_simulations = 30
-    q_simulated = np.zeros((n_simulations, n_q, n_shooting + 1))
-    qdot_simulated = np.zeros((n_simulations, n_q, n_shooting + 1))
-    for i_simulation in range(n_simulations):
-        wM = np.random.normal(0, wM_std, (2, n_shooting + 1))
-        wPq = np.random.normal(0, wPq_std, (2, n_shooting + 1))
-        wPqdot = np.random.normal(0, wPqdot_std, (2, n_shooting + 1))
-        q_simulated[i_simulation, :, 0] = q_sol[:, 0]
-        qdot_simulated[i_simulation, :, 0] = qdot_sol[:, 0]
-        mus_activation_simulated[i_simulation, :, 0] = activations_sol[:, 0]
-        for i_node in range(n_shooting):
-            x_prev = cas.vertcat(q_simulated[i_simulation, :, i_node], qdot_simulated[i_simulation, :, i_node], mus_activation_simulated[i_simulation, :, i_node])
-            hand_pos_simulated[i_simulation, :, i_node] = np.reshape(hand_pos_fcn(x_prev[:2])[:2], (2,))
-            hand_vel_simulated[i_simulation, :, i_node] = np.reshape(hand_vel_fcn(x_prev[:2], x_prev[2:4])[:2], (2,))
-            u = excitations_sol[:, i_node]
-            s = stochastic_variables_sol[:, i_node]
-            k1 = dyn_fun(x_prev, u, [], s, wM[:, i_node], wPq[:, i_node], wPqdot[:, i_node])
-            x_next = x_prev + dt * dyn_fun(x_prev + dt / 2 * k1, u, [], s, wM[:, i_node], wPq[:, i_node], wPqdot[:, i_node])
-            q_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[:2], (2, ))
-            qdot_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[2:4], (2, ))
-            mus_activation_simulated[i_simulation, :, i_node + 1] = np.reshape(x_next[4:], (6, ))
-        hand_pos_simulated[i_simulation, :, i_node + 1] = np.reshape(hand_pos_fcn(x_next[:2])[:2], (2,))
-        hand_vel_simulated[i_simulation, :, i_node + 1] = np.reshape(hand_vel_fcn(x_next[:2], x_next[2:4])[:2], (2, ))
-        axs[0, 0].plot(hand_pos_simulated[i_simulation, 0, :], hand_pos_simulated[i_simulation, 1, :], color="tab:red")
-        axs[1, 0].plot(np.linspace(0, final_time, n_shooting + 1), q_simulated[i_simulation, 0, :], color="k")
-        axs[2, 0].plot(np.linspace(0, final_time, n_shooting + 1), q_simulated[i_simulation, 1, :], color="k")
-        axs[0, 1].plot(hand_vel_simulated[i_simulation, 0, :], hand_vel_simulated[i_simulation, 1, :], color="tab:red")
-        axs[1, 1].plot(np.linspace(0, final_time, n_shooting + 1), qdot_simulated[i_simulation, 0, :], color="k")
-        axs[2, 1].plot(np.linspace(0, final_time, n_shooting + 1), qdot_simulated[i_simulation, 1, :], color="k")
-    hand_pos_without_noise = np.zeros((2, n_shooting + 1))
-    for i_node in range(n_shooting + 1):
-        hand_pos_without_noise[:, i_node] = np.reshape(hand_pos_fcn(q_sol[:, i_node])[:2], (2,))
-    axs[0, 0].plot(hand_pos_without_noise[0, :], hand_pos_without_noise[1, :], color="k")
-    axs[0, 0].plot(ee_initial_position[0], ee_initial_position[1], color="tab:green", marker="o")
-    axs[0, 0].plot(ee_final_position[0], ee_final_position[1], color="tab:red", marker="o")
-    axs[0, 0].set_xlabel("X [m]")
-    axs[0, 0].set_ylabel("Y [m]")
-    axs[0, 0].set_title("Hand position simulated")
-    axs[1, 0].set_xlabel("Time [s]")
-    axs[1, 0].set_ylabel("Shoulder angle [rad]")
-    axs[2, 0].set_xlabel("Time [s]")
-    axs[2, 0].set_ylabel("Elbow angle [rad]")
-    axs[0, 1].set_xlabel("X velocity [m/s]")
-    axs[0, 1].set_ylabel("Y velocity [m/s]")
-    axs[0, 1].set_title("Hand velocity simulated")
-    axs[1, 1].set_xlabel("Time [s]")
-    axs[1, 1].set_ylabel("Shoulder velocity [rad/s]")
-    axs[2, 1].set_xlabel("Time [s]")
-    axs[2, 1].set_ylabel("Elbow velocity [rad/s]")
-    axs[0, 0].axis("equal")
-    plt.tight_layout()
-    plt.savefig("simulated_results.png", dpi=300)
-    plt.show()
-
 if __name__ == "__main__":
     main()
 
-# TODO: Check expected feedback effort
