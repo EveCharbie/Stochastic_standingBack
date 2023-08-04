@@ -79,8 +79,6 @@ def stochastic_forward_dynamics(
 
         tau_fb += get_excitation_with_feedback(K_matrix, ee, ref, wS) + wM
 
-    dq_computed = qdot
-
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
         friction[i, i] = 0.05
@@ -88,7 +86,7 @@ def stochastic_forward_dynamics(
     tau_full = cas.vertcat(cas.MX.zeros(n_root), tau_fb)
     dqdot_computed = nlp.model.constrained_forward_dynamics(q, qdot, tau_full + friction @ qdot)
 
-    return DynamicsEvaluation(dxdt=cas.vertcat(dq_computed, dqdot_computed), defects=None)
+    return DynamicsEvaluation(dxdt=cas.vertcat(qdot, dqdot_computed), defects=None)
 
 
 def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp: NonLinearProgram, wM, wS, cholesky_flag):
@@ -378,12 +376,12 @@ def prepare_socp(
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ? ### was not there before
-    objective_functions.add(reach_standing_position_consistantly,
-                    custom_type=ObjectiveFcn.Mayer,
-                    node=Node.PENULTIMATE,
-                    weight=1e3,
-                    phase=0,
-                    quadratic=True)# constrain only the CoM in Y (don't give a **** about CoM height)
+    # objective_functions.add(reach_standing_position_consistantly,  ### was there before
+    #                 custom_type=ObjectiveFcn.Mayer,
+    #                 node=Node.PENULTIMATE,
+    #                 weight=1e3,
+    #                 phase=0,
+    #                 quadratic=True)# constrain only the CoM in Y (don't give a **** about CoM height)
     # objective_functions.add(expected_feedback_effort,
     #                         custom_type=ObjectiveFcn.Lagrange,
     #                         node=Node.ALL_SHOOTING,
@@ -394,10 +392,10 @@ def prepare_socp(
 
     # Constraints
     constraints = ConstraintList()
-    constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING)
+    # constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING) ### was there before
     # constraints.add(CoM_over_ankle, node=Node.END, phase=0)  ### was there before
-    constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.1,
-                    max_bound=np.inf, phase=0)
+    # constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.1,
+    #                 max_bound=np.inf, phase=0)
     # constraints.add(reach_standing_position_consistantly,
     #                           node=Node.PENULTIMATE,
     #                           min_bound=np.array([-cas.inf, -cas.inf]),
@@ -588,7 +586,7 @@ def prepare_socp(
         constraints=constraints,
         multinode_constraints=multinode_constraints,
         variable_mappings=variable_mappings,
-        ode_solver=None,
+        ode_solver=OdeSolver.RK4(n_integration_steps=5),
         skip_continuity=True,
         n_threads=1,
         assume_phase_dynamics=False,
@@ -611,7 +609,7 @@ def main():
     # b.exec()
 
     # Load the deterministic solution to warm-start
-    path_to_results = "/home/charbie/Documents/Programmation/Stochastic_standingBack/results/odel2D_7Dof_1C_3M_torque_driven_1phase_ocp.pkl"
+    path_to_results = "/home/charbie/Documents/Programmation/Stochastic_standingBack/results/Model2D_7Dof_1C_3M_torque_driven_1phase_ocp.pkl"
     with open(path_to_results, 'rb') as file:
         data = pickle.load(file)
         q_deterministic = data['q_sol']
@@ -641,7 +639,7 @@ def main():
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
-    solver.set_maximum_iterations(1000) # 1000
+    solver.set_maximum_iterations(0) # 1000
     solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
     solver._nlp_scaling_method = "none"
 
