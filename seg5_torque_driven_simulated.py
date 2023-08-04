@@ -77,17 +77,17 @@ def casadi_std_squared(elements: cas.MX) -> cas.MX:
     mean = casadi_mean(elements)
     return cas.sum1((elements - mean) ** 2) / elements.shape[0]
 
-def try_to_reach_standing_position_consistantly(controllers: list[PenaltyController], motor_noise_magnitude: cas.DM) -> cas.MX:
+def try_to_reach_standing_position_consistantly(controllers: list[PenaltyController], motor_noise_magnitude: cas.DM, nb_random: int) -> cas.MX:
 
     nu = controllers[0].controls.shape
     nq = controllers[0].states['q'].shape
 
-    CoM_positions = cas.MX.zeros(30)
-    CoM_velocities = cas.MX.zeros(30)
-    pelvis_rots = cas.MX.zeros(30)
-    pelvis_velocities = cas.MX.zeros(30)
-    noise = np.random.normal(loc=0, scale=motor_noise_magnitude, size=(nu, 30, controllers[0].ns))
-    for j in range(30):
+    CoM_positions = cas.MX.zeros(nb_random)
+    CoM_velocities = cas.MX.zeros(nb_random)
+    pelvis_rots = cas.MX.zeros(nb_random)
+    pelvis_velocities = cas.MX.zeros(nb_random)
+    noise = np.random.normal(loc=0, scale=motor_noise_magnitude, size=(nu, nb_random, controllers[0].ns))
+    for j in range(nb_random):
         states_integrated = controllers[0].states.cx_start
         for i, ctrl in enumerate(controllers[:-1]):
             controls = ctrl.controls.cx_start + noise[:, j, i]
@@ -109,6 +109,9 @@ def prepare_ocp(
     biorbd_model_path: str,
     final_time: float,
     n_shooting: int,
+    motor_noise_magnitude: float,
+    weight: int,
+    nb_random: int
 ) -> OptimalControlProgram:
     """
     The initialization of an ocp
@@ -167,8 +170,9 @@ def prepare_ocp(
     multinode_objectives.add(try_to_reach_standing_position_consistantly,
                             nodes_phase=[0 for _ in range(n_shooting)],
                             nodes=[i for i in range(n_shooting)],
-                            motor_noise_magnitude=0.25,
-                            phase=0, weight=10, quadratic=True)  # objective only on the CoM and CoMdot in Y (don't give a **** about CoM height)
+                            motor_noise_magnitude=motor_noise_magnitude,
+                            nb_random=nb_random,
+                            phase=0, weight=weight, quadratic=True)  # objective only on the CoM and CoMdot in Y (don't give a **** about CoM height)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -242,7 +246,11 @@ def prepare_ocp(
 def main():
 
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
-    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated.pkl"
+    motor_noise_magnitude = 5
+    weight = 10
+    nb_random = 100
+
+    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated_noise{motor_noise_magnitude}_weight{weight}_random{nb_random}.pkl"
 
     # import bioviz
     # b = bioviz.Viz(biorbd_model_path)
@@ -255,7 +263,7 @@ def main():
     final_time += dt
 
     # Solver parameters
-    solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+    solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
     # # solver.set_linear_solver('mumps')
     solver.set_linear_solver('ma57')
     solver.set_tol(1e-3)
@@ -265,8 +273,12 @@ def main():
     solver.set_hessian_approximation('limited-memory')
 
     ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
-                        final_time=final_time,
-                        n_shooting=n_shooting)
+                      final_time=final_time,
+                      n_shooting=n_shooting,
+                      motor_noise_magnitude=motor_noise_magnitude,
+                      weight=weight,
+                      nb_random=nb_random
+                      )
 
     sol_ocp = ocp.solve(solver)
 
