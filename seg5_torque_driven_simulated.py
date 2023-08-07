@@ -245,10 +245,11 @@ def prepare_ocp(
 
 def main():
 
+	# TODO: Try to add a local (MHE style) objective which would prevent divergence at each node with a lighter weight.
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
-    motor_noise_magnitude = 5
+    motor_noise_magnitude = 2.5
     weight = 10
-    nb_random = 100
+    nb_random = 30
 
     save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated_noise{motor_noise_magnitude}_weight{weight}_random{nb_random}.pkl"
 

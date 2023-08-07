@@ -38,6 +38,7 @@ from bioptim import (
     DynamicsFcn,
     Axis,
     OdeSolver,
+    ControlType,
 )
 
 def get_CoM(model, q):
@@ -56,19 +57,6 @@ def Custom_track_markers(controller: PenaltyController) -> cas.MX:
     markers = controller.model.markers(q)
     markers_pos = markers[0]
     return markers_pos[0] ** 2 + markers_pos[1] ** 2 + markers_pos[2] ** 2
-#
-# def leuven_trapezoidal_deterministic(controllers: list[PenaltyController]) -> cas.MX:
-#
-#     dt = controllers[0].tf / controllers[0].ns
-#
-#     dX_i = controllers[0].dynamics(controllers[0].states.cx_start, controllers[0].controls.cx_start,
-#                                         controllers[0].parameters.cx_start, controllers[0].stochastic_variables.cx_start)
-#     dX_i_plus = controllers[1].dynamics(controllers[1].states.cx_start, controllers[1].controls.cx_start,
-#                                         controllers[1].parameters.cx_start, controllers[1].stochastic_variables.cx_start)
-#
-#     out = controllers[1].states.cx_start - (controllers[0].states.cx_start + (dX_i + dX_i_plus) / 2 * dt)
-#
-#     return out * 1e3
 
 def prepare_ocp(
     biorbd_model_path: str,
@@ -128,12 +116,6 @@ def prepare_ocp(
         phase=0
     )
 
-    # multinode_constraints = MultinodeConstraintList()
-    # for i in range(n_shooting - 1):
-    #     multinode_constraints.add(leuven_trapezoidal_deterministic,
-    #                               nodes_phase=[0, 0],
-    #                               nodes=[i, i + 1])
-
     # Dynamics
     dynamics = DynamicsList()
     dynamics.add(DynamicsFcn.TORQUE_DRIVEN, with_contact=True, phase=0)
@@ -179,7 +161,7 @@ def prepare_ocp(
     x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
     x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    controls_init = np.ones((n_q-n_root, n_shooting))
+    controls_init = np.ones((n_q-n_root, n_shooting+1))
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
@@ -194,10 +176,9 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        # multinode_constraints=multinode_constraints,
         variable_mappings=variable_mappings,
-        # ode_solver=None,
-        # skip_continuity=True,
+        ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
+        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         assume_phase_dynamics=False,
     )
@@ -214,8 +195,7 @@ def main():
     # --- Prepare the ocp --- #
     dt = 0.01
     final_time = 0.5
-    n_shooting = int(final_time/dt) + 1
-    final_time += dt
+    n_shooting = int(final_time/dt)
 
     # Solver parameters
     solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))

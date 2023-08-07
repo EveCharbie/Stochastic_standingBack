@@ -44,8 +44,8 @@ from bioptim import (
     VariableScalingList,
 )
 
-def get_excitation_with_feedback(K, EE, ref, wS):
-    return K @ ((EE - ref) + wS)
+def get_excitation_with_feedback(K, EE, ref, sensory_noise):
+    return K @ ((EE - ref) + sensory_noise)
 
 def stochastic_forward_dynamics(
     states: cas.MX | cas.SX,
@@ -53,8 +53,8 @@ def stochastic_forward_dynamics(
     parameters: cas.MX | cas.SX,
     stochastic_variables: cas.MX | cas.SX,
     nlp: NonLinearProgram,
-    wM,
-    wS,
+    motor_noise,
+    sensory_noise,
     with_gains,
 ) -> DynamicsEvaluation:
 
@@ -77,7 +77,7 @@ def stochastic_forward_dynamics(
 
         ee = cas.vertcat(q[n_root:], qdot[n_root:])
 
-        tau_fb += get_excitation_with_feedback(K_matrix, ee, ref, wS) + wM
+        tau_fb += get_excitation_with_feedback(K_matrix, ee, ref, sensory_noise) + motor_noise
 
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
@@ -89,7 +89,7 @@ def stochastic_forward_dynamics(
     return DynamicsEvaluation(dxdt=cas.vertcat(qdot, dqdot_computed), defects=None)
 
 
-def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp: NonLinearProgram, wM, wS, cholesky_flag):
+def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp: NonLinearProgram, motor_noise, sensory_noise, with_cholesky):
 
     n_q = ocp.nlp[0].model.nb_q
     n_root = ocp.nlp[0].model.nb_root
@@ -104,7 +104,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=nu, n_feedbacks=2*nu)  # Actuated states + vestibular eventually
     ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=2*nu)  # Hip position & velocity + vestibular eventually
     ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*nu)
-    if cholesky_flag:
+    if with_cholesky:
         ConfigureProblem.configure_stochastic_cholesky_cov(ocp, nlp, n_noised_states=2*nu)
     else:
         ConfigureProblem.configure_stochastic_cov_implicit(ocp, nlp, n_noised_states=2*nu)
@@ -112,7 +112,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_stochastic_c(ocp, nlp, n_feedbacks=2*nu, n_noise=3*nu)
     ConfigureProblem.configure_dynamics_function(ocp, nlp,
                                                  dyn_func=nlp.dynamics_type.dynamic_function,
-                                                 wM=wM, wS=wS, with_gains=False)
+                                                 motor_noise=motor_noise, sensory_noise=sensory_noise, with_gains=False)
 
 
 def states_equals_ref_kinematics(controller: PenaltyController) -> cas.MX:
@@ -202,7 +202,7 @@ def get_CoMdot(model, q, qdot):
 def get_CoM_and_CoMdot(model, q, qdot):
     return cas.vertcat(get_CoM(model, q), get_CoMdot(model, q, qdot))
 
-def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM) -> cas.MX:
+def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnitude: cas.DM) -> cas.MX:
     """
     ...
     """
@@ -214,7 +214,7 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
 
 
     stochastic_sym = cas.MX.sym("stochastic_sym", n_stochastic, 1)
-    sensory_noise_matrix = wS_magnitude * cas.MX_eye(wS_magnitude.shape[0])
+    sensory_noise_matrix = sensory_noise_magnitude * cas.MX_eye(sensory_noise_magnitude.shape[0])
 
     stochastic_sym_dict = {
         key: stochastic_sym[controller.stochastic_variables[key].index]
@@ -257,7 +257,7 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     # pelvis_pos_velo = cas.vertcat(controllers[0].states["q"].cx_start[2], controllers[0].states["qot"].cx_start[2])  # Pelvis pos + velo should be used as a feedback for all the joints eventually
     states_pos_velo = cas.vertcat(q_joints, qdot_joints)
 
-    T_fb = K_matrix @ ((states_pos_velo - states_ref) + wS_magnitude)
+    T_fb = K_matrix @ ((states_pos_velo - states_ref) + sensory_noise_magnitude)
     jac_T_fb_x = cas.jacobian(T_fb, cas.vertcat(q_joints, qdot_joints))
     trace_jac_p_jack = cas.trace(jac_T_fb_x @ cov_matrix @ jac_T_fb_x.T)
     expectedEffort_fb_mx = trace_jac_p_jack + trace_k_sensor_k
@@ -273,10 +273,10 @@ def expected_feedback_effort(controller: PenaltyController, wS_magnitude: cas.DM
     return out
 
 
-def zero_acceleration(controller: PenaltyController, wM: np.ndarray, wS: np.ndarray) -> cas.MX:
+def zero_acceleration(controller: PenaltyController, motor_noise: np.ndarray, sensory_noise: np.ndarray) -> cas.MX:
     dx = stochastic_forward_dynamics(controller.states.cx_start, controller.controls.cx_start,
                                      controller.parameters.cx_start, controller.stochastic_variables.cx_start,
-                                     controller.get_nlp, wM, wS, with_gains=False)
+                                     controller.get_nlp, motor_noise, sensory_noise, with_gains=False)
     return dx.dxdt[controller.states_dot.index("qddot")]
 
 def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
@@ -292,16 +292,16 @@ def leuven_trapezoidal(controllers: list[PenaltyController]) -> cas.MX:
     n_q = controllers[0].model.nb_q
     n_root = controllers[0].model.nb_root
     n_joints = n_q - n_root
-    wM = np.zeros((n_joints, 1))
-    wS = np.zeros((2*(n_q-n_root), 1))
+    motor_noise = np.zeros((n_joints, 1))
+    sensory_noise = np.zeros((2*(n_q-n_root), 1))
     dt = controllers[0].tf / controllers[0].ns
 
     dX_i = stochastic_forward_dynamics(controllers[0].states.cx_start, controllers[0].controls.cx_start,
                                         controllers[0].parameters.cx_start, controllers[0].stochastic_variables.cx_start,
-                                        controllers[0].get_nlp, wM, wS, with_gains=False).dxdt
+                                        controllers[0].get_nlp, motor_noise, sensory_noise, with_gains=False).dxdt
     dX_i_plus = stochastic_forward_dynamics(controllers[1].states.cx_start, controllers[1].controls.cx_start,
                                         controllers[1].parameters.cx_start, controllers[1].stochastic_variables.cx_start,
-                                        controllers[1].get_nlp, wM, wS, with_gains=False).dxdt
+                                        controllers[1].get_nlp, motor_noise, sensory_noise, with_gains=False).dxdt
 
     out = controllers[1].states.cx_start - (controllers[0].states.cx_start + (dX_i + dX_i_plus) / 2 * dt)
 
@@ -347,19 +347,19 @@ def prepare_socp(
     biorbd_model_path: str,
     final_time: float,
     n_shooting: int,
-    wM_magnitude: cas.DM,
+    motor_noise_magnitude: cas.DM,
     wPq_magnitude: cas.DM,
     wPqdot_magnitude: cas.DM,
     q_deterministic: np.ndarray,
     qdot_deterministic: np.ndarray,
     tau_deterministic: np.ndarray,
-    cholesky_flag: bool = False,
+    with_cholesky: bool = False,
 ) -> StochasticOptimalControlProgram:
     """
     ...
     """
 
-    wS_magnitude = cas.vertcat(wPq_magnitude, wPqdot_magnitude)
+    sensory_noise_magnitude = cas.vertcat(wPq_magnitude, wPqdot_magnitude)
 
     bio_model = BiorbdModel(biorbd_model_path)
 
@@ -387,7 +387,7 @@ def prepare_socp(
     #                         node=Node.ALL_SHOOTING,
     #                         weight=10,
     #                         quadratic=True,
-    #                         wS_magnitude=wS_magnitude,
+    #                         sensory_noise_magnitude=sensory_noise_magnitude,
     #                         phase=0)
 
     # Constraints
@@ -401,20 +401,14 @@ def prepare_socp(
     #                           min_bound=np.array([-cas.inf, -cas.inf]),
     #                           max_bound=np.array([0.004**2, 0.05**2]))  # constrain only the CoM in Y (don't give a **** about CoM height)
 
-    multinode_constraints = MultinodeConstraintList()
-    for i in range(n_shooting-1):
-        multinode_constraints.add(leuven_trapezoidal,
-                                  nodes_phase=[0, 0],
-                                  nodes=[i, i+1])
-
     # Dynamics
     dynamics = DynamicsList()
     dynamics.add(configure_stochastic_optimal_control_problem,
-                 dynamic_function=lambda states, controls, parameters, stochastic_variables, nlp, wM, wS,
+                 dynamic_function=lambda states, controls, parameters, stochastic_variables, nlp, motor_noise, sensory_noise,
                                          with_gains: stochastic_forward_dynamics(states, controls, parameters,
-                                                                             stochastic_variables, nlp, wM, wS,
+                                                                             stochastic_variables, nlp, motor_noise, sensory_noise,
                                                                              with_gains=with_gains),
-                 wM=np.zeros((2, 1)), wS=np.zeros((4, 1)), cholesky_flag=cholesky_flag, expand=False)
+                 motor_noise=np.zeros((2, 1)), sensory_noise=np.zeros((4, 1)), with_cholesky=with_cholesky, expand=False)
 
 
     pose_at_first_node = np.array([
@@ -450,7 +444,7 @@ def prepare_socp(
     x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
     x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    controls_init = tau_deterministic[:, :-1]
+    controls_init = tau_deterministic
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
@@ -459,16 +453,18 @@ def prepare_socp(
     n_m = (2*nu)**2  # M(8x8)
     n_a = (2*nu)**2  # A(8x8)
     n_c = (2*nu) * (3*nu)  # C(8x12)
-    n_cov = (2 * nu) ** 2  # Cov(8x8)
     n_stochastic = n_k + n_ref + n_m + n_a + n_c
-    if not cholesky_flag:
+    if not with_cholesky:
+        n_cov = (2 * nu) ** 2  # Cov(8x8)
         n_stochastic += n_cov  # + cov(4, 4)
+        n_cholesky_cov = 0
     else:
         n_cholesky_cov = 0
         for i in range(nu):
             for j in range(i + 1):
                 n_cholesky_cov += 1
         n_stochastic += n_cholesky_cov  # + cholesky_cov(10)
+        n_cov = 0
 
     s_init = InitialGuessList()
     s_bounds = BoundsList()
@@ -517,7 +513,7 @@ def prepare_socp(
     s_init.add("c", initial_guess=c_init, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("c", min_bound=c_min, max_bound=c_max, interpolation=InterpolationType.EACH_FRAME)
 
-    if not cholesky_flag:
+    if with_cholesky:
         cov_init = np.ones((n_cholesky_cov, n_shooting + 1)) * 0.01
         cov_min = np.ones((n_cholesky_cov, n_shooting + 1)) * -500
         cov_max = np.ones((n_cholesky_cov, n_shooting + 1)) * 500
@@ -564,7 +560,7 @@ def prepare_socp(
     s_scaling["m"] = [1] * n_m
     s_scaling["a"] = [10] * n_a
     s_scaling["c"] = [1] * n_c
-    if not cholesky_flag:
+    if with_cholesky:
         s_scaling["cholesky_cov"] = [0.01] * n_cholesky_cov # should be 0.01 for q, and 0.05 for qdot
     else:
         s_scaling["cov"] = [0.01] * n_cov
@@ -586,17 +582,17 @@ def prepare_socp(
         constraints=constraints,
         multinode_constraints=multinode_constraints,
         variable_mappings=variable_mappings,
-        ode_solver=OdeSolver.RK4(n_integration_steps=5),
-        skip_continuity=True,
+        ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
+        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         assume_phase_dynamics=False,
-        problem_type=SocpType.SOCP_IMPLICIT(wM_magnitude, wS_magnitude),
+        problem_type=SocpType.SOCP_IMPLICIT(motor_noise_magnitude, sensory_noise_magnitude),
     )
 
 def main():
 
     RUN_OPTIM_FLAG = True  # False
-    cholesky_flag = True
+    with_cholesky = True
 
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
     n_q = 7
@@ -619,16 +615,15 @@ def main():
     # --- Prepare the ocp --- #
     dt = 0.01
     final_time = 0.5
-    n_shooting = int(final_time/dt) + 1  # There is no U on the last node (I do not hack it here)
-    final_time += dt
+    n_shooting = int(final_time/dt)
 
     # TODO: How do we choose the values?
-    wM_std = 0.05
+    motor_noise_std = 0.05
     wPq_std = 3e-4
     wPqdot_std = 0.0024
 
     # TODO: Add vestibular feedback
-    wM_magnitude = cas.DM(np.array([wM_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
+    motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
     wPq_magnitude = cas.DM(np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
     wPqdot_magnitude = cas.DM(np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
 
@@ -646,13 +641,13 @@ def main():
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
                         final_time=final_time,
                         n_shooting=n_shooting,
-                        wM_magnitude=wM_magnitude,
+                        motor_noise_magnitude=motor_noise_magnitude,
                         wPq_magnitude=wPq_magnitude,
                         wPqdot_magnitude=wPqdot_magnitude,
                         q_deterministic=q_deterministic,
                         qdot_deterministic=qdot_deterministic,
                         tau_deterministic=tau_deterministic,
-                        cholesky_flag=cholesky_flag)
+                        with_cholesky=with_cholesky)
     # socp.add_plot_penalty(CostType.ALL)
     # socp.check_conditioning()
 
