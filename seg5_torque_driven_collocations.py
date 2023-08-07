@@ -421,12 +421,12 @@ def prepare_socp(
     qdot_init = qdot_deterministic
 
     x_init = InitialGuessList()
-    x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
-    x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
+    x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.ALL_POINTS, phase=0)
+    x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.ALL_POINTS, phase=0)
 
-    controls_init = tau_deterministic[:, :-1]
+    controls_init = tau_deterministic
     u_init = InitialGuessList()
-    u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
+    u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.ALL_POINTS, phase=0)
 
     n_k = nu * (nu + nu)  # K(4x8)
     n_ref = nu + nu  # ref(8x1)

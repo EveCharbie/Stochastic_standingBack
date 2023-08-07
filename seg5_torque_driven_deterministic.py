@@ -96,9 +96,9 @@ def prepare_ocp(
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
-    #                         quadratic=True, phase=0)
-    # objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=1, min_bound=0.1, max_bound=0.3, phase=0)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
+                            quadratic=True, phase=0)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=-1, min_bound=0.1, max_bound=0.3, phase=0)
 
     # Constraints
     constraints = ConstraintList()
