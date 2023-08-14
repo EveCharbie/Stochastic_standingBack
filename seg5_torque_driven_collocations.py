@@ -65,15 +65,16 @@ def stochastic_forward_dynamics(
 
     n_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
+    n_joints = n_q-n_root
 
     tau_fb = tau[n_root:]
     if with_gains:
         ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)
         k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
         K_matrix = cas.MX((n_q-n_root) * 2, n_q-n_root)
-        for s0 in range(2*(n_q-n_root)):
-            for s1 in range(n_q-n_root):
-                K_matrix[s0, s1] = k[s0*1 + s1]
+        for s0 in range(2*n_joints):
+            for s1 in range(n_joints):
+                K_matrix[s0, s1] = k[s0*n_joints + s1]
         K_matrix = K_matrix.T
 
         ee = cas.vertcat(q[n_root:], qdot[n_root:])
@@ -94,7 +95,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
 
     n_q = ocp.nlp[0].model.nb_q
     n_root = ocp.nlp[0].model.nb_root
-    nu = n_q - n_root
+    n_joints = n_q - n_root
 
     ConfigureProblem.configure_q(ocp, nlp, True, False, False)
     ConfigureProblem.configure_qdot(ocp, nlp, True, False, True)
@@ -102,15 +103,14 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     ConfigureProblem.configure_tau(ocp, nlp, False, True)
 
     # Stochastic variables
-    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=nu, n_feedbacks=2*nu)  # Actuated states + vestibular eventually
-    ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=2*nu)  # Hip position & velocity + vestibular eventually
-    ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*nu, n_constraints=3)
+    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=n_joints, n_feedbacks=2*n_joints)  # Actuated states + vestibular eventually
+    ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=2*n_joints)  # Hip position & velocity + vestibular eventually
+    ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*n_joints, n_collocation_points=4)
     if with_cholesky:
-        ConfigureProblem.configure_stochastic_cholesky_cov(ocp, nlp, n_noised_states=2*nu)
+        ConfigureProblem.configure_stochastic_cholesky_cov(ocp, nlp, n_noised_states=2*n_joints)
     else:
-        ConfigureProblem.configure_stochastic_cov_implicit(ocp, nlp, n_noised_states=2*nu)
+        ConfigureProblem.configure_stochastic_cov_implicit(ocp, nlp, n_noised_states=2*n_joints)
     ConfigureProblem.configure_dynamics_function(ocp, nlp,
-                                                 # dyn_func=nlp.dynamics_type.dynamic_function,
                                                  dyn_func=lambda states, controls, parameters, stochastic_variables,
                                                                  nlp, motor_noise,
                                                                  sensory_noise: nlp.dynamics_type.dynamic_function(
@@ -148,14 +148,12 @@ def reach_standing_position_consistantly(controller: PenaltyController) -> cas.M
     This is a multi-node constraint because the covariance matrix depends on all the precedent nodes, but it only
     applies at the END node.
     """
-    n_q = controller.model.nb_q
     n_root = controller.model.nb_root
     n_joints = controller.model.nb_q - n_root
     Q_root = cas.MX.sym("q_root", n_root)
     Q_joints = cas.MX.sym("q_joints", n_joints)
     Qdot_root = cas.MX.sym("qdot_root", n_root)
     Qdot_joints = cas.MX.sym("qdot_joints", n_joints)
-    n_states = n_q * 2
 
     if "cholesky_cov" in controller.stochastic_variables.keys():
         cov_sym = cas.MX.sym("cov", controller.stochastic_variables["cholesky_cov"].cx_start.shape[0])
@@ -221,7 +219,7 @@ def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnit
 
     n_q = controller.model.nb_q
     n_root = controller.model.nb_root
-    nu = n_q - n_root
+    n_joints = n_q - n_root
     n_stochastic = controller.stochastic_variables.shape
 
 
@@ -238,7 +236,7 @@ def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnit
     if "cholesky_cov" in stochastic_sym_dict.keys():
         l_cov_matrix = controller.stochastic_variables["cholesky_cov"].reshape_to_cholesky_matrix(
             stochastic_sym_dict,
-            2*nu,
+            2*n_joints,
             Node.START,
             "cholesky_cov",
         )
@@ -246,8 +244,8 @@ def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnit
     else:
         cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(
             stochastic_sym_dict,
-            2*nu,
-            2*nu,
+            2*n_joints,
+            2*n_joints,
             Node.START,
             "cov",
         )
@@ -255,14 +253,14 @@ def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnit
     states_ref = stochastic_sym_dict["ref"].cx_start
 
     k = stochastic_sym_dict["k"].cx_start
-    K_matrix = cas.MX(2*(n_q-n_root), n_q-n_root)
-    for s0 in range(2*(n_q-n_root)):
-        for s1 in range(n_q-n_root):
-            K_matrix[s0, s1] = k[s0 * (n_q-n_root) + s1]
+    K_matrix = cas.MX(2*n_joints, n_joints)
+    for s0 in range(2*n_joints):
+        for s1 in range(n_joints):
+            K_matrix[s0, s1] = k[s0 * n_joints + s1]
     K_matrix = K_matrix.T
 
-    q_joints = cas.MX.sym("q_joints", nu, 1)
-    qdot_joints = cas.MX.sym("qdot_joints", nu, 1)
+    q_joints = cas.MX.sym("q_joints", n_joints, 1)
+    qdot_joints = cas.MX.sym("qdot_joints", n_joints, 1)
 
     # Compute the expected effort
     trace_k_sensor_k = cas.trace(K_matrix @ sensory_noise_matrix @ K_matrix.T)
@@ -305,7 +303,7 @@ def custom_contact_force_constraint(controller: PenaltyController, contact_index
     # TODO: ask Pariterre/Ipuch why configure_contact does not work.
     """
 
-    n_q =controller.model.nb_q
+    n_q = controller.model.nb_q
     n_root = controller.model.nb_root
 
     q = controller.states["q"].cx_start
@@ -345,7 +343,7 @@ def prepare_socp(
 
     n_q = bio_model.nb_q
     n_root = bio_model.nb_root
-    nu = n_q - n_root
+    n_joints = n_q - n_root
 
     variable_mappings = BiMappingList()
     variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2, 3], to_first=[3, 4, 5, 6])
@@ -356,6 +354,10 @@ def prepare_socp(
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ? ### was not there before
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
+                            quadratic=True, phase=0)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=-1, min_bound=0.1, max_bound=0.3, phase=0)
+
     # objective_functions.add(reach_standing_position_consistantly,  ### was there before
     #                 custom_type=ObjectiveFcn.Mayer,
     #                 node=Node.PENULTIMATE,
@@ -372,7 +374,8 @@ def prepare_socp(
 
     # Constraints
     constraints = ConstraintList()
-    # constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING) ### was there before
+    constraints.add(states_equals_ref_kinematics, node=Node.ALL_SHOOTING)
+
     # constraints.add(CoM_over_ankle, node=Node.END, phase=0)  ### was there before
     # constraints.add(custom_contact_force_constraint, node=Node.ALL_SHOOTING, contact_index=1, min_bound=0.1,
     #                 max_bound=np.inf, phase=0)
@@ -410,8 +413,8 @@ def prepare_socp(
     x_bounds["qdot"].max[:, 0] = 0
 
     u_bounds = BoundsList()
-    tau_min = np.ones((nu, 3)) * -500
-    tau_max = np.ones((nu, 3)) * 500
+    tau_min = np.ones((n_joints, 3)) * -500
+    tau_max = np.ones((n_joints, 3)) * 500
     # tau_min[:, 0] = 0
     # tau_max[:, 0] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, phase=0)
@@ -428,18 +431,18 @@ def prepare_socp(
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.ALL_POINTS, phase=0)
 
-    n_k = nu * (nu + nu)  # K(4x8)
-    n_ref = nu + nu  # ref(8x1)
-    n_m = (2*nu)**2 * 3  # M(8x8x3)
+    n_k = n_joints * (n_joints + n_joints)  # K(4x8)
+    n_ref = n_joints + n_joints  # ref(8x1)
+    n_m = (2*n_joints)**2 * 4  # M(8x8x(3+1))
     n_stochastic = n_k + n_ref + n_m
     if not with_cholesky:
-        n_cov = (2 * nu) ** 2  # Cov(8x8)
+        n_cov = (2 * n_joints) ** 2  # Cov(8x8)
         n_stochastic += n_cov  # + cov(4, 4)
         n_cholesky_cov = 0
     else:
         n_cov = 0
         n_cholesky_cov = 0
-        for i in range(nu):
+        for i in range(n_joints):
             for j in range(i + 1):
                 n_cholesky_cov += 1
         n_stochastic += n_cholesky_cov  # + cholesky_cov(10)
@@ -481,10 +484,10 @@ def prepare_socp(
         cov_init = np.ones((n_cholesky_cov, n_shooting + 1)) * 0.01
         cov_min = np.ones((n_cholesky_cov, n_shooting + 1)) * -500
         cov_max = np.ones((n_cholesky_cov, n_shooting + 1)) * 500
-        P_0 = cas.DM_eye(2*nu) * np.hstack((np.ones((nu, )) * 1e-4, np.ones((nu, )) * 1e-7))  # P
+        P_0 = cas.DM_eye(2*n_joints) * np.hstack((np.ones((n_joints, )) * 1e-4, np.ones((n_joints, )) * 1e-7))  # P
         idx = 0
-        for i in range(nu):
-            for j in range(nu):
+        for i in range(n_joints):
+            for j in range(n_joints):
                 cov_init[idx, 0] = P_0[i, j]
                 cov_min[idx, 0] = P_0[i, j]
                 cov_max[idx, 0] = P_0[i, j]
@@ -503,11 +506,11 @@ def prepare_socp(
         cov_init = np.ones((n_cov, n_shooting + 1)) * 0.01
         cov_min = np.ones((n_cov, n_shooting + 1)) * -500
         cov_max = np.ones((n_cov, n_shooting + 1)) * 500
-        P_0 = cas.DM_eye(2*nu) * np.hstack((np.ones((nu, )) * 1e-4, np.ones((nu, )) * 1e-7))  # P
+        P_0 = cas.DM_eye(2*n_joints) * np.hstack((np.ones((n_joints, )) * 1e-4, np.ones((n_joints, )) * 1e-7))  # P
         cov_vector = np.zeros((n_cov, ))
-        for i in range(nu):
-            for j in range(nu):
-                cov_vector[i*nu+j] = P_0[i, j]
+        for i in range(n_joints):
+            for j in range(n_joints):
+                cov_vector[i*n_joints+j] = P_0[i, j]
         cov_min[:, 0] = cov_vector
         cov_max[:, 0] = cov_vector
 
@@ -516,7 +519,7 @@ def prepare_socp(
 
     # # Vaiables scaling
     # u_scaling = VariableScalingList()
-    # u_scaling["tau"] = [10] * nu
+    # u_scaling["tau"] = [10] * n_joints
     #
     # s_scaling = VariableScalingList()
     # s_scaling["k"] = [100] * n_k
@@ -574,7 +577,7 @@ def main():
         tau_deterministic = data['tau_sol']
 
     # --- Prepare the ocp --- #
-    dt = 0.01
+    dt = 0.05
     final_time = 0.5
     n_shooting = int(final_time/dt)  # There is no U on the last node (I do not hack it here)
 
@@ -595,7 +598,7 @@ def main():
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
-    solver.set_maximum_iterations(0) # 1000
+    solver.set_maximum_iterations(1000)
     solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
     solver._nlp_scaling_method = "none"
 
