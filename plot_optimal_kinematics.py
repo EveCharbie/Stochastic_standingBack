@@ -5,8 +5,8 @@ import biorbd
 import pickle
 
 
-def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, stochastic_variables=[], nb_random=30):
-    motor_noise_magnitude = 5  # 0.25
+def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, stochastic_variables=[], nb_random=30):
+    motor_noise_magnitude = 10
     nu = tau_sol.shape[0]
     nq = q_sol.shape[0]
 
@@ -21,10 +21,12 @@ def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, stochastic_variables=[]
                 stochastic_variables = np.vstack((stochastic_variables))  # TODO
             else:
                 stochastic_variables = []
-            new_states = ocp.nlp[0].dynamics[k](states_integrated[:, j, k],
+            new_states = ocp.nlp[0].dynamics[k](states_integrated[:, j, k],  ### ?????
                                                 controls,
+                                                time_sol,
+                                                stochastic_variables,
                                                 [],
-                                                stochastic_variables)[0]  # select "xf"
+                                                [])[0]  # select "xf"
             states_integrated[:, j, k+1] = np.reshape(new_states, (2*nq, ))
             controls_noised[:, j, k] = controls
 
@@ -97,8 +99,7 @@ biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
 
 dt = 0.01
 final_time = 0.5
-n_shooting = int(final_time / dt) + 1
-final_time += dt
+n_shooting = int(final_time / dt)
 
 DoF_names = ["TransY", "TransZ", "PelvisRot", "Shoulder", "Hip", "Knee", "Ankle"]
 
@@ -112,7 +113,7 @@ for name in ocp_type_list:
     elif name == "simulated":
         from seg5_torque_driven_simulated import prepare_ocp
         save_path = f"graphs/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated_plot"
-        results_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated.pkl"
+        results_path = f"results/Model2D_7Dof_1C_3M_torque_driven_1phase_simulated_noise10_weight100_random30.pkl"
     else:
         raise RuntimeError("Wrong ocp_type")
 
@@ -121,6 +122,7 @@ for name in ocp_type_list:
         q_sol = data["q_sol"]
         qdot_sol = data["qdot_sol"]
         tau_sol = data["tau_sol"]
+        time_sol = data["time_sol"]
 
     model = biorbd.Model(biorbd_model_path)
 
@@ -128,7 +130,7 @@ for name in ocp_type_list:
                       final_time=final_time,
                       n_shooting=n_shooting)
 
-    states_integrated, controls_noised = get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, nb_random=30)
+    states_integrated, controls_noised = get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, nb_random=30)
 
     plot_q(q_sol, states_integrated, final_time, n_shooting, DoF_names, name, nb_random=30)
     plot_CoM(states_integrated, model, n_shooting, name, nb_random=30)

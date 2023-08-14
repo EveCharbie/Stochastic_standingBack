@@ -38,6 +38,7 @@ from bioptim import (
     DynamicsFcn,
     Axis,
     OdeSolver,
+    ControlType,
 )
 
 def get_CoM(model, q):
@@ -91,10 +92,44 @@ def try_to_reach_standing_position_consistantly(controllers: list[PenaltyControl
         states_integrated = controllers[0].states.cx_start
         for i, ctrl in enumerate(controllers[:-1]):
             controls = ctrl.controls.cx_start + noise[:, j, i]
-            new_states = ctrl._nlp.dynamics[i](states_integrated[:, -1],
+            new_states = ctrl.get_nlp.dynamics[i](states_integrated[:, -1],
                                        controls,
                                        ctrl.parameters.cx_start,
-                                       ctrl.stochastic_variables.cx_start)[0]  # select "xf"
+                                       ctrl.stochastic_variables.cx_start,
+                                       ctrl.cx(),
+                                       ctrl.cx(),
+                                       )[0]  # select "xf"
+            states_integrated = cas.horzcat(states_integrated,
+                                            new_states)
+        CoM_positions[j] = controllers[-1].model.center_of_mass(states_integrated[:nq, -1])[1]
+        CoM_velocities[j] = controllers[-1].model.center_of_mass_velocity(states_integrated[:nq, -1], states_integrated[nq:, -1])[1]
+        pelvis_rots[j] = states_integrated[2, -1]
+        pelvis_velocities[j] = states_integrated[nq+2, -1]
+    std_standing_position = casadi_std_squared(CoM_positions) + casadi_std_squared(CoM_velocities) + casadi_std_squared(pelvis_rots) + casadi_std_squared(pelvis_velocities)
+
+    return std_standing_position
+
+def minimize_local_uncertainty(controller: PenaltyController, motor_noise_magnitude: cas.DM, nb_random: int) -> cas.MX:
+
+    nu = controllers[0].controls.shape
+    nq = controllers[0].states['q'].shape
+
+    CoM_positions = cas.MX.zeros(nb_random)
+    CoM_velocities = cas.MX.zeros(nb_random)
+    pelvis_rots = cas.MX.zeros(nb_random)
+    pelvis_velocities = cas.MX.zeros(nb_random)
+    noise = np.random.normal(loc=0, scale=motor_noise_magnitude, size=(nu, nb_random, controllers[0].ns))
+    for j in range(nb_random):
+        states_integrated = controllers[0].states.cx_start
+        for i, ctrl in enumerate(controllers[:-1]):
+            controls = ctrl.controls.cx_start + noise[:, j, i]
+            new_states = ctrl.get_nlp.dynamics[i](states_integrated[:, -1],
+                                       controls,
+                                       ctrl.parameters.cx_start,
+                                       ctrl.stochastic_variables.cx_start,
+                                       ctrl.cx(),
+                                       ctrl.cx(),
+                                       )[0]  # select "xf"
             states_integrated = cas.horzcat(states_integrated,
                                             new_states)
         CoM_positions[j] = controllers[-1].model.center_of_mass(states_integrated[:nq, -1])[1]
@@ -146,8 +181,9 @@ def prepare_ocp(
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_COM_POSITION, node=Node.END, weight=-100, quadratic=False,
                             axes=Axis.Z, phase=0)  # Temporary while in 1 phase ?
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
-    #                         quadratic=True, phase=0)  # Minimize efforts (instead of expected efforts)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
+                            quadratic=True, phase=0)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=-1, min_bound=0.1, max_bound=0.3, phase=0)
 
     # Constraints
     constraints = ConstraintList()
@@ -155,21 +191,15 @@ def prepare_ocp(
         ConstraintFcn.TRACK_CONTACT_FORCES,
         min_bound=0.1,
         max_bound=np.inf,
-        node=Node.ALL_SHOOTING,
+        node=Node.ALL,
         contact_index=1,
         phase=0
     )
 
-    # multinode_constraints = MultinodeConstraintList()
-    # for i in range(n_shooting - 1):
-    #     multinode_constraints.add(leuven_trapezoidal_deterministic,
-    #                               nodes_phase=[0, 0],
-    #                               nodes=[i, i + 1])
-
     multinode_objectives = MultinodeObjectiveList()
     multinode_objectives.add(try_to_reach_standing_position_consistantly,
-                            nodes_phase=[0 for _ in range(n_shooting)],
-                            nodes=[i for i in range(n_shooting)],
+                            nodes_phase=[0 for _ in range(n_shooting+1)],
+                            nodes=[i for i in range(n_shooting+1)],
                             motor_noise_magnitude=motor_noise_magnitude,
                             nb_random=nb_random,
                             phase=0, weight=weight, quadratic=True)  # objective only on the CoM and CoMdot in Y (don't give a **** about CoM height)
@@ -219,7 +249,7 @@ def prepare_ocp(
     x_init.add("q", initial_guess=q_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
     x_init.add("qdot", initial_guess=qdot_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
-    controls_init = np.ones((n_q-n_root, n_shooting))
+    controls_init = np.ones((n_q-n_root, n_shooting+1))
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=controls_init, interpolation=InterpolationType.EACH_FRAME, phase=0)
 
@@ -234,21 +264,20 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        # multinode_constraints=multinode_constraints,
         multinode_objectives=multinode_objectives,
         variable_mappings=variable_mappings,
-        # ode_solver=None,
-        # skip_continuity=True,
+        ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
+        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         assume_phase_dynamics=False,
     )
 
 def main():
 
-	# TODO: Try to add a local (MHE style) objective which would prevent divergence at each node with a lighter weight.
+    # TODO: Try to add a local (MHE style) objective which would prevent divergence at each node with a lighter weight.
     biorbd_model_path = "models/Model2D_7Dof_1C_3M.bioMod"
-    motor_noise_magnitude = 2.5
-    weight = 10
+    motor_noise_magnitude = 10
+    weight = 100
     nb_random = 30
 
     save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_simulated_noise{motor_noise_magnitude}_weight{weight}_random{nb_random}.pkl"
@@ -260,8 +289,7 @@ def main():
     # --- Prepare the ocp --- #
     dt = 0.01
     final_time = 0.5
-    n_shooting = int(final_time/dt) + 1
-    final_time += dt
+    n_shooting = int(final_time/dt)
 
     # Solver parameters
     solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
@@ -286,9 +314,11 @@ def main():
     q_sol = sol_ocp.states["q"]
     qdot_sol = sol_ocp.states["qdot"]
     tau_sol = sol_ocp.controls["tau"]
+    time_sol = sol_ocp.parameters["time"]
     data = {"q_sol": q_sol,
             "qdot_sol": qdot_sol,
-            "tau_sol": tau_sol}
+            "tau_sol": tau_sol,
+            "time_sol": time_sol}
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:

@@ -39,6 +39,8 @@ from bioptim import (
     Axis,
     OdeSolver,
     ControlType,
+    Shooting,
+    SolutionIntegrator
 )
 
 def get_CoM(model, q):
@@ -193,18 +195,18 @@ def main():
     # b.exec()
 
     # --- Prepare the ocp --- #
-    dt = 0.01
+    dt = 0.05
     final_time = 0.5
     n_shooting = int(final_time/dt)
 
     # Solver parameters
-    solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+    solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
     # # solver.set_linear_solver('mumps')
     # solver.set_linear_solver('ma57')
     # solver.set_tol(1e-3)
     # solver.set_dual_inf_tol(3e-4)
     # solver.set_constr_viol_tol(1e-7)
-    # solver.set_maximum_iterations(10000)
+    solver.set_maximum_iterations(1000)
     solver.set_hessian_approximation('limited-memory')
 
     ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
@@ -213,12 +215,23 @@ def main():
 
     sol_ocp = ocp.solve(solver)
 
+    # sol_ocp.integrate(shooting_type=Shooting.SINGLE,
+    #                         keep_intermediate_points=False,
+    #                         integrator=SolutionIntegrator.SCIPY_RK45)
+    sol_ocp.noisy_integrate(shooting_type=Shooting.SINGLE,
+                            keep_intermediate_points=False,
+                            integrator=SolutionIntegrator.SCIPY_RK45,
+                            n_random=30)
+    sol_ocp.animate()
+
     q_sol = sol_ocp.states["q"]
     qdot_sol = sol_ocp.states["qdot"]
     tau_sol = sol_ocp.controls["tau"]
+    time_sol = sol_ocp.parameters["time"]
     data = {"q_sol": q_sol,
             "qdot_sol": qdot_sol,
-            "tau_sol": tau_sol}
+            "tau_sol": tau_sol,
+            "time_sol": time_sol}
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
