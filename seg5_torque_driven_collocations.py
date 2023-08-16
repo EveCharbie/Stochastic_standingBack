@@ -357,6 +357,8 @@ def prepare_socp(
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
                             quadratic=True, phase=0)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=-1, min_bound=0.1, max_bound=0.3, phase=0)
+    objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, phase=0, quadratic=True)
+
 
     # objective_functions.add(reach_standing_position_consistantly,  ### was there before
     #                 custom_type=ObjectiveFcn.Mayer,
@@ -562,7 +564,7 @@ def main():
     n_q = 7
     n_root = 3
 
-    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_socp_implicit.pkl"
+    save_path = f"results/{biorbd_model_path[7:-7]}_torque_driven_1phase_socp_collocations.pkl"
 
     # import bioviz
     # b = bioviz.Viz(biorbd_model_path)
@@ -582,9 +584,9 @@ def main():
     n_shooting = int(final_time/dt)  # There is no U on the last node (I do not hack it here)
 
     # TODO: How do we choose the values?
-    motor_noise_std = 0.05
-    wPq_std = 3e-4
-    wPqdot_std = 0.0024
+    motor_noise_std = 0  # 0.05
+    wPq_std = 0  # 3e-4
+    wPqdot_std = 0  # 0.0024
 
     # TODO: Add vestibular feedback
     motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
