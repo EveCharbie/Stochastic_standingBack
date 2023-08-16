@@ -9,7 +9,7 @@ segment	Pelvis
 	rangesQ
 		-2.5 2.5
 		 -1.0 3.0
-		-3.0 3.0
+		-3.0 9.0
 	rangesQdot	-31.42 31.42
 		-31.42 31.42
 		-31.42 31.42
@@ -51,9 +51,6 @@ segment	Arm
 		0 1 0 0.023425367
 		0 0  1 0.211508031
 		0 0 0 1
-	rotations	 x
-	rangesQ	-0.7 3.1
-	rangesQdot	-31.42 31.42
 	mass	4.72
 	inertia
 		0.03770325476957999	0.0	0.0
@@ -99,6 +96,7 @@ marker	 CENTER_HAND
 	position 0.0 0.025 -0.0655
 	technical 1
 endmarker
+
 segment	Thigh
 	parent	Pelvis
 	RTinMatrix	1
@@ -145,9 +143,6 @@ segment	Foot
 		0.0 6.123233995736766e-17 -1.0 3.36e-07
 		0.0 1.0 6.123233995736766e-17 -0.427480971
 		0 0 0 1
-	rotations	 x
-	rangesQ	-0.7 0.7
-	rangesQdot	-31.42 31.42
 	mass	2.32
 	inertia
 		0.0178	0.0	0.0
@@ -167,8 +162,3 @@ marker	 FOOT
 	technical 1
 endmarker
 
-contact	Foot_Toe
-	parent	Foot
-	position	0.00000000000   -0.0300000000   -0.15000000000
-	axis	yz
-endcontact

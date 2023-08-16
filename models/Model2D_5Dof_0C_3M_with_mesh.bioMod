@@ -9,7 +9,7 @@ segment	Pelvis
 	rangesQ
 		-2.5 2.5
 		 -1.0 3.0
-		-3.0 3.0
+		-3.0 9.0
 	rangesQdot	-31.42 31.42
 		-31.42 31.42
 		-31.42 31.42
@@ -19,6 +19,7 @@ segment	Pelvis
 		0.0	0.1254	0.0
 		0.0	0.0	0.1123
 	com	0.0	0.0	0.1044
+	meshfile	mesh/pelvis.stl
 endsegment
 
 segment	Thorax
@@ -30,6 +31,7 @@ segment	Thorax
 		0.0	0.6185	0.0
 		0.0	0.0	0.2343
 	com	0.0	0.0	0.1767
+	meshfile	mesh/thorax.stl
 endsegment
 
 segment	Head
@@ -41,64 +43,9 @@ segment	Head
 		0.0	0.0881	0.0
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
+	meshfile mesh/head.stl
 endsegment
 
-segment	Arm
-	parent	Thorax
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	rotations	 x
-	rangesQ	-0.7 3.1
-	rangesQdot	-31.42 31.42
-	mass	4.72
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-endsegment
-
-segment	Forearm
-	parent	Arm
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-endsegment
-
-segment	Hand
-	parent	Forearm
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-endsegment
-
-marker	 CENTER_HAND
-	parent	Hand
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
 segment	Thigh
 	parent	Pelvis
 	RTinMatrix	1
@@ -116,6 +63,7 @@ segment	Thigh
 		0.0	0.3444	0.0
 		0.0	0.0	0.0674
 	com	0.0	0.0	-0.2017
+	meshfile mesh/thigh.stl
 endsegment
 
 segment	Leg
@@ -135,6 +83,7 @@ segment	Leg
 		0.0	0.1702	0.0
 		0.0	0.0	0.0122
 	com	0.0	0.0	-0.2026
+	meshfile mesh/leg_left.stl
 endsegment
 
 segment	Foot
@@ -145,15 +94,13 @@ segment	Foot
 		0.0 6.123233995736766e-17 -1.0 3.36e-07
 		0.0 1.0 6.123233995736766e-17 -0.427480971
 		0 0 0 1
-	rotations	 x
-	rangesQ	-0.7 0.7
-	rangesQdot	-31.42 31.42
 	mass	2.32
 	inertia
 		0.0178	0.0	0.0
 		0.0	0.0022	0.0
 		0.0	0.0	0.0176
 	com	0.0	0.0	-0.0757
+	meshfile mesh/foot.stl
 endsegment
 
 marker	 BELOW_KNEE
@@ -167,8 +114,3 @@ marker	 FOOT
 	technical 1
 endmarker
 
-contact	Foot_Toe
-	parent	Foot
-	position	0.00000000000   -0.0300000000   -0.15000000000
-	axis	yz
-endcontact
