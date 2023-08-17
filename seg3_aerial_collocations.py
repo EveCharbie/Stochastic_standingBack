@@ -48,7 +48,7 @@ from bioptim import (
 def get_excitation_with_feedback(K, EE, ref, sensory_noise):
     return K @ ((EE - ref) + sensory_noise)
 
-def stochastic_forward_dynamics_n_jointsmerical(states, controls, stochastic_variables, model, motor_noise, sensory_noise, with_gains):
+def stochastic_forward_dynamics_numerical(states, controls, stochastic_variables, model, motor_noise, sensory_noise, with_gains):
 
     q = states[:model.nbQ()]
     qdot = states[model.nbQ():]
@@ -339,7 +339,7 @@ def integrator(model, polynomial_degree, n_shooting, duration, states, controls,
     # Coefficients of the collocation equation
     _c = cas.MX.zeros((polynomial_degree + 1, polynomial_degree + 1))
 
-    # Coefficients of the contin_jointsity equation
+    # Coefficients of the continuity equation
     _d = cas.MX.zeros(polynomial_degree + 1)
 
     # Choose collocation points
@@ -356,7 +356,7 @@ def integrator(model, polynomial_degree, n_shooting, duration, states, controls,
             if r != j:
                 _l *= (time_control_interval - step_time[r]) / (step_time[j] - step_time[r])
 
-        # Evaluate the polynomial at the final time to get the coefficients of the contin_jointsity equation
+        # Evaluate the polynomial at the final time to get the coefficients of the continuity equation
         if method == "radau":
             _d[j] = 1 if j == polynomial_degree else 0
         else:
@@ -370,7 +370,7 @@ def integrator(model, polynomial_degree, n_shooting, duration, states, controls,
                 _l *= (time_control_interval - step_time[r]) / (step_time[j] - step_time[r])
 
         # Evaluate the time derivative of the polynomial at all collocation points to get
-        # the coefficients of the contin_jointsity equation
+        # the coefficients of the continuity equation
         tfcn = cas.Function("tfcn", [time_control_interval], [cas.tangent(_l, time_control_interval)])
         for r in range(polynomial_degree + 1):
             _c[j, r] = tfcn(step_time[r])
@@ -427,7 +427,7 @@ def get_m_init(model_path,
     n_q = model.nbQ()
     nb_root = model.nbRoot()
     n_joints = model.nbQ() - nb_root
-    non_root_index_contin_jointsity = []
+    non_root_index_continuity = []
     non_root_index_defects = []
     for i in range(2):
         for j in range(polynomial_degree+1):
@@ -437,7 +437,7 @@ def get_m_init(model_path,
                     (nb_root + n_joints) * (i * (polynomial_degree+1) + j) + nb_root + n_joints,
                 )
             )
-        non_root_index_contin_jointsity += list(
+        non_root_index_continuity += list(
             range((nb_root + n_joints) * i + nb_root, (nb_root + n_joints) * i + nb_root + n_joints)
         )
 
@@ -462,7 +462,7 @@ def get_m_init(model_path,
     states_end, defects = integrator(model, polynomial_degree, n_shooting, duration, states_full, controls_sym, stochastic_variables_sym, motor_noise_magnitude, sensory_noise_magnitude)
     initial_polynomial_evaluation = cas.vertcat(x_q_root, x_q_joints, x_qdot_root, x_qdot_joints)
     defects = cas.vertcat(initial_polynomial_evaluation, defects)[non_root_index_defects]
-    states_end = states_end[non_root_index_contin_jointsity]
+    states_end = states_end[non_root_index_continuity]
 
     df_dz = cas.horzcat(
         cas.jacobian(states_end, x_q_joints),
@@ -579,7 +579,7 @@ def get_cov_init(model_path,
     n_q = model.nbQ()
     nb_root = model.nbRoot()
     n_joints = model.nbQ() - nb_root
-    non_root_index_contin_jointsity = []
+    non_root_index_continuity = []
     non_root_index_defects = []
     for i in range(2):
         for j in range(polynomial_degree+1):
@@ -589,7 +589,7 @@ def get_cov_init(model_path,
                     (nb_root + n_joints) * (i * (polynomial_degree+1) + j) + nb_root + n_joints,
                 )
             )
-        non_root_index_contin_jointsity += list(
+        non_root_index_continuity += list(
             range((nb_root + n_joints) * i + nb_root, (nb_root + n_joints) * i + nb_root + n_joints)
         )
 
