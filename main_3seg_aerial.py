@@ -11,13 +11,13 @@ from bioptim import Solver
 from seg3_aerial_collocations_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
 
-RUN_OCP_COLLOCATIONS = False # True
+RUN_OCP_COLLOCATIONS = False  # True
 RUN_SOCP_COLLOCATIONS = True
 
-model_name = "Model2D_5Dof_0C_3M"
+model_name = "Model2D_6Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
 biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
-n_q = 5
+n_q = 6
 n_root = 3
 
 # import bioviz
@@ -96,8 +96,6 @@ for i_noise, noise_factor in enumerate(noise_factors):
             m_last = None
             cov_last = None
             cholesky_last = None
-            a_last = None
-            c_last = None
 
     else:
         path_to_results = (f"results/{model_name}_aerial_socp_collocations_{0.05 * noise_factors[i_noise-1]}_"
@@ -115,8 +113,6 @@ for i_noise, noise_factor in enumerate(noise_factors):
             m_last = data['m_sol']
             cov_last = data['cov_sol']
             cholesky_last = data['cholesky_sol']
-            a_last = data['a_sol']
-            c_last = data['c_sol']
 
     motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
     sensory_noise_magnitude = cas.DM(np.array([wPq_std ** 2 / dt, wPqdot_std ** 2 / dt]))  # Pelvis orientation + angular velocity
@@ -149,8 +145,6 @@ for i_noise, noise_factor in enumerate(noise_factors):
     ref_sol = sol_socp.stochastic_variables["ref"]
     m_sol = sol_socp.stochastic_variables["m"]
     cov_sol = sol_socp.stochastic_variables["cov"]
-    a_sol = sol_socp.stochastic_variables["a"]
-    c_sol = sol_socp.stochastic_variables["c"]
     data = {"q_sol": q_sol,
             "qdot_sol": qdot_sol,
             "tau_sol": tau_sol,
@@ -158,9 +152,7 @@ for i_noise, noise_factor in enumerate(noise_factors):
             "k_sol": k_sol,
             "ref_sol": ref_sol,
             "m_sol": m_sol,
-            "cov_sol": cov_sol,
-            "a_sol": a_sol,
-            "c_sol": c_sol}
+            "cov_sol": cov_sol}
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:

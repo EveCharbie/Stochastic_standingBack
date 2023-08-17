@@ -77,7 +77,7 @@ def prepare_ocp(
     n_joints = n_q - n_root
 
     variable_mappings = BiMappingList()
-    variable_mappings.add("tau", to_second=[None, None, None, 0, 1], to_first=[3, 4])
+    variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -94,8 +94,8 @@ def prepare_ocp(
     dynamics = DynamicsList()
     dynamics.add(DynamicsFcn.TORQUE_DRIVEN)
 
-    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, -0.1878, 0.0])  # Initial position approx from bioviz
-    pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.5036, 0.0])  # Final position approx from bioviz
+    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
+    pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.0, 0.5036, 0.0])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
     x_bounds["q"] = bio_model.bounds_from_ranges("q")

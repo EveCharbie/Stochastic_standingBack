@@ -61,10 +61,11 @@ def stochastic_forward_dynamics_numerical(states, controls, stochastic_variables
     if with_gains:
         ref = stochastic_variables[n_joints*2: n_joints*2+2]
         k = stochastic_variables[:n_joints*2]
-        k_matrix = cas.MX(n_joints, 2)
-        for s0 in range(n_joints):
-            for s1 in range(2):
-                k_matrix[s0, s1] = k[s0 * 2 + s1]
+
+        k_matrix = cas.MX(2, n_joints)
+        for s0 in range(2):
+            for s1 in range(n_joints):
+                k_matrix[s0, s1] = k[s0 * n_joints + s1]
         K_matrix = k_matrix.T
         ee = cas.vertcat(q[2], qdot[2])
 
@@ -418,16 +419,16 @@ def get_m_init(model_path,
 
     model = biorbd.Model(model_path)
 
-    nb_root = 3
-    nu = 2
+    nb_root = model.nbRoot()
+    nu = model.nbQ() - nb_root
     non_root_index_continuity = []
     non_root_index_defects = []
     for i in range(2):
-        for j in range(polynomial_degree):
+        for j in range(polynomial_degree+1):
             non_root_index_defects += list(
                 range(
-                    (nb_root + nu) * (i * (polynomial_degree) + j) + nb_root,
-                    (nb_root + nu) * (i * (polynomial_degree) + j) + nb_root + nu,
+                    (nb_root + nu) * (i * (polynomial_degree+1) + j) + nb_root,
+                    (nb_root + nu) * (i * (polynomial_degree+1) + j) + nb_root + nu,
                 )
             )
         non_root_index_continuity += list(
@@ -453,9 +454,8 @@ def get_m_init(model_path,
     )
 
     states_end, defects = integrator(model, polynomial_degree, n_shooting, duration, states_full, controls_sym, stochastic_variables_sym, motor_noise, sensory_noise)
-    # initial_polynomial_evaluation = cas.vertcat(x_q_root, x_q_joints, x_qdot_root, x_qdot_joints) - cas.vertcat(x_q_root, x_q_joints, x_qdot_root, x_qdot_joints)
-    # initial_polynomial_evaluation = 0 - cas.vertcat(x_q_root, x_q_joints, x_qdot_root, x_qdot_joints)
-    # defects = cas.vertcat(initial_polynomial_evaluation, defects)
+    initial_polynomial_evaluation = cas.vertcat(x_q_root, x_q_joints, x_qdot_root, x_qdot_joints)
+    defects = cas.vertcat(initial_polynomial_evaluation, defects)
 
     states_end = states_end[non_root_index_continuity]
     defects = defects[non_root_index_defects]
@@ -585,7 +585,7 @@ def prepare_socp(
     n_joints = n_q - n_root
 
     variable_mappings = BiMappingList()
-    variable_mappings.add("tau", to_second=[None, None, None, 0, 1], to_first=[3, 4])
+    variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -623,7 +623,7 @@ def prepare_socp(
                  motor_noise=np.zeros((2, 1)), sensory_noise=np.zeros((4, 1)), with_cholesky=with_cholesky, expand=False)
 
 
-    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, -0.1878, 0.0])  # Initial position approx from bioviz
+    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
 
     x_bounds = BoundsList()
     x_bounds["q"] = bio_model.bounds_from_ranges("q")
@@ -654,7 +654,7 @@ def prepare_socp(
     u_init = InitialGuessList()
     u_init.add("tau", initial_guess=tau_last, interpolation=InterpolationType.ALL_POINTS)
 
-    n_k = 2*n_joints * 2  # K(4x2)
+    n_k = n_joints * 2  # K(4x2)
     n_ref = 2  # ref(2)
     n_m = (2*n_joints)**2 * 3  # M(6x6x3)
     n_stochastic = n_k + n_ref + n_m
@@ -691,8 +691,8 @@ def prepare_socp(
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     if m_last is None:
-        # m_last = get_m_init(biorbd_model_path, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_last, qdot_last, tau_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
-        m_last = np.ones((n_m, n_shooting + 1)) * 0.01
+        m_last = get_m_init(biorbd_model_path, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_last, qdot_last, tau_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
+        # m_last = np.ones((n_m, n_shooting + 1)) * 0.01
     s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
