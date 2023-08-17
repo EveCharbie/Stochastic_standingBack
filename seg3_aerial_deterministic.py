@@ -77,7 +77,7 @@ def prepare_ocp(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", node=Node.ALL_SHOOTING, weight=0.01,
                             quadratic=True)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 
@@ -85,7 +85,7 @@ def prepare_ocp(
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
-    constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
+    # constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -113,6 +113,8 @@ def prepare_ocp(
     tau_max = np.ones((n_q, 3)) * 500
     tau_min[:, 0] = 0
     tau_max[:, 0] = 0
+    tau_min[[0, 1, 2], :] = 0
+    tau_max[[0, 1, 2], :] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     # Initial guesses

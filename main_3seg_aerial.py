@@ -31,7 +31,7 @@ final_time = 0.8
 n_shooting = int(final_time / dt)
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver('ma97')
 solver.set_tol(1e-3)
 solver.set_dual_inf_tol(3e-4)
