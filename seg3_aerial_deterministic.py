@@ -64,7 +64,8 @@ def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
 def prepare_ocp(
     biorbd_model_path: str,
     final_time: float,
-    n_shooting: int
+    n_shooting: int,
+    ode_solver: OdeSolver,
 ) -> OptimalControlProgram:
     """
     ...
@@ -73,8 +74,6 @@ def prepare_ocp(
     bio_model = BiorbdModel(biorbd_model_path)
 
     n_q = bio_model.nb_q
-    n_root = bio_model.nb_root
-    n_joints = n_q - n_root
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -135,7 +134,7 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
+        ode_solver=ode_solver,
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         assume_phase_dynamics=False,

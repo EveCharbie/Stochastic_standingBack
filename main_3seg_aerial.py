@@ -6,13 +6,15 @@ import numpy as np
 
 import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
-from bioptim import Solver
+from bioptim import Solver, OdeSolver
 
-from seg3_aerial_collocations_deterministic import prepare_ocp
+from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
+from seg3_aerial_trapezoidal import prepare_socp_trap
 
-RUN_OCP_COLLOCATIONS = False  # True
-RUN_SOCP_COLLOCATIONS = True
+RUN_OCP = False  # True
+RUN_SOCP = True
+ode_solver = OdeSolver.TRAPEZOIDAL  # OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre")
 
 model_name = "Model2D_6Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -41,131 +43,272 @@ solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM e
 solver._nlp_scaling_method = "none"
 
 
-# --- Run the deterministic collocation --- #
-save_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
+if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
-if RUN_OCP_COLLOCATIONS:
-    ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
-                        final_time=final_time,
-                        n_shooting=n_shooting)
+    # --- Run the deterministic collocation --- #
+    save_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
+    
+    if RUN_OCP:
+        ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
+                            final_time=final_time,
+                            n_shooting=n_shooting,
+                            ode_solver=)
+    
+        # ocp.add_plot_penalty(CostType.ALL)
+        # ocp.check_conditioning()
+        sol_ocp = ocp.solve(solver=solver)
+    
+        q_sol = sol_ocp.states["q"]
+        qdot_sol = sol_ocp.states["qdot"]
+        tau_sol = sol_ocp.controls["tau"]
+        time_sol = sol_ocp.parameters["time"][0][0]
+        data = {"q_sol": q_sol,
+                "qdot_sol": qdot_sol,
+                "tau_sol": tau_sol,
+                "time_sol": time_sol}
+    
+        with open(save_path, "wb") as file:
+            pickle.dump(data, file)
+    
+        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        b.load_movement(q_sol)
+        b.exec()
+    
+    
+    # --- Run the SOCP collocation with increasing noise --- #
+    noise_factors = [0, 0.05, 0.1, 0.5, 1.0]
+    with_cholesky = False
+    
+    for i_noise, noise_factor in enumerate(noise_factors):
+    
+        # TODO: How do we choose the values?
+        motor_noise_std = 0.05 * noise_factor
+        wPq_std = 3e-4 * noise_factor
+        wPqdot_std = 0.0024 * noise_factor
+    
+        save_path = f"results/{model_name}_aerial_socp_collocations_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
+    
+        if noise_factor == 0:
+            path_to_results = f"results/{model_name}_aerial_ocp_collocations.pkl"
+            with open(path_to_results, 'rb') as file:
+                data = pickle.load(file)
+                q_last = data['q_sol']
+                qdot_last = data['qdot_sol']
+                tau_last = data['tau_sol']
+                time_last = data['time_sol']
+                k_last = None
+                ref_last = None
+                m_last = None
+                cov_last = None
+                cholesky_last = None
+    
+        else:
+            path_to_results = (f"results/{model_name}_aerial_socp_collocations_{0.05 * noise_factors[i_noise-1]}_"
+                               f"{3e-4 * noise_factors[i_noise-1]}_"
+                               f"{0.0024 * noise_factors[i_noise-1]}.pkl")
+    
+            with open(path_to_results, 'rb') as file:
+                data = pickle.load(file)
+                q_last = data['q_sol']
+                qdot_last = data['qdot_sol']
+                tau_last = data['tau_sol']
+                time_last = data['time_sol']
+                k_last = data['k_sol']
+                ref_last = data['ref_sol']
+                m_last = data['m_sol']
+                cov_last = data['cov_sol']
+                cholesky_last = data['cholesky_sol']
+    
+        motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
+        sensory_noise_magnitude = cas.DM(cas.vertcat(
+            np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]),
+            np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)])
+        ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+    
+        socp = prepare_socp(biorbd_model_path=biorbd_model_path,
+                            time_last=time_last,
+                            n_shooting=n_shooting,
+                            motor_noise_magnitude=motor_noise_magnitude,
+                            sensory_noise_magnitude=sensory_noise_magnitude,
+                            q_last=q_last,
+                            qdot_last=qdot_last,
+                            tau_last=tau_last,
+                            k_last=None,
+                            ref_last=None,
+                            m_last=None,
+                            cov_last=None,
+                            with_cholesky=with_cholesky)
+    
+        # socp.add_plot_penalty(CostType.ALL)
+        # socp.check_conditioning()
+    
+        sol_socp = socp.solve(solver)
+        # sol_socp.graphs()
+    
+        q_sol = sol_socp.states["q"]
+        qdot_sol = sol_socp.states["qdot"]
+        tau_sol = sol_socp.controls["tau"]
+        time_sol = sol_socp.parameters["time"][0][0]
+        k_sol = sol_socp.stochastic_variables["k"]
+        ref_sol = sol_socp.stochastic_variables["ref"]
+        m_sol = sol_socp.stochastic_variables["m"]
+        cov_sol = sol_socp.stochastic_variables["cov"]
+        data = {"q_sol": q_sol,
+                "qdot_sol": qdot_sol,
+                "tau_sol": tau_sol,
+                "time_sol": time_sol,
+                "k_sol": k_sol,
+                "ref_sol": ref_sol,
+                "m_sol": m_sol,
+                "cov_sol": cov_sol}
+    
+        # --- Save the results --- #
+        with open(save_path, "wb") as file:
+            pickle.dump(data, file)
+    
+        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        b.load_movement(q_sol)
+        b.exec()
 
-    # ocp.add_plot_penalty(CostType.ALL)
-    # ocp.check_conditioning()
-    sol_ocp = ocp.solve(solver=solver)
+elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
 
-    q_sol = sol_ocp.states["q"]
-    qdot_sol = sol_ocp.states["qdot"]
-    tau_sol = sol_ocp.controls["tau"]
-    time_sol = sol_ocp.parameters["time"][0][0]
-    data = {"q_sol": q_sol,
-            "qdot_sol": qdot_sol,
-            "tau_sol": tau_sol,
-            "time_sol": time_sol}
+    # --- Run the deterministic trapezoidal --- #
+    save_path = f"results/{model_name}_aerial_ocp_trapezoidal.pkl"
 
-    with open(save_path, "wb") as file:
-        pickle.dump(data, file)
+    if RUN_OCP:
+        ocp_trap = prepare_ocp(biorbd_model_path=biorbd_model_path,
+                                    final_time=final_time,
+                                    n_shooting=n_shooting,
+                                    ode_solver=ode_solver,)
 
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(q_sol)
-    b.exec()
+        # ocp.add_plot_penalty(CostType.ALL)
+        # ocp.check_conditioning()
+        sol_ocp = ocp_trap.solve(solver=solver)
 
+        q_sol = sol_ocp.states["q"]
+        qdot_sol = sol_ocp.states["qdot"]
+        tau_sol = sol_ocp.controls["tau"]
+        time_sol = sol_ocp.parameters["time"][0][0]
+        data = {"q_sol": q_sol,
+                "qdot_sol": qdot_sol,
+                "tau_sol": tau_sol,
+                "time_sol": time_sol}
 
-# --- Run the SOCP collocation with increasing noise --- #
-noise_factors = [0, 0.05, 0.1, 0.5, 1.0]
-with_cholesky = False
+        with open(save_path, "wb") as file:
+            pickle.dump(data, file)
 
-for i_noise, noise_factor in enumerate(noise_factors):
+        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        b.load_movement(q_sol)
+        b.exec()
 
-    # TODO: How do we choose the values?
-    motor_noise_std = 0.05 * noise_factor
-    wPq_std = 3e-4 * noise_factor
-    wPqdot_std = 0.0024 * noise_factor
+    # --- Run the SOCP trapezoidal with increasing noise --- #
+    noise_factors = [0, 0.05, 0.1, 0.5, 1.0]
+    with_cholesky = True
 
-    save_path = f"results/{model_name}_aerial_socp_collocations_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
+    for i_noise, noise_factor in enumerate(noise_factors):
 
-    if noise_factor == 0:
-        path_to_results = f"results/{model_name}_aerial_ocp_collocations.pkl"
-        with open(path_to_results, 'rb') as file:
-            data = pickle.load(file)
-            q_last = data['q_sol']
-            qdot_last = data['qdot_sol']
-            tau_last = data['tau_sol']
-            time_last = data['time_sol']
-            k_last = None
-            ref_last = None
-            m_last = None
-            cov_last = None
-            cholesky_last = None
+        # TODO: How do we choose the values?
+        motor_noise_std = 0.05 * noise_factor
+        wPq_std = 3e-4 * noise_factor
+        wPqdot_std = 0.0024 * noise_factor
 
-    else:
-        path_to_results = (f"results/{model_name}_aerial_socp_collocations_{0.05 * noise_factors[i_noise-1]}_"
-                           f"{3e-4 * noise_factors[i_noise-1]}_"
-                           f"{0.0024 * noise_factors[i_noise-1]}.pkl")
+        save_path = f"results/{model_name}_aerial_socp_trapezoidal_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
 
-        with open(path_to_results, 'rb') as file:
-            data = pickle.load(file)
-            q_last = data['q_sol']
-            qdot_last = data['qdot_sol']
-            tau_last = data['tau_sol']
-            time_last = data['time_sol']
-            k_last = data['k_sol']
-            ref_last = data['ref_sol']
-            m_last = data['m_sol']
-            cov_last = data['cov_sol']
-            cholesky_last = data['cholesky_sol']
+        if noise_factor == 0:
+            path_to_results = f"results/{model_name}_aerial_ocp_trapezoidal.pkl"
+            with open(path_to_results, 'rb') as file:
+                data = pickle.load(file)
+                q_last = data['q_sol']
+                qdot_last = data['qdot_sol']
+                tau_last = data['tau_sol']
+                time_last = data['time_sol']
+                k_last = None
+                ref_last = None
+                m_last = None
+                cov_last = None
+                cholesky_last = None
+                a_last = None
+                c_last = None
 
-    motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
-    sensory_noise_magnitude = cas.DM(cas.vertcat(
-        np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]),
-        np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)])
-    ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+        else:
+            path_to_results = (f"results/{model_name}_aerial_socp_trapezoidal_{0.05 * noise_factors[i_noise - 1]}_"
+                               f"{3e-4 * noise_factors[i_noise - 1]}_"
+                               f"{0.0024 * noise_factors[i_noise - 1]}.pkl")
 
-    socp = prepare_socp(biorbd_model_path=biorbd_model_path,
-                        time_last=time_last,
-                        n_shooting=n_shooting,
-                        motor_noise_magnitude=motor_noise_magnitude,
-                        sensory_noise_magnitude=sensory_noise_magnitude,
-                        q_last=q_last,
-                        qdot_last=qdot_last,
-                        tau_last=tau_last,
-                        k_last=None,
-                        ref_last=None,
-                        m_last=None,
-                        cov_last=None,
-                        with_cholesky=with_cholesky)
+            with open(path_to_results, 'rb') as file:
+                data = pickle.load(file)
+                q_last = data['q_sol']
+                qdot_last = data['qdot_sol']
+                tau_last = data['tau_sol']
+                time_last = data['time_sol']
+                k_last = data['k_sol']
+                ref_last = data['ref_sol']
+                m_last = data['m_sol']
+                cov_last = data['cov_sol']
+                cholesky_last = data['cholesky_sol']
+                a_last = data['a_sol']
+                c_last = data['c_sol']
 
-    # socp.add_plot_penalty(CostType.ALL)
-    # socp.check_conditioning()
+        motor_noise_magnitude = cas.DM(
+            np.array([motor_noise_std ** 2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
+        sensory_noise_magnitude = cas.DM(cas.vertcat(
+            np.array([wPq_std ** 2 / dt for _ in range(n_q - n_root)]),
+            np.array([wPqdot_std ** 2 / dt for _ in range(n_q - n_root)])
+        ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
-    sol_socp = socp.solve(solver)
-    # sol_socp.graphs()
+        socp = prepare_socp_trap(biorbd_model_path=biorbd_model_path,
+                            time_last=time_last,
+                            n_shooting=n_shooting,
+                            motor_noise_magnitude=motor_noise_magnitude,
+                            sensory_noise_magnitude=sensory_noise_magnitude,
+                            q_last=q_last,
+                            qdot_last=qdot_last,
+                            tau_last=tau_last,
+                            k_last=None,
+                            ref_last=None,
+                            m_last=None,
+                            cov_last=None,
+                            cholesky_last=None,
+                            a_last=None,
+                            c_last=None,
+                            with_cholesky=with_cholesky)
 
-    q_sol = sol_socp.states["q"]
-    qdot_sol = sol_socp.states["qdot"]
-    tau_sol = sol_socp.controls["tau"]
-    time_sol = sol_socp.parameters["time"][0][0]
-    k_sol = sol_socp.stochastic_variables["k"]
-    ref_sol = sol_socp.stochastic_variables["ref"]
-    m_sol = sol_socp.stochastic_variables["m"]
-    cov_sol = sol_socp.stochastic_variables["cov"]
-    data = {"q_sol": q_sol,
-            "qdot_sol": qdot_sol,
-            "tau_sol": tau_sol,
-            "time_sol": time_sol,
-            "k_sol": k_sol,
-            "ref_sol": ref_sol,
-            "m_sol": m_sol,
-            "cov_sol": cov_sol}
+        # socp.add_plot_penalty(CostType.ALL)
+        # socp.check_conditioning()
 
-    # --- Save the results --- #
-    with open(save_path, "wb") as file:
-        pickle.dump(data, file)
+        sol_socp = socp.solve(solver)
+        # sol_socp.graphs()
 
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(q_sol)
-    b.exec()
+        q_sol = sol_socp.states["q"]
+        qdot_sol = sol_socp.states["qdot"]
+        tau_sol = sol_socp.controls["tau"]
+        time_sol = sol_socp.parameters["time"][0][0]
+        k_sol = sol_socp.stochastic_variables["k"]
+        ref_sol = sol_socp.stochastic_variables["ref"]
+        m_sol = sol_socp.stochastic_variables["m"]
+        cov_sol = sol_socp.stochastic_variables["cov"]
+        cholesky_sol = sol_socp.stochastic_variables["cholesky"]
+        a_sol = sol_socp.stochastic_variables["a"]
+        c_sol = sol_socp.stochastic_variables["c"]
+        data = {"q_sol": q_sol,
+                "qdot_sol": qdot_sol,
+                "tau_sol": tau_sol,
+                "time_sol": time_sol,
+                "k_sol": k_sol,
+                "ref_sol": ref_sol,
+                "m_sol": m_sol,
+                "cov_sol": cov_sol,
+                "cholesky_sol": cholesky_sol,
+                "a_sol": a_sol,
+                "c_sol": c_sol}
 
+        # --- Save the results --- #
+        with open(save_path, "wb") as file:
+            pickle.dump(data, file)
 
+        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        b.load_movement(q_sol)
+        b.exec()
 
 
 
