@@ -72,7 +72,7 @@ def stochastic_forward_dynamics_numerical(states, controls, stochastic_variables
         # ee = cas.vertcat(q[2], qdot[2])
         ee = cas.horzcat(q, qdot)
 
-        tau_fb += get_excitation_with_feedback(K_matrix, ee, ref, sensory_noise) + motor_noise
+        tau_fb[n_root:] += get_excitation_with_feedback(K_matrix, ee, ref, sensory_noise) + motor_noise
 
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
@@ -102,7 +102,7 @@ def stochastic_forward_dynamics(
     n_root = nlp.model.nb_root
     n_joints = n_q-n_root
 
-    tau_fb = tau[n_root:]
+    tau_fb = tau[:]
     if with_gains:
         ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)
         k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
@@ -111,14 +111,13 @@ def stochastic_forward_dynamics(
         # ee = cas.vertcat(q[2], qdot[2])
         ee = cas.vertcat(q, qdot)
 
-        tau_fb += get_excitation_with_feedback(K_matrix, ee, ref, sensory_noise) + motor_noise
+        tau_fb[n_root:] += get_excitation_with_feedback(K_matrix, ee, ref, sensory_noise) + motor_noise
 
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
         friction[i, i] = 0.1
 
-    tau_full = cas.vertcat(cas.MX.zeros(n_root), tau_fb)
-    dqdot_computed = nlp.model.forward_dynamics(q, qdot, tau_full + friction @ qdot)
+    dqdot_computed = nlp.model.forward_dynamics(q, qdot, tau_fb + friction @ qdot)
 
     return DynamicsEvaluation(dxdt=cas.vertcat(qdot, dqdot_computed))
 
@@ -751,9 +750,6 @@ def prepare_socp(
     n_root = bio_model.nb_root
     n_joints = n_q - n_root
 
-    variable_mappings = BiMappingList()
-    variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
-
     # Add objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
@@ -778,6 +774,7 @@ def prepare_socp(
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
+    constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
     constraints.add(ref_equals_mean_values, node=Node.ALL)
 
     # Dynamics
@@ -807,8 +804,8 @@ def prepare_socp(
     x_bounds["qdot"].max[2, 0] = 2.5 * np.pi
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_joints, 3)) * -500
-    tau_max = np.ones((n_joints, 3)) * 500
+    tau_min = np.ones((n_q, 3)) * -500
+    tau_max = np.ones((n_q, 3)) * 500
     tau_min[:, 0] = 0
     tau_max[:, 0] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
@@ -945,7 +942,6 @@ def prepare_socp(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        variable_mappings=variable_mappings,
         ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,

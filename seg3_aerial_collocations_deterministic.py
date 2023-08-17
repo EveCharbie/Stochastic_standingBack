@@ -76,9 +76,6 @@ def prepare_ocp(
     n_root = bio_model.nb_root
     n_joints = n_q - n_root
 
-    variable_mappings = BiMappingList()
-    variable_mappings.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
-
     # Add objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
@@ -89,6 +86,7 @@ def prepare_ocp(
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
+    constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -112,8 +110,8 @@ def prepare_ocp(
     x_bounds["qdot"].max[2, 0] = 2.5 * np.pi
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_joints, 3)) * -500
-    tau_max = np.ones((n_joints, 3)) * 500
+    tau_min = np.ones((n_q, 3)) * -500
+    tau_max = np.ones((n_q, 3)) * 500
     tau_min[:, 0] = 0
     tau_max[:, 0] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
@@ -124,7 +122,7 @@ def prepare_ocp(
     x_init.add("qdot", initial_guess=[0.01]*n_q, interpolation=InterpolationType.CONSTANT)
 
     u_init = InitialGuessList()
-    u_init.add("tau", initial_guess=[0.01]*n_joints, interpolation=InterpolationType.CONSTANT)
+    u_init.add("tau", initial_guess=[0.01]*n_q, interpolation=InterpolationType.CONSTANT)
 
     return OptimalControlProgram(
         bio_model,
@@ -137,7 +135,6 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        variable_mappings=variable_mappings,
         ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
