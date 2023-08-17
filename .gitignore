@@ -166,3 +166,7 @@ results/
 videos/
 
 *.png
+
+.idea/inspectionProfiles/
+
+.idea/

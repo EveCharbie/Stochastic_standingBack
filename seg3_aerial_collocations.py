@@ -76,7 +76,7 @@ def stochastic_forward_dynamics_numerical(states, controls, stochastic_variables
 
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
-        friction[i, i] = 0.05
+        friction[i, i] = 0.1
 
     tau_full = cas.vertcat(cas.MX.zeros(n_root), tau_fb)
     dqdot_computed = model.ForwardDynamics(q, qdot, tau_full + friction @ qdot).to_mx()
@@ -115,7 +115,7 @@ def stochastic_forward_dynamics(
 
     friction = cas.MX.zeros(n_q, n_q)
     for i in range(n_root, n_q):
-        friction[i, i] = 0.05
+        friction[i, i] = 0.1
 
     tau_full = cas.vertcat(cas.MX.zeros(n_root), tau_fb)
     dqdot_computed = nlp.model.forward_dynamics(q, qdot, tau_full + friction @ qdot)
