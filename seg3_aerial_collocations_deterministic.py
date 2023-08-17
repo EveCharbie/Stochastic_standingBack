@@ -73,11 +73,10 @@ def prepare_ocp(
     bio_model = BiorbdModel(biorbd_model_path)
 
     n_q = bio_model.nb_q
-    n_root = bio_model.nb_root
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", index=[3, 4, 5], node=Node.ALL_SHOOTING, weight=0.01,
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", node=Node.ALL_SHOOTING, weight=0.01,
                             quadratic=True)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 

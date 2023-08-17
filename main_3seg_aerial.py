@@ -29,7 +29,7 @@ final_time = 0.8
 n_shooting = int(final_time / dt)
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver('ma97')
 solver.set_tol(1e-3)
 solver.set_dual_inf_tol(3e-4)
@@ -52,6 +52,7 @@ if RUN_OCP_COLLOCATIONS:
     # ocp.add_plot_penalty(CostType.ALL)
     # ocp.check_conditioning()
     sol_ocp = ocp.solve(solver=solver)
+    # sol_ocp.graphs(show_bounds=True)
 
     q_sol = sol_ocp.states["q"]
     qdot_sol = sol_ocp.states["qdot"]
@@ -65,9 +66,9 @@ if RUN_OCP_COLLOCATIONS:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(q_sol)
-    b.exec()
+    # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    # b.load_movement(q_sol)
+    # b.exec()
 
 
 # --- Run the SOCP collocation with increasing noise --- #
@@ -116,8 +117,8 @@ for i_noise, noise_factor in enumerate(noise_factors):
 
     motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
     sensory_noise_magnitude = cas.DM(cas.vertcat(
-        np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]),
-        np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)])
+        np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root+1)]),
+        np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root+1)])
     ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
