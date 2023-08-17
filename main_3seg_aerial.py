@@ -115,7 +115,10 @@ for i_noise, noise_factor in enumerate(noise_factors):
             cholesky_last = data['cholesky_sol']
 
     motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
-    sensory_noise_magnitude = cas.DM(np.array([wPq_std ** 2 / dt, wPqdot_std ** 2 / dt]))  # Pelvis orientation + angular velocity
+    sensory_noise_magnitude = cas.DM(cas.vertcat(
+        np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]),
+        np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)])
+    ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
     socp = prepare_socp(biorbd_model_path=biorbd_model_path,
                         time_last=time_last,
