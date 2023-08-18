@@ -12,9 +12,9 @@ from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
 from seg3_aerial_trapezoidal import prepare_socp_trap
 
-RUN_OCP = False  # True
+RUN_OCP = True
 RUN_SOCP = True
-ode_solver = OdeSolver.TRAPEZOIDAL  # OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre")
+ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre") #  OdeSolver.TRAPEZOIDAL  #
 
 model_name = "Model2D_6Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -52,7 +52,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         ocp = prepare_ocp(biorbd_model_path=biorbd_model_path,
                             final_time=final_time,
                             n_shooting=n_shooting,
-                            ode_solver=)
+                            ode_solver=ode_solver)
     
         # ocp.add_plot_penalty(CostType.ALL)
         # ocp.check_conditioning()
@@ -66,13 +66,18 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 "qdot_sol": qdot_sol,
                 "tau_sol": tau_sol,
                 "time_sol": time_sol}
-    
+
+        if sol_ocp.status != 0:
+            save_path = save_path.replace(".pkl", "_DVG.pkl")
+        else:
+            save_path = save_path.replace(".pkl", "_CVG.pkl")
+
         with open(save_path, "wb") as file:
             pickle.dump(data, file)
     
-        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        b.load_movement(q_sol)
-        b.exec()
+        # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        # b.load_movement(q_sol)
+        # b.exec()
     
     
     # --- Run the SOCP collocation with increasing noise --- #
@@ -86,10 +91,12 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         wPq_std = 3e-4 * noise_factor
         wPqdot_std = 0.0024 * noise_factor
     
-        save_path = f"results/{model_name}_aerial_socp_collocations_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
+        save_path = (f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std, 6)}_"
+                     f"{round(wPq_std, 6)}_"
+                     f"{round(wPqdot_std, 6)}.pkl")
     
         if noise_factor == 0:
-            path_to_results = f"results/{model_name}_aerial_ocp_collocations.pkl"
+            path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
             with open(path_to_results, 'rb') as file:
                 data = pickle.load(file)
                 q_last = data['q_sol']
@@ -103,9 +110,10 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 cholesky_last = None
     
         else:
-            path_to_results = (f"results/{model_name}_aerial_socp_collocations_{0.05 * noise_factors[i_noise-1]}_"
-                               f"{3e-4 * noise_factors[i_noise-1]}_"
-                               f"{0.0024 * noise_factors[i_noise-1]}.pkl")
+
+            path_to_results = (f"results/{model_name}_aerial_socp_collocations_{round(0.05 * noise_factors[i_noise-1], 6)}_"
+                               f"{round(3e-4 * noise_factors[i_noise-1], 6)}_"
+                               f"{round(0.0024 * noise_factors[i_noise-1], 6)}_CVG.pkl")
     
             with open(path_to_results, 'rb') as file:
                 data = pickle.load(file)
@@ -161,14 +169,19 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 "ref_sol": ref_sol,
                 "m_sol": m_sol,
                 "cov_sol": cov_sol}
-    
+
+        if sol_socp.status != 0:
+            save_path = save_path.replace(".pkl", "_DVG.pkl")
+        else:
+            save_path = save_path.replace(".pkl", "_CVG.pkl")
+
         # --- Save the results --- #
         with open(save_path, "wb") as file:
             pickle.dump(data, file)
     
-        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        b.load_movement(q_sol)
-        b.exec()
+        # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        # b.load_movement(q_sol)
+        # b.exec()
 
 elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
 
@@ -194,12 +207,17 @@ elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
                 "tau_sol": tau_sol,
                 "time_sol": time_sol}
 
+        if sol_ocp.status != 0:
+            save_path = save_path.replace(".pkl", "_DVG.pkl")
+        else:
+            save_path = save_path.replace(".pkl", "_CVG.pkl")
+
         with open(save_path, "wb") as file:
             pickle.dump(data, file)
 
-        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        b.load_movement(q_sol)
-        b.exec()
+        # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        # b.load_movement(q_sol)
+        # b.exec()
 
     # --- Run the SOCP trapezoidal with increasing noise --- #
     noise_factors = [0, 0.05, 0.1, 0.5, 1.0]
@@ -212,10 +230,12 @@ elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
         wPq_std = 3e-4 * noise_factor
         wPqdot_std = 0.0024 * noise_factor
 
-        save_path = f"results/{model_name}_aerial_socp_trapezoidal_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
+        save_path = (f"results/{model_name}_aerial_socp_trapezoidal_{round(motor_noise_std, 6)}_"
+                     f"{round(wPq_std, 6)}_"
+                     f"{round(wPqdot_std, 6)}.pkl")
 
         if noise_factor == 0:
-            path_to_results = f"results/{model_name}_aerial_ocp_trapezoidal.pkl"
+            path_to_results = f"results/{model_name}_aerial_ocp_trapezoidal_CVG.pkl"
             with open(path_to_results, 'rb') as file:
                 data = pickle.load(file)
                 q_last = data['q_sol']
@@ -231,9 +251,10 @@ elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
                 c_last = None
 
         else:
-            path_to_results = (f"results/{model_name}_aerial_socp_trapezoidal_{0.05 * noise_factors[i_noise - 1]}_"
-                               f"{3e-4 * noise_factors[i_noise - 1]}_"
-                               f"{0.0024 * noise_factors[i_noise - 1]}.pkl")
+            path_to_results = (f"results/{model_name}_aerial_socp_trapezoidal_"
+                               f"{round(0.05 * noise_factors[i_noise - 1], 6)}_"
+                               f"{round(3e-4 * noise_factors[i_noise - 1], 6)}_"
+                               f"{round(0.0024 * noise_factors[i_noise - 1], 6)}_CVG.pkl")
 
             with open(path_to_results, 'rb') as file:
                 data = pickle.load(file)
@@ -302,13 +323,18 @@ elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
                 "a_sol": a_sol,
                 "c_sol": c_sol}
 
+        if sol_socp.status != 0:
+            save_path = save_path.replace(".pkl", "_DVG.pkl")
+        else:
+            save_path = save_path.replace(".pkl", "_CVG.pkl")
+
         # --- Save the results --- #
         with open(save_path, "wb") as file:
             pickle.dump(data, file)
 
-        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        b.load_movement(q_sol)
-        b.exec()
+        # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        # b.load_movement(q_sol)
+        # b.exec()
 
 
 
