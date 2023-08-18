@@ -810,7 +810,7 @@ def get_c_init(model_path, n_shooting, n_stochastic, q_last, qdot_last, tau_last
 
     return c_last
 
-def prepare_socp(
+def prepare_socp_trap(
     biorbd_model_path: str,
     time_last: float,
     n_shooting: int,

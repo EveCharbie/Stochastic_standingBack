@@ -321,7 +321,7 @@ def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
     q = controller.states["q"].cx_start
     CoM_pos = get_CoM(controller.model, q)
     CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[0]
+    marker_pos = controller.model.markers(q)[2]
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 
@@ -375,7 +375,7 @@ def integrator(model, polynomial_degree, n_shooting, duration, states, controls,
         for r in range(polynomial_degree + 1):
             _c[j, r] = tfcn(step_time[r])
 
-    # Total n_jointsmber of variables for one finite element
+    # Total number of variables for one finite element
     states_end = _d[0] * states[:, 0]
     defects = []
     for j in range(1, polynomial_degree + 1):
@@ -384,7 +384,7 @@ def integrator(model, polynomial_degree, n_shooting, duration, states, controls,
         for r in range(polynomial_degree + 1):
             xp_j += _c[r, j] * states[:, r]
 
-        f_j = stochastic_forward_dynamics_n_jointsmerical(
+        f_j = stochastic_forward_dynamics_numerical(
             states=states[:, j],
             controls=controls,  # Piecewise constant control
             stochastic_variables=stochastic_variables,
