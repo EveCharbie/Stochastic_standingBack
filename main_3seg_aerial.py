@@ -3,6 +3,7 @@ import bioviz
 import pickle
 import casadi as cas
 import numpy as np
+import os
 
 import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
@@ -94,7 +95,11 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         save_path = (f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std, 6)}_"
                      f"{round(wPq_std, 6)}_"
                      f"{round(wPqdot_std, 6)}.pkl")
-    
+
+        # if save_path.replace(".pkl", "_CVG.pkl") in os.listdir("results"):
+        #     print(f"Already did {save_path}!")
+        #     continue
+
         if noise_factor == 0:
             path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
             with open(path_to_results, 'rb') as file:
@@ -126,7 +131,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 m_last = data['m_sol']
                 cov_last = data['cov_sol']
                 cholesky_last = data['cov_cholesky_sol']
-    
+
         motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
         sensory_noise_magnitude = cas.DM(cas.vertcat(
             np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root+1)]),

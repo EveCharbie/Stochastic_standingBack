@@ -109,7 +109,7 @@ ocp_type_list = ["deterministe", "collocations"]
 for name in ocp_type_list:
 
     if name == "deterministe":
-        results_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
+        results_path = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
 
         with open(results_path, 'rb') as file:
             data = pickle.load(file)
@@ -128,7 +128,9 @@ for name in ocp_type_list:
             motor_noise_std = 0.05 * noise_factor
             wPq_std = 3e-4 * noise_factor
             wPqdot_std = 0.0024 * noise_factor
-            results_path = f"results/{model_name}_aerial_socp_collocations_{motor_noise_std}_{wPq_std}_{wPqdot_std}.pkl"
+            results_path = (f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std,6)}_"
+                            f"{round(wPq_std, 6)}_"
+                            f"{round(wPqdot_std, 6)}_CVG.pkl")
 
             with open(results_path, 'rb') as file:
                 data = pickle.load(file)

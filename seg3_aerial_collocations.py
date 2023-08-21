@@ -20,7 +20,7 @@ from bioptim import (
     InitialGuessList,
     ObjectiveFcn,
     Solver,
-    BiorbdModel,
+    StochasticBiorbdModel,
     ObjectiveList,
     NonLinearProgram,
     DynamicsEvaluation,
@@ -732,16 +732,28 @@ def prepare_socp(
     ...
     """
 
-    bio_model = BiorbdModel(biorbd_model_path)
-    bio_model.sensory_reference_function = sensory_reference_function
+    polynomial_degree = 3
+
+    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree, method="legendre")
+
+    motor_noise_mapping = BiMappingList()
+    motor_noise_mapping.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
+
+    bio_model = StochasticBiorbdModel(
+        biorbd_model_path,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_reference_function=sensory_reference_function,
+        motor_noise_mapping=motor_noise_mapping,
+    )
+
     n_q = bio_model.nb_q
     n_root = bio_model.nb_root
     friction_coefficients = cas.DM.zeros(n_q, n_q)
     for i in range(n_root, n_q):
         friction_coefficients[i, i] = 0.1
     bio_model.friction_coefficients = friction_coefficients
-
-    polynomial_degree = 3
+    bio_model.set_friction_coefficients(friction_coefficients)
 
     n_q = bio_model.nb_q
     n_root = bio_model.nb_root
@@ -751,6 +763,12 @@ def prepare_socp(
     objective_functions = ObjectiveList()
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
                             quadratic=True)
+    # objective_functions.add(
+    #     ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
+    #     node=Node.ALL,
+    #     weight=1e3 / 2,
+    #     quadratic=False,
+    # )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     if np.sum(sensory_noise_magnitude) == 0:
         objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
@@ -760,27 +778,27 @@ def prepare_socp(
     #                 node=Node.END,
     #                 weight=1e3,
     #                 quadratic=True)
-    # objective_functions.add(expected_feedback_effort,
-    #                         custom_type=ObjectiveFcn.Lagrange,
-    #                         node=Node.ALL_SHOOTING,
-    #                         weight=10,
-    #                         quadratic=True,
-    #                         sensory_noise_magnitude=sensory_noise_magnitude)
 
     # Constraints
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
-    # constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
 
     # Dynamics
     dynamics = DynamicsList()
-    dynamics.add(configure_stochastic_optimal_control_problem,
-                 dynamic_function=lambda states, controls, parameters, stochastic_variables, nlp, motor_noise, sensory_noise,
-                                         with_gains: stochastic_forward_dynamics(states, controls, parameters,
-                                                                             stochastic_variables, nlp, motor_noise, sensory_noise,
-                                                                             with_gains=with_gains),
-                 motor_noise=np.zeros((2, 1)), sensory_noise=np.zeros((4, 1)), with_cholesky=with_cholesky, expand=False)
+    dynamics.add(
+        DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN,
+        problem_type=problem_type,
+        n_references=8,
+        with_cholesky=False,
+        expand=False,
+    )
+    # dynamics.add(configure_stochastic_optimal_control_problem,
+    #              dynamic_function=lambda states, controls, parameters, stochastic_variables, nlp, motor_noise, sensory_noise,
+    #                                      with_gains: stochastic_forward_dynamics(states, controls, parameters,
+    #                                                                          stochastic_variables, nlp, motor_noise, sensory_noise,
+    #                                                                          with_gains=with_gains),
+    #              motor_noise=np.zeros((2, 1)), sensory_noise=np.zeros((4, 1)), with_cholesky=with_cholesky, expand=False)
 
 
     pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
@@ -943,10 +961,9 @@ def prepare_socp(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        ode_solver=OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre"),
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         assume_phase_dynamics=False,
-        problem_type=SocpType.SOCP_COLLOCATION(motor_noise_magnitude, sensory_noise_magnitude),
+        problem_type=problem_type,
     )
 
