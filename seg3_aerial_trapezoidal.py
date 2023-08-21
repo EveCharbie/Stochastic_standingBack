@@ -326,7 +326,7 @@ def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
     q = controller.states["q"].cx_start
     CoM_pos = get_CoM(controller.model, q)
     CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[0]
+    marker_pos = controller.model.markers(q)[2]
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 

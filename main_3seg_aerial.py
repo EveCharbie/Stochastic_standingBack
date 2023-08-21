@@ -12,7 +12,7 @@ from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
 from seg3_aerial_trapezoidal import prepare_socp_trap
 
-RUN_OCP = True
+RUN_OCP = False  # True
 RUN_SOCP = True
 ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre") #  OdeSolver.TRAPEZOIDAL  #
 
@@ -125,12 +125,12 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 ref_last = data['ref_sol']
                 m_last = data['m_sol']
                 cov_last = data['cov_sol']
-                cholesky_last = data['cholesky_sol']
+                cholesky_last = data['cov_cholesky_sol']
     
         motor_noise_magnitude = cas.DM(np.array([motor_noise_std ** 2 / dt for _ in range(n_q-n_root)]))  # All DoFs except root
         sensory_noise_magnitude = cas.DM(cas.vertcat(
-            np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root)]),
-            np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root)])
+            np.array([wPq_std ** 2 / dt for _ in range(n_q-n_root+1)]),
+            np.array([wPqdot_std ** 2 / dt for _ in range(n_q-n_root+1)])
         ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
     
         socp = prepare_socp(biorbd_model_path=biorbd_model_path,
@@ -145,6 +145,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                             ref_last=None,
                             m_last=None,
                             cov_last=None,
+                            cholesky_last=None,
                             with_cholesky=with_cholesky)
     
         # socp.add_plot_penalty(CostType.ALL)
@@ -160,7 +161,12 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         k_sol = sol_socp.stochastic_variables["k"]
         ref_sol = sol_socp.stochastic_variables["ref"]
         m_sol = sol_socp.stochastic_variables["m"]
-        cov_sol = sol_socp.stochastic_variables["cov"]
+        if with_cholesky:
+            cov_cholesky_sol = sol_socp.stochastic_variables["cov_holesky"]
+            cov_sol = None
+        else:
+            cov_cholesky_sol = None
+            cov_sol = sol_socp.stochastic_variables["cov"]
         data = {"q_sol": q_sol,
                 "qdot_sol": qdot_sol,
                 "tau_sol": tau_sol,
@@ -168,7 +174,8 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 "k_sol": k_sol,
                 "ref_sol": ref_sol,
                 "m_sol": m_sol,
-                "cov_sol": cov_sol}
+                "cov_sol": cov_sol,
+                "cov_cholesky_sol": cov_cholesky_sol}
 
         if sol_socp.status != 0:
             save_path = save_path.replace(".pkl", "_DVG.pkl")
@@ -273,8 +280,8 @@ elif isinstance(ode_solver, OdeSolver.TRAPEZOIDAL):
         motor_noise_magnitude = cas.DM(
             np.array([motor_noise_std ** 2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
         sensory_noise_magnitude = cas.DM(cas.vertcat(
-            np.array([wPq_std ** 2 / dt for _ in range(n_q - n_root)]),
-            np.array([wPqdot_std ** 2 / dt for _ in range(n_q - n_root)])
+            np.array([wPq_std ** 2 / dt for _ in range(n_q - n_root + 1)]),
+            np.array([wPqdot_std ** 2 / dt for _ in range(n_q - n_root + 1)])
         ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
         socp = prepare_socp_trap(biorbd_model_path=biorbd_model_path,

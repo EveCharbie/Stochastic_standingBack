@@ -105,7 +105,7 @@ def stochastic_forward_dynamics(
     if with_gains:
         ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)
         k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
-        K_matrix = nlp.stochastic_variables["k"].reshape_sym_to_matrix(k, n_joints, n_ref)
+        K_matrix = nlp.stochastic_variables["k"].reshape_sym_to_matrix(k)
 
         # ee = cas.vertcat(q[2], qdot[2])
         ee = cas.vertcat(q[2:], qdot[2:])
@@ -134,7 +134,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
 
     # Stochastic variables
     n_ref = 2 * (n_joints + 1)
-    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=n_joints, n_feedbacks=n_ref)  # Only vestibular
+    ConfigureProblem.configure_stochastic_k(ocp, nlp, n_noised_controls=n_joints, n_references=n_ref)
     ConfigureProblem.configure_stochastic_ref(ocp, nlp, n_references=n_ref)
     ConfigureProblem.configure_stochastic_m(ocp, nlp, n_noised_states=2*n_joints, n_collocation_points=3+1)
     if with_cholesky:
@@ -158,16 +158,21 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     )
 
 
-def ref_equals_mean_values(controller: PenaltyController) -> cas.MX:
+def sensory_reference_function(
+    states: cas.MX | cas.SX,
+    controls: cas.MX | cas.SX,
+    parameters: cas.MX | cas.SX,
+    stochastic_variables: cas.MX | cas.SX,
+    nlp: NonLinearProgram,
+):
     """
-    Returns the pelvis position and velocity sice there is no thoracic joint it is the same as semi-circular canal.
+    This functions returns the sensory reference for the feedback gains.
     """
-    q = controller.states["q"].cx_start
-    qdot = controller.states["qdot"].cx_start
-    ref = controller.stochastic_variables["ref"].cx_start
-    # ee = cas.vertcat(q[2], qdot[2])
-    ee = cas.vertcat(q[2:], qdot[2:])
-    return ee - ref
+    q = states[nlp.states["q"].index]
+    qdot = states[nlp.states["qdot"].index]
+    vestibular_and_proprioceptive_sensory = cas.vertcat(q[2:], qdot[2:])
+    return vestibular_and_proprioceptive_sensory
+
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
     """
@@ -184,24 +189,17 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     if "cholesky_cov" in controller.stochastic_variables.keys():
         cov_sym = cas.MX.sym("cov", controller.stochastic_variables["cholesky_cov"].cx_start.shape[0])
-        cov_sym_dict = {"cholesky_cov": cov_sym}
-        cov_sym_dict["cholesky_cov"].cx_start = cov_sym
         l_cov_matrix = (
             controller
             .stochastic_variables["cholesky_cov"]
-            .reshape_to_cholesky_matrix(
-                cov_sym_dict,
-                2 * n_joints,
-                Node.START,
-                "cholesky_cov",
+            .reshape_sym_to_cholesky_matrix(
+                cov_sym,
             )
         )
         cov_matrix = l_cov_matrix @ l_cov_matrix.T
     else:
         cov_sym = cas.MX.sym("cov", controller.stochastic_variables.cx_start.shape[0])
-        cov_sym_dict = {"cov": cov_sym}
-        cov_sym_dict["cov"].cx_start = cov_sym
-        cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(cov_sym_dict, 2*n_joints, 2*n_joints, Node.START, "cov")
+        cov_matrix = controller.stochastic_variables["cov"].reshape_sym_to_matrix(cov_sym)
 
     # What should we use as a reference?
     CoM_pos = get_CoM(controller.model, cas.vertcat(Q_root, Q_joints))[:2]
@@ -264,29 +262,15 @@ def expected_feedback_effort(controller: PenaltyController, sensory_noise_magnit
         key: stochastic_sym[controller.stochastic_variables[key].index]
         for key in controller.stochastic_variables.keys()
     }
-    for key in controller.stochastic_variables.keys():
-        stochastic_sym_dict[key].cx_start = stochastic_sym_dict[key]
 
     if "cholesky_cov" in stochastic_sym_dict.keys():
-        l_cov_matrix = controller.stochastic_variables["cholesky_cov"].reshape_to_cholesky_matrix(
-            stochastic_sym_dict,
-            2*n_joints,
-            Node.START,
-            "cholesky_cov",
-        )
+        l_cov_matrix = controller.stochastic_variables["cholesky_cov"].reshape_to_cholesky_matrix(Node.START)
         cov_matrix = l_cov_matrix @ l_cov_matrix.T
     else:
-        cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(
-            stochastic_sym_dict,
-            2*n_joints,
-            2*n_joints,
-            Node.START,
-            "cov",
-        )
+        cov_matrix = controller.stochastic_variables["cov"].reshape_to_matrix(Node.START)
 
-    ref = stochastic_sym_dict["ref"].cx_start
-
-    K_matrix = controller.stochastic_variables["k"].reshape_sym_to_matrix(stochastic_sym_dict["k"], n_joints, 2)
+    ref = stochastic_sym_dict["ref"]
+    K_matrix = controller.stochastic_variables["k"].reshape_sym_to_matrix(stochastic_sym_dict["k"])
 
     q_joints = cas.MX.sym("q_joints", n_joints, 1)
     qdot_joints = cas.MX.sym("qdot_joints", n_joints, 1)
@@ -741,6 +725,7 @@ def prepare_socp(
     ref_last: np.ndarray = None,
     m_last: np.ndarray = None,
     cov_last: np.ndarray = None,
+    cholesky_last: np.ndarray = None,
     with_cholesky: bool = False,
 ) -> StochasticOptimalControlProgram:
     """
@@ -748,6 +733,14 @@ def prepare_socp(
     """
 
     bio_model = BiorbdModel(biorbd_model_path)
+    bio_model.sensory_reference_function = sensory_reference_function
+    n_q = bio_model.nb_q
+    n_root = bio_model.nb_root
+    friction_coefficients = cas.DM.zeros(n_q, n_q)
+    for i in range(n_root, n_q):
+        friction_coefficients[i, i] = 0.1
+    bio_model.friction_coefficients = friction_coefficients
+
     polynomial_degree = 3
 
     n_q = bio_model.nb_q
@@ -779,7 +772,6 @@ def prepare_socp(
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
     # constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
-    constraints.add(ref_equals_mean_values, node=Node.ALL)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -864,7 +856,9 @@ def prepare_socp(
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
     if with_cholesky:
-        # cov_init = get_cov_init()
+        if cholesky_last is None:
+            # cov_init = get_cov_init()
+            print("not implemented yet")
         cov_min = np.ones((n_cholesky_cov, 3)) * -500
         cov_max = np.ones((n_cholesky_cov, 3)) * 500
         P_0 = cas.DM_eye(2*n_joints) * np.hstack((np.ones((n_joints, )) * 1e-4, np.ones((n_joints, )) * 1e-7))  # P
