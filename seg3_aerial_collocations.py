@@ -158,7 +158,7 @@ def configure_stochastic_optimal_control_problem(ocp: OptimalControlProgram, nlp
     )
 
 
-def sensory_reference_function(
+def sensory_reference(
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
     parameters: cas.MX | cas.SX,
@@ -739,25 +739,25 @@ def prepare_socp(
     motor_noise_mapping = BiMappingList()
     motor_noise_mapping.add("tau", to_second=[None, None, None, 0, 1, 2], to_first=[3, 4, 5])
 
+    n_q = 6
+    n_root = 3
+    n_joints = n_q - n_root
+    friction_coefficients = cas.DM.zeros(n_q, n_q)
+    for i in range(n_root, n_q):
+        friction_coefficients[i, i] = 0.1
+
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
         sensory_noise_magnitude=sensory_noise_magnitude,
         motor_noise_magnitude=motor_noise_magnitude,
-        sensory_reference_function=sensory_reference_function,
+        sensory_reference=sensory_reference,
         motor_noise_mapping=motor_noise_mapping,
+        n_references=(n_joints+1)*2,
+        n_noised_states=n_joints*2,
+        n_noised_controls=n_joints,
+        n_collocation_points=polynomial_degree + 1,
+        friction_coefficients=friction_coefficients,
     )
-
-    n_q = bio_model.nb_q
-    n_root = bio_model.nb_root
-    friction_coefficients = cas.DM.zeros(n_q, n_q)
-    for i in range(n_root, n_q):
-        friction_coefficients[i, i] = 0.1
-    bio_model.friction_coefficients = friction_coefficients
-    bio_model.set_friction_coefficients(friction_coefficients)
-
-    n_q = bio_model.nb_q
-    n_root = bio_model.nb_root
-    n_joints = n_q - n_root
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -789,17 +789,9 @@ def prepare_socp(
     dynamics.add(
         DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN,
         problem_type=problem_type,
-        n_references=8,
         with_cholesky=False,
         expand=False,
     )
-    # dynamics.add(configure_stochastic_optimal_control_problem,
-    #              dynamic_function=lambda states, controls, parameters, stochastic_variables, nlp, motor_noise, sensory_noise,
-    #                                      with_gains: stochastic_forward_dynamics(states, controls, parameters,
-    #                                                                          stochastic_variables, nlp, motor_noise, sensory_noise,
-    #                                                                          with_gains=with_gains),
-    #              motor_noise=np.zeros((2, 1)), sensory_noise=np.zeros((4, 1)), with_cholesky=with_cholesky, expand=False)
-
 
     pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
 

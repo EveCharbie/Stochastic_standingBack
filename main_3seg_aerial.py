@@ -96,9 +96,9 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                      f"{round(wPq_std, 6)}_"
                      f"{round(wPqdot_std, 6)}.pkl")
 
-        # if save_path.replace(".pkl", "_CVG.pkl") in os.listdir("results"):
-        #     print(f"Already did {save_path}!")
-        #     continue
+        if save_path.replace(".pkl", "_CVG.pkl") in os.listdir("results"):
+            print(f"Already did {save_path}!")
+            continue
 
         if noise_factor == 0:
             path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
