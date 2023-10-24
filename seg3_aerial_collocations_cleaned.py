@@ -82,7 +82,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     # What should we use as a reference?
     CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[:2]
     CoM_vel = controller.model.center_of_mass_velocity(cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[:2]
-    CoM_ang_vel = controller.model.center_of_mass_rotation(cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[0]
+    CoM_ang_vel = controller.model.body_rotation_rate(cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[0]
 
     jac_CoM_q = cas.jacobian(CoM_pos, cas.vertcat(Q_joints))
     jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_joints, Qdot_joints))
@@ -176,7 +176,7 @@ def prepare_socp(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
         node=Node.ALL,
         weight=1e3 / 2,
-        quadratic=False,
+        quadratic=True,
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     # if np.sum(sensory_noise_magnitude) == 0:
