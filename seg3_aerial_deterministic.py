@@ -74,6 +74,7 @@ def prepare_ocp(
     bio_model = BiorbdModel(biorbd_model_path)
 
     n_q = bio_model.nb_q
+    n_root = bio_model.nb_root
 
     # Add objective functions
     objective_functions = ObjectiveList()
@@ -109,12 +110,12 @@ def prepare_ocp(
     x_bounds["qdot"].max[2, 0] = 2.5 * np.pi
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_q, 3)) * -500
-    tau_max = np.ones((n_q, 3)) * 500
-    tau_min[:, 0] = 0
-    tau_max[:, 0] = 0
-    tau_min[[0, 1, 2], :] = 0
-    tau_max[[0, 1, 2], :] = 0
+    tau_min = np.ones((n_q-n_root, 3)) * -500
+    tau_max = np.ones((n_q-n_root, 3)) * 500
+    # tau_min[:, 0] = 0
+    # tau_max[:, 0] = 0
+    # tau_min[[0, 1, 2], :] = 0
+    # tau_max[[0, 1, 2], :] = 0
     u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     # Initial guesses
@@ -123,7 +124,14 @@ def prepare_ocp(
     x_init.add("qdot", initial_guess=[0.01]*n_q, interpolation=InterpolationType.CONSTANT)
 
     u_init = InitialGuessList()
-    u_init.add("tau", initial_guess=[0.01]*n_q, interpolation=InterpolationType.CONSTANT)
+    u_init.add("tau", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
+
+    variable_mappings = BiMappingList()
+    variable_mappings.add(
+        "tau",
+        to_second=[None, None, None, 0, 1, 2],
+        to_first=[3, 4, 5],
+    )
 
     return OptimalControlProgram(
         bio_model,
@@ -137,8 +145,52 @@ def prepare_ocp(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=ode_solver,
+        variable_mappings=variable_mappings,
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
-        assume_phase_dynamics=False,
     )
 
+if __name__ == "__main__":
+
+    model_name = "Model2D_6Dof_0C_3M"
+    biorbd_model_path = f"models/{model_name}.bioMod"
+    biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
+    save_path = f"results/{model_name}_aerial_ocp.pkl"
+
+    dt = 0.05
+    final_time = 0.8
+    n_shooting = int(final_time / dt)
+    ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3)
+
+    ocp = prepare_ocp(biorbd_model_path, final_time, n_shooting, ode_solver)
+
+    # --- Solve the program --- #
+    solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+    solver.set_linear_solver('ma97')
+    solver.set_tol(1e-3)
+    solver.set_dual_inf_tol(3e-4)
+    solver.set_constr_viol_tol(1e-7)
+    solver.set_maximum_iterations(1000)
+    sol = ocp.solve(solver)
+
+    q_sol = sol.states["q"]
+    qdot_sol = sol.states["qdot"]
+    tau_sol = sol.controls["tau"]
+    time_sol = sol.parameters["time"][0][0]
+    data = {"q_sol": q_sol,
+            "qdot_sol": qdot_sol,
+            "tau_sol": tau_sol,
+            "time_sol": time_sol}
+
+    if sol.status != 0:
+        save_path = save_path.replace(".pkl", "_DVG.pkl")
+    else:
+        save_path = save_path.replace(".pkl", "_CVG.pkl")
+
+    with open(save_path, "wb") as file:
+        pickle.dump(data, file)
+
+    import bioviz
+    b = bioviz.Viz(biorbd_model_path_with_mesh)
+    b.load_movement(q_sol)
+    b.exec()
