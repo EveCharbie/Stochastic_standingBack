@@ -53,7 +53,7 @@ def zero_acceleration(controller: PenaltyController, motor_noise: np.ndarray, se
 
 
 def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
-    q = controller.states["q"].cx_start
+    q = controller.q.cx_start
     CoM_pos = controller.model.center_of_mass(q)
     CoM_pos_y = CoM_pos[1]
     marker_pos = controller.model.markers(q)[2]
@@ -67,9 +67,6 @@ def prepare_ocp(
     n_shooting: int,
     ode_solver: OdeSolver,
 ) -> OptimalControlProgram:
-    """
-    ...
-    """
 
     bio_model = BiorbdModel(biorbd_model_path)
 
@@ -78,7 +75,7 @@ def prepare_ocp(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau", node=Node.ALL_SHOOTING, weight=0.01,
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01,
                             quadratic=True)
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 
@@ -86,52 +83,58 @@ def prepare_ocp(
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_ankle, node=Node.END)
-    # constraints.add(ConstraintFcn.TRACK_CONTROL, key="tau", index=[0, 1, 2], node=Node.ALL)
 
     # Dynamics
     dynamics = DynamicsList()
-    dynamics.add(DynamicsFcn.TORQUE_DRIVEN)
+    dynamics.add(DynamicsFcn.TORQUE_DRIVEN_FREE_FLOATING_BASE)
 
     pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
     pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.0, 0.5036, 0.0])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
-    x_bounds["q"] = bio_model.bounds_from_ranges("q")
-    x_bounds["q"].min[:, 0] = pose_at_first_node
-    x_bounds["q"].max[:, 0] = pose_at_first_node
-    x_bounds["q"].min[2, 2] = 2*np.pi - 0.2
-    x_bounds["q"].max[2, 2] = 2*np.pi + 0.2
-    x_bounds["qdot"] = bio_model.bounds_from_ranges("qdot")
-    x_bounds["qdot"].min[:, 0] = 0
-    x_bounds["qdot"].max[:, 0] = 0
-    x_bounds["qdot"].min[1, 0] = 2
-    x_bounds["qdot"].max[1, 0] = 2
-    x_bounds["qdot"].min[2, 0] = 2.5 * np.pi
-    x_bounds["qdot"].max[2, 0] = 2.5 * np.pi
+    q_roots_min = bio_model.bounds_from_ranges("q").min[:n_root, :]
+    q_roots_max = bio_model.bounds_from_ranges("q").max[:n_root, :]
+    q_joints_min = bio_model.bounds_from_ranges("q").min[n_root:, :]
+    q_joints_max = bio_model.bounds_from_ranges("q").max[n_root:, :]
+    qdot_roots_min = bio_model.bounds_from_ranges("qdot").min[:n_root, :]
+    qdot_roots_max = bio_model.bounds_from_ranges("qdot").max[:n_root, :]
+    qdot_joints_min = bio_model.bounds_from_ranges("qdot").min[n_root:, :]
+    qdot_joints_max = bio_model.bounds_from_ranges("qdot").max[n_root:, :]
+
+    q_roots_min[:, 0] = pose_at_first_node[:n_root]
+    q_roots_max[:, 0] = pose_at_first_node[:n_root]
+    q_joints_min[:, 0] = pose_at_first_node[n_root:]
+    q_joints_max[:, 0] = pose_at_first_node[n_root:]
+    q_roots_min[2, 2] = 2*np.pi - 0.2
+    q_roots_max[2, 2] = 2*np.pi + 0.2
+    qdot_roots_min[:, 0] = 0
+    qdot_roots_max[:, 0] = 0
+    qdot_joints_min[:, 0] = 0
+    qdot_joints_max[:, 0] = 0
+    qdot_roots_min[1, 0] = 2
+    qdot_roots_max[1, 0] = 2
+    qdot_roots_min[2, 0] = 2.5 * np.pi
+    qdot_roots_max[2, 0] = 2.5 * np.pi
+
+    x_bounds.add("q_roots", min_bound=q_roots_min, max_bound=q_roots_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    x_bounds.add("q_joints", min_bound=q_joints_min, max_bound=q_joints_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    x_bounds.add("qdot_roots", min_bound=qdot_roots_min, max_bound=qdot_roots_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    x_bounds.add("qdot_joints", min_bound=qdot_joints_min, max_bound=qdot_joints_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     u_bounds = BoundsList()
     tau_min = np.ones((n_q-n_root, 3)) * -500
     tau_max = np.ones((n_q-n_root, 3)) * 500
-    # tau_min[:, 0] = 0
-    # tau_max[:, 0] = 0
-    # tau_min[[0, 1, 2], :] = 0
-    # tau_max[[0, 1, 2], :] = 0
-    u_bounds.add("tau", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    u_bounds.add("tau_joints", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     # Initial guesses
     x_init = InitialGuessList()
-    x_init.add("q", initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T, interpolation=InterpolationType.LINEAR)
-    x_init.add("qdot", initial_guess=[0.01]*n_q, interpolation=InterpolationType.CONSTANT)
+    x_init.add("q_roots", initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[:n_root, :], interpolation=InterpolationType.LINEAR)
+    x_init.add("q_joints", initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[n_root:, :], interpolation=InterpolationType.LINEAR)
+    x_init.add("qdot_roots", initial_guess=[0.01]*n_root, interpolation=InterpolationType.CONSTANT)
+    x_init.add("qdot_joints", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
 
     u_init = InitialGuessList()
-    u_init.add("tau", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
-
-    variable_mappings = BiMappingList()
-    variable_mappings.add(
-        "tau",
-        to_second=[None, None, None, 0, 1, 2],
-        to_first=[3, 4, 5],
-    )
+    u_init.add("tau_joints", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
 
     return OptimalControlProgram(
         bio_model,
@@ -145,7 +148,6 @@ def prepare_ocp(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=ode_solver,
-        variable_mappings=variable_mappings,
         control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
     )
@@ -173,14 +175,20 @@ if __name__ == "__main__":
     solver.set_maximum_iterations(1000)
     sol = ocp.solve(solver)
 
-    q_sol = sol.states["q"]
-    qdot_sol = sol.states["qdot"]
-    tau_sol = sol.controls["tau"]
+    q_roots_sol = sol.states["q_roots"]
+    q_joints_sol = sol.states["q_joints"]
+    qdot_roots_sol = sol.states["qdot_roots"]
+    qdot_joints_sol = sol.states["qdot_joints"]
+    tau_sol = sol.controls["tau_joints"]
     time_sol = sol.parameters["time"][0][0]
-    data = {"q_sol": q_sol,
-            "qdot_sol": qdot_sol,
-            "tau_sol": tau_sol,
-            "time_sol": time_sol}
+    data = {
+        "q_roots": q_roots_sol,
+        "q_joints": q_joints_sol,
+        "qdot_roots": qdot_roots_sol,
+        "qdot_joints": qdot_joints_sol,
+        "tau": tau_sol,
+        "time": time_sol,
+    }
 
     if sol.status != 0:
         save_path = save_path.replace(".pkl", "_DVG.pkl")
