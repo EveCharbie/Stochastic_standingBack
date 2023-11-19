@@ -253,7 +253,7 @@ def prepare_socp(
 
     n_ref = 2*(n_joints+1)  # ref(8)
     n_k = n_joints * n_ref  # K(3x8)
-    n_m = (2*n_q)**2 * (polynomial_degree+2)  # M(12x12x5)
+    n_m = (2*n_q)**2 * (polynomial_degree+1)  # M(12x12x4)
     n_stochastic = n_k + n_ref + n_m
     n_cov = (2 * n_q) ** 2  # Cov(12x12)
     n_stochastic += n_cov
