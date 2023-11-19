@@ -111,19 +111,13 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     return val
 
-def zero_acceleration(controller: PenaltyController, motor_noise: np.ndarray, sensory_noise: np.ndarray) -> cas.MX:
-    dx = stochastic_forward_dynamics(controller.states.cx_start, controller.controls.cx_start,
-                                     controller.parameters.cx_start, controller.stochastic_variables.cx_start,
-                                     controller.get_nlp, motor_noise, sensory_noise, with_gains=False)
-    return dx.dxdt[controller.states_dot.index("qddot")]
-
-def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
+def CoM_over_toes(controller: PenaltyController) -> cas.MX:
     q_roots = controller.states["q_roots"].cx_start
     q_joints = controller.states["q_joints"].cx_start
     q = cas.vertcat(q_roots, q_joints)
     CoM_pos = controller.model.center_of_mass(q)
     CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[2]
+    marker_pos = controller.model.markers(q)[4]
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 
@@ -134,9 +128,11 @@ def prepare_socp(
     n_shooting: int,
     motor_noise_magnitude: cas.DM,
     sensory_noise_magnitude: cas.DM,
-    q_last: np.ndarray = None,
-    qdot_last: np.ndarray = None,
-    tau_last: np.ndarray = None,
+    q_roots_last: np.ndarray = None,
+    q_joints_last: np.ndarray = None,
+    qdot_roots_last: np.ndarray = None,
+    qdot_joints_last: np.ndarray = None,
+    tau_joints_last: np.ndarray = None,
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
     m_last: np.ndarray = None,
@@ -192,7 +188,7 @@ def prepare_socp(
     # Constraints
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
-    constraints.add(CoM_over_ankle, node=Node.END)
+    constraints.add(CoM_over_toes, node=Node.END)
 
     # Dynamics
     dynamics = DynamicsList()
@@ -234,22 +230,22 @@ def prepare_socp(
 
     # Initial guesses
     x_init = InitialGuessList()
-    if q_last is None:
+    if q_roots_last is None:
         x_init.add("q_roots", initial_guess=np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T, interpolation=InterpolationType.LINEAR)
         x_init.add("q_joints", initial_guess=np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T, interpolation=InterpolationType.LINEAR)
         x_init.add("qdot_roots", initial_guess=[0.01]*n_root, interpolation=InterpolationType.CONSTANT)
         x_init.add("qdot_joints", initial_guess=[0.01]*n_joints, interpolation=InterpolationType.CONSTANT)
     else:
-        x_init.add("q_roots", initial_guess=q_last[:n_root], interpolation=InterpolationType.ALL_POINTS)
-        x_init.add("q_joints", initial_guess=q_last[n_root:], interpolation=InterpolationType.ALL_POINTS)
-        x_init.add("qdot_roots", initial_guess=qdot_last[:n_root], interpolation=InterpolationType.ALL_POINTS)
-        x_init.add("qdot_joints", initial_guess=qdot_last[n_root:], interpolation=InterpolationType.ALL_POINTS)
+        x_init.add("q_roots", initial_guess=q_roots_last, interpolation=InterpolationType.ALL_POINTS)
+        x_init.add("q_joints", initial_guess=q_joints_last, interpolation=InterpolationType.ALL_POINTS)
+        x_init.add("qdot_roots", initial_guess=qdot_roots_last, interpolation=InterpolationType.ALL_POINTS)
+        x_init.add("qdot_joints", initial_guess=qdot_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
     u_init = InitialGuessList()
     if tau_last is None:
         u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
-        u_init.add("tau_joints", initial_guess=tau_last, interpolation=InterpolationType.ALL_POINTS)
+        u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
     n_ref = 2*(n_joints+1)  # ref(8)
     n_k = n_joints * n_ref  # K(3x8)
@@ -260,6 +256,10 @@ def prepare_socp(
 
     s_init = InitialGuessList()
     s_bounds = BoundsList()
+
+
+    # TODO: intiialize !!!!
+
 
     if k_last is None:
         k_last = np.ones((n_k, n_shooting + 1)) * 0.01

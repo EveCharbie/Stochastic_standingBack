@@ -45,18 +45,11 @@ from bioptim import (
     ControlType,
 )
 
-def zero_acceleration(controller: PenaltyController, motor_noise: np.ndarray, sensory_noise: np.ndarray) -> cas.MX:
-    dx = stochastic_forward_dynamics(controller.states.cx_start, controller.controls.cx_start,
-                                     controller.parameters.cx_start, controller.stochastic_variables.cx_start,
-                                     controller.get_nlp, motor_noise, sensory_noise, with_gains=False)
-    return dx.dxdt[controller.states_dot.index("qddot")]
-
-
-def CoM_over_ankle(controller: PenaltyController) -> cas.MX:
+def CoM_over_toes(controller: PenaltyController) -> cas.MX:
     q = controller.q.cx_start
     CoM_pos = controller.model.center_of_mass(q)
     CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[2]
+    marker_pos = controller.model.markers(q)[4]
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 
@@ -82,7 +75,7 @@ def prepare_ocp(
     # Constraints
     constraints = ConstraintList()
     constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
-    constraints.add(CoM_over_ankle, node=Node.END)
+    constraints.add(CoM_over_toes, node=Node.END)
 
     # Dynamics
     dynamics = DynamicsList()
