@@ -12,8 +12,9 @@ from bioptim import Solver, OdeSolver
 from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
 
-RUN_OCP = True
+RUN_OCP = False
 RUN_SOCP = True
+RUN_VISION = True
 ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre")
 
 model_name = "Model2D_6Dof_0C_3M"
@@ -74,9 +75,9 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         with open(save_path, "wb") as file:
             pickle.dump(data, file)
     
-        # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        # b.load_movement(q_sol)
-        # b.exec()
+        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+        b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+        b.exec()
     
     
     # --- Run the SOCP collocation with increasing noise --- #

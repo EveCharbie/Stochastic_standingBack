@@ -12,6 +12,8 @@ import numpy as np
 import scipy
 from IPython import embed
 
+from utils import CoM_over_toes
+
 import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
@@ -45,15 +47,6 @@ from bioptim import (
     ControlType,
 )
 
-def CoM_over_toes(controller: PenaltyController) -> cas.MX:
-    q = controller.q.cx_start
-    CoM_pos = controller.model.center_of_mass(q)
-    CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[4]
-    marker_pos_y = marker_pos[1]
-    return marker_pos_y - CoM_pos_y
-
-
 def prepare_ocp(
     biorbd_model_path: str,
     final_time: float,
@@ -81,7 +74,7 @@ def prepare_ocp(
     dynamics = DynamicsList()
     dynamics.add(DynamicsFcn.TORQUE_DRIVEN_FREE_FLOATING_BASE)
 
-    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
+    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, np.pi-0.1, -0.1878, 0.0])  # Initial position approx from bioviz
     pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.0, 0.5036, 0.0])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
@@ -98,8 +91,8 @@ def prepare_ocp(
     q_roots_max[:, 0] = pose_at_first_node[:n_root]
     q_joints_min[:, 0] = pose_at_first_node[n_root:]
     q_joints_max[:, 0] = pose_at_first_node[n_root:]
-    q_roots_min[2, 2] = 2*np.pi - 0.2
-    q_roots_max[2, 2] = 2*np.pi + 0.2
+    q_roots_min[2, 2] = 2*np.pi - 0.5
+    q_roots_max[2, 2] = 2*np.pi + 0.5
     qdot_roots_min[:, 0] = 0
     qdot_roots_max[:, 0] = 0
     qdot_joints_min[:, 0] = 0

@@ -12,6 +12,8 @@ import numpy as np
 import scipy
 from IPython import embed
 
+from utils import (CoM_over_toes, get_ref_init, get_m_init, get_cov_init)
+
 import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
@@ -111,17 +113,6 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     return val
 
-def CoM_over_toes(controller: PenaltyController) -> cas.MX:
-    q_roots = controller.states["q_roots"].cx_start
-    q_joints = controller.states["q_joints"].cx_start
-    q = cas.vertcat(q_roots, q_joints)
-    CoM_pos = controller.model.center_of_mass(q)
-    CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[4]
-    marker_pos_y = marker_pos[1]
-    return marker_pos_y - CoM_pos_y
-
-
 def prepare_socp(
     biorbd_model_path: str,
     time_last: float,
@@ -198,7 +189,7 @@ def prepare_socp(
         with_cholesky=False,
     )
 
-    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, 0.0, -0.1878, 0.0])  # Initial position approx from bioviz
+    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, np.pi-0.1, -0.1878, 0.0])  # Initial position approx from bioviz
     pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.0, 0.5036, 0.0])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
@@ -242,7 +233,7 @@ def prepare_socp(
         x_init.add("qdot_joints", initial_guess=qdot_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
     u_init = InitialGuessList()
-    if tau_last is None:
+    if tau_joints_last is None:
         u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
         u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.ALL_POINTS)
@@ -257,10 +248,6 @@ def prepare_socp(
     s_init = InitialGuessList()
     s_bounds = BoundsList()
 
-
-    # TODO: intiialize !!!!
-
-
     if k_last is None:
         k_last = np.ones((n_k, n_shooting + 1)) * 0.01
     s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
@@ -270,14 +257,14 @@ def prepare_socp(
     ref_max = cas.horzcat(x_bounds["q_roots"].max[2, :], x_bounds["q_joints"].max, x_bounds["qdot_roots"].max[2, :], x_bounds["qdot_joints"].max).T
 
     if ref_last is None:
-        # ref_last = get_ref_init(q_last, qdot_last)
-        ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
+        ref_last = get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree)
+        # ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
     s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     if m_last is None:
-        # m_last = get_m_init(biorbd_model_path, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_last, qdot_last, tau_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
-        m_last = np.ones((n_m, n_shooting + 1)) * 0.01
+        m_last = get_m_init(bio_model, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, tau_joints_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
+        # m_last = np.ones((n_m, n_shooting + 1)) * 0.01
     s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
@@ -289,9 +276,23 @@ def prepare_socp(
         for j in range(2*n_q):
             cov_vector[i*n_q+j] = P_0[i, j]
     if cov_last is None:
-        cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
-    cov_min[:, 0] = cov_vector.reshape((-1, ))
-    cov_max[:, 0] = cov_vector.reshape((-1, ))
+        # cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
+        cov_last = get_cov_init(bio_model,
+                                polynomial_degree,
+                                n_shooting,
+                                n_stochastic,
+                                time_last,
+                                q_roots_last,
+                                q_joints_last,
+                                qdot_roots_last,
+                                qdot_joints_last,
+                                tau_joints_last,
+                                k_last,
+                                ref_last,
+                                m_last,
+                                cov_vector,
+                                motor_noise_magnitude,
+                                sensory_noise_magnitude)
 
     s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
@@ -324,7 +325,6 @@ def main():
     biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
 
     save_path = f"results/{model_name}_aerial_socp_collocations.pkl"
-
 
     n_q = 6
     n_root = 3
