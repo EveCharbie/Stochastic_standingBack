@@ -36,6 +36,9 @@ endsegment
 
 segment	Head
 	parent	Thorax
+	rotations	 x
+	rangesQ
+		-70*3.14/180 3.14/8
 	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
 	mass	5.12
 	inertia
@@ -99,6 +102,7 @@ segment	Hand
 		0.0	0.0	0.0006717710781510774
 	com	0.01927061	-0.007717575	-0.051481325
 	meshfile mesh/hand.stl
+	meshrt -0.5 0 0 xyz 0 0 0
 endsegment
 
 marker	 CENTER_HAND

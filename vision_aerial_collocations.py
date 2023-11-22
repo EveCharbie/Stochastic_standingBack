@@ -46,10 +46,154 @@ from bioptim import (
     CostType,
     VariableScalingList,
     ControlType,
+    PhaseDynamics,
 )
 
+def gaussian_function(x, sigma=1, mhu=0, offset=0, scaling_factor=1, flip=False):
+    """
+    Gaussian function
+    mhu: mean
+    sigma: standard deviation
+    flip: if True, the gaussian is flipped vertically
+    """
+    sign = 1 if not flip else -1
+    flip_offset = 0
+    if flip:
+        flip_offset = scaling_factor / sigma * cas.sqrt(2 * np.pi)
+    return scaling_factor * sign * 1 / (sigma * cas.sqrt(2 * np.pi)) * cas.exp(-0.5 * ((x - mhu) / sigma) ** 2) + flip_offset + offset
+
+def smooth_square_function(x, a, width, center=0, offset=0, scaling_factor=0):
+    minimum = scaling_factor / cas.sqrt(a**2 + 1)
+    b = 1 / (width / np.pi)
+    h = offset + minimum
+    k = width*center/scaling_factor + np.pi/2
+    return scaling_factor * cas.sin(b*x - k) / cas.sqrt(a**2 + cas.sin(b*x - k)**2) + h
+
+
+def motor_acuity(motor_noise, tau_nominal):
+    adjusted_motor_noise = gaussian_function(x=tau_nominal,
+                                     sigma=100,
+                                     offset=motor_noise,
+                                     scaling_factor=1000,
+                                     flip=True)
+    return adjusted_motor_noise
+
+def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
+
+    n_joints = model.nb_q - model.nb_root
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+
+    sensory_input = sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints)
+    proprioceptive_feedback = sensory_input[: 2 * n_joints]
+    vestibular_feedback = sensory_input[2 * n_joints:]
+
+    proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
+    noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
+
+    head_idx = model.segment_index("Head")
+    vestibular_noise = cas.MX.zeros(2, 1)
+    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    for i in range(2):
+        vestibular_noise[i] = gaussian_function(x=head_velocity,
+                                                sigma=10,
+                                                offset=sensory_noise[
+                                                    2 * (model.nb_q - model.nb_root) + i],
+                                                scaling_factor=10,
+                                                flip=True)
+    noised_vestibular_feedback = vestibular_feedback + vestibular_noise
+
+    return cas.vertcat(noised_propriceptive_feedback, noised_vestibular_feedback)
+
+def ff_noised_sensory_input(model, tf, time, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
+
+    def visual_noise(model, q, qdot, sensory_noise):
+
+        floor_normal_vector = cas.MX.zeros(3, 1)
+        floor_normal_vector[2] = 1
+        eyes_vect_start = model.marker(q, model.marker_index("eyes_vect_start"))
+        eyes_vect_end = model.marker(q, model.marker_index("eyes_vect_end"))
+        gaze_vector = eyes_vect_end - eyes_vect_start
+        angle = cas.acos(cas.dot(gaze_vector, floor_normal_vector) / (cas.norm_fro(gaze_vector) * cas.norm_fro(floor_normal_vector)))
+        # if the athlete is looking upward, consider he does not see the floor
+        angle_to_consider = cas.if_else(gaze_vector[2] > 0, np.pi/2, angle)
+        noise_on_where_you_look = smooth_square_function(x=angle_to_consider,
+                                              a=0.1,
+                                              width=np.pi/2,
+                                              offset=sensory_noise[2*(model.nb_q - model.nb_root) + 2],
+                                              scaling_factor=sensory_noise[2*(model.nb_q - model.nb_root) + 2],
+                                              )
+
+        head_velocity = model.segment_angular_velocity(q, qdot, model.segment_index("Head"))[0]
+        vestibular_noise = gaussian_function(x=head_velocity,
+                                                sigma=10,
+                                                offset=sensory_noise[
+                                                    2 * (model.nb_q - model.nb_root) + 1],
+                                                scaling_factor=10,
+                                                flip=True)
+
+        return noise_on_where_you_look + vestibular_noise
+
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+
+    time_to_contact = tf - time
+    time_to_contact_noise = visual_noise(model, q, qdot, sensory_noise)
+    noised_time_to_contact = time_to_contact + time_to_contact_noise
+
+    somersault_velocity = model.body_rotation_rate(q, qdot)[0]
+    head_angular_velocity = model.segment_angular_velocity(q, qdot, model.segment_index("Head"))[0]
+    somersault_velocity_noise = gaussian_function(x=head_angular_velocity,
+                                            sigma=10,
+                                            offset=sensory_noise[2*(model.nb_q - model.nb_root)+1],
+                                            scaling_factor=10,
+                                            flip=True)
+    noised_somersault_velocity = somersault_velocity + somersault_velocity_noise
+
+    return noised_somersault_velocity * noised_time_to_contact
+
+def compute_torques_from_noise_and_feedback(nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise):
+
+    n_q = nlp.model.nb_q
+    n_root = nlp.model.nb_root
+    n_joints = n_q - n_root
+
+    tf = parameters[0]
+    q_roots = DynamicsFunctions.get(nlp.states["q_roots"], states)
+    q_joints = DynamicsFunctions.get(nlp.states["q_joints"], states)
+    qdot_roots = DynamicsFunctions.get(nlp.states["qdot_roots"], states)
+    qdot_joints = DynamicsFunctions.get(nlp.states["qdot_joints"], states)
+    tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
+
+    fb_ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)[:2*n_joints + 2]
+    ff_ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)[2*n_joints + 2]
+
+    k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
+    k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
+
+    k_fb = k_matrix[:, :2*n_joints + 2]
+    k_ff = k_matrix[:, 2*n_joints + 2:]
+
+    tau_fb = k_fb @ (fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise) - fb_ref)
+    tau_ff = k_ff @ (ff_noised_sensory_input(nlp.model, tf, time, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise) - ff_ref)
+    tau_motor_noise = motor_acuity(motor_noise, tau_nominal)
+
+    tau = tau_nominal + tau_fb + tau_ff + tau_motor_noise
+
+    return tau
+
+def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints):
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+    proprioceptive_feedback = cas.vertcat(q_joints, qdot_joints)
+    head_idx = model.segment_index("Head")
+    head_orientation = model.segment_orientation(q, head_idx)
+    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)
+    vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
+    return cas.vertcat(proprioceptive_feedback, vestibular_feedback)
+
 def sensory_reference(
-    time: cas.MX | cas.SX,
+    time: cas.MX,
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
     parameters: cas.MX | cas.SX,
@@ -65,8 +209,7 @@ def sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    vestibular_and_joints_feedback = cas.vertcat(q_joints, qdot_joints, q_roots[2], qdot_roots[2])
-    return vestibular_and_joints_feedback
+    return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints)
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
     """
@@ -114,25 +257,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     return val
 
-def compute_torques_from_noise_and_feedback(
-    nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise
-):
-    tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
-
-    ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)
-    k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
-    k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
-
-    sensory_input = nlp.model.sensory_reference(time, states, controls, parameters, stochastic_variables, nlp)
-    tau_fb = k_matrix @ ((sensory_input - ref) + sensory_noise)
-
-    tau_motor_noise = motor_noise
-
-    tau_joints = tau_nominal + tau_fb + tau_motor_noise
-
-    return tau_joints
-
-def prepare_socp(
+def prepare_socp_vision(
     biorbd_model_path: str,
     time_last: float,
     n_shooting: int,
@@ -149,7 +274,10 @@ def prepare_socp(
     cov_last: np.ndarray = None,
 ) -> StochasticOptimalControlProgram:
     """
-    ...
+    Sensory inputs:
+    - proprioceptive: joint angles and velocities (5+5)
+    - vestibular: head orientation and angular velocity (1+1)
+    - visual: vision (1)
     """
 
     polynomial_degree = 3
@@ -170,8 +298,8 @@ def prepare_socp(
         motor_noise_magnitude=motor_noise_magnitude,
         sensory_reference=sensory_reference,
         compute_torques_from_noise_and_feedback=compute_torques_from_noise_and_feedback,
-        n_references=2*(n_joints+1),
-        n_feedbacks=2*(n_joints+1),
+        n_references=2*n_joints+2+1,
+        n_feedbacks=2*n_joints+2,  # The last one is a feedforward
         n_noised_states=n_q*2,
         n_noised_controls=n_joints,
         n_collocation_points=polynomial_degree + 1,
@@ -209,10 +337,11 @@ def prepare_socp(
         DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN_FREE_FLOATING_BASE,
         problem_type=problem_type,
         with_cholesky=False,
+        phase_dynamics=PhaseDynamics.ONE_PER_NODE,
     )
 
-    pose_at_first_node = np.array([-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0])  # Initial position approx from bioviz
-    pose_at_last_node = np.array([-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856])  # Final position approx from bioviz
+    pose_at_first_node = np.array([-0.0346, 0.1207, 0.2255, 0.0, 0.0045, 3.1, -0.1787, 0.0])  # Initial position approx from bioviz
+    pose_at_last_node = np.array([-0.0346, 0.1207, 5.8292, -0.1801, -0.2954, 0.5377, 0.8506, -0.6856])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
     x_bounds["q_roots"] = bio_model.bounds_from_ranges("q_roots")
@@ -221,8 +350,8 @@ def prepare_socp(
     x_bounds["q_roots"].max[:, 0] = pose_at_first_node[:n_root]
     x_bounds["q_joints"].min[:, 0] = pose_at_first_node[n_root:]
     x_bounds["q_joints"].max[:, 0] = pose_at_first_node[n_root:]
-    x_bounds["q_roots"].min[2, 2] = 5.8292 - 0.2
-    x_bounds["q_roots"].max[2, 2] = 5.8292 + 0.2
+    x_bounds["q_roots"].min[2, 2] = pose_at_last_node[2] - 0.2
+    x_bounds["q_roots"].max[2, 2] = pose_at_last_node[2] + 0.2
     x_bounds["qdot_roots"] = bio_model.bounds_from_ranges("qdot_roots")
     x_bounds["qdot_joints"] = bio_model.bounds_from_ranges("qdot_joints")
     x_bounds["qdot_roots"].min[:, 0] = 0
@@ -260,11 +389,11 @@ def prepare_socp(
     else:
         u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
-    n_ref = 2*(n_joints+1)  # ref(8)
-    n_k = n_joints * n_ref  # K(3x8)
-    n_m = (2*n_q)**2 * (polynomial_degree+1)  # M(12x12x4)
+    n_ref = 2*n_joints + 2 + 1  # ref(13)
+    n_k = n_joints * n_ref  # K(3x13)
+    n_m = (2*n_q)**2 * (polynomial_degree+1)  # M(16x16x4)
     n_stochastic = n_k + n_ref + n_m
-    n_cov = (2 * n_q) ** 2  # Cov(12x12)
+    n_cov = (2 * n_q) ** 2  # Cov(16x16)
     n_stochastic += n_cov
 
     s_init = InitialGuessList()
@@ -276,19 +405,21 @@ def prepare_socp(
     s_bounds.add("k", min_bound=[-500]*n_k, max_bound=[500]*n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(x_bounds["q_joints"].min, x_bounds["qdot_joints"].min,
-                          x_bounds["q_roots"].min[2, :].reshape(1, 3), x_bounds["qdot_roots"].min[2, :].reshape(1, 3))
+                          x_bounds["q_roots"].min[2, :].reshape(1, 3)-1, x_bounds["qdot_roots"].min[2, :].reshape(1, 3)-10,
+                          np.ones((1, 3)) * pose_at_last_node[2])
     ref_max = cas.vertcat(x_bounds["q_joints"].max, x_bounds["qdot_joints"].max,
-                          x_bounds["q_roots"].max[2, :].reshape(1, 3), x_bounds["qdot_roots"].max[2, :].reshape(1, 3))
+                          x_bounds["q_roots"].max[2, :].reshape(1, 3)+1, x_bounds["qdot_roots"].max[2, :].reshape(1, 3)+10,
+                          np.ones((1, 3)) * pose_at_last_node[2])
 
     if ref_last is None:
-        ref_last = get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree)
-        # ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
+        # ref_last = get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree)
+        ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
     s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     if m_last is None:
-        m_last = get_m_init(bio_model, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, tau_joints_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
-        # m_last = np.ones((n_m, n_shooting + 1)) * 0.01
+        # m_last = get_m_init(bio_model, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, tau_joints_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
+        m_last = np.ones((n_m, n_shooting + 1)) * 0.01
     s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
@@ -300,23 +431,23 @@ def prepare_socp(
         for j in range(2*n_q):
             cov_vector[i*n_q+j] = P_0[i, j]
     if cov_last is None:
-        # cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
-        cov_last = get_cov_init(bio_model,
-                                polynomial_degree,
-                                n_shooting,
-                                n_stochastic,
-                                time_last,
-                                q_roots_last,
-                                q_joints_last,
-                                qdot_roots_last,
-                                qdot_joints_last,
-                                tau_joints_last,
-                                k_last,
-                                ref_last,
-                                m_last,
-                                cov_vector,
-                                motor_noise_magnitude,
-                                sensory_noise_magnitude)
+        cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
+        # cov_last = get_cov_init(bio_model,
+        #                         polynomial_degree,
+        #                         n_shooting,
+        #                         n_stochastic,
+        #                         time_last,
+        #                         q_roots_last,
+        #                         q_joints_last,
+        #                         qdot_roots_last,
+        #                         qdot_joints_last,
+        #                         tau_joints_last,
+        #                         k_last,
+        #                         ref_last,
+        #                         m_last,
+        #                         cov_vector,
+        #                         motor_noise_magnitude,
+        #                         sensory_noise_magnitude)
 
     s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
@@ -350,7 +481,7 @@ def main():
 
     save_path = f"results/{model_name}_aerial_socp_collocations.pkl"
 
-    n_q = 7
+    n_q = 6
     n_root = 3
 
     dt = 0.05
@@ -381,7 +512,7 @@ def main():
     solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
     solver._nlp_scaling_method = "none"
 
-    socp = prepare_socp(biorbd_model_path,
+    socp = prepare_socp_vision(biorbd_model_path,
                         final_time,
                         n_shooting,
                         motor_noise_magnitude,

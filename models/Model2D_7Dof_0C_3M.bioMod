@@ -34,6 +34,9 @@ endsegment
 
 segment	Head
 	parent	Thorax
+	rotations	 x
+	rangesQ
+		-70*3.14/180 3.14/8
 	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
 	mass	5.12
 	inertia

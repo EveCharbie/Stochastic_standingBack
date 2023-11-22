@@ -49,8 +49,8 @@ def CoM_over_toes(controller: PenaltyController) -> cas.MX:
 
 
 def get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree):
-    ref_last = cas.vertcat(q_roots_last[2, :].reshape(1, 65), q_joints_last, qdot_roots_last[2, :].reshape(1, 65), qdot_joints_last)
-    ref_last = ref_last[:, 0::(polynomial_degree+1)]
+    ref_last = cas.vertcat(q_joints_last, qdot_joints_last, q_roots_last[2, :].reshape(1, -1), qdot_roots_last[2, :].reshape(1, -1))
+    ref_last = ref_last[:, 0::(polynomial_degree+2)]
     return ref_last
 
 

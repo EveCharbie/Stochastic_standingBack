@@ -54,7 +54,15 @@ def prepare_ocp(
     ode_solver: OdeSolver,
 ) -> OptimalControlProgram:
 
-    bio_model = BiorbdModel(biorbd_model_path)
+    biorbd_model = biorbd.Model(biorbd_model_path)
+    n_q = biorbd_model.nbQ()
+    n_root = biorbd_model.nbRoot()
+    n_joints = n_q - n_root
+    friction_coefficients = cas.DM.zeros(n_joints, n_joints)
+    for i in range(n_joints):
+        friction_coefficients[i, i] = 0.1
+
+    bio_model = BiorbdModel(biorbd_model_path, friction_coefficients=friction_coefficients)
 
     n_q = bio_model.nb_q
     n_root = bio_model.nb_root
@@ -74,8 +82,8 @@ def prepare_ocp(
     dynamics = DynamicsList()
     dynamics.add(DynamicsFcn.TORQUE_DRIVEN_FREE_FLOATING_BASE)
 
-    pose_at_first_node = np.array([-0.0422, 0.0892, 0.2386, np.pi-0.1, -0.1878, 0.0])  # Initial position approx from bioviz
-    pose_at_last_node = np.array([-0.0422, 0.0892, 5.7904, 0.0, 0.5036, 0.0])  # Final position approx from bioviz
+    pose_at_first_node = np.array([-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0])  # Initial position approx from bioviz
+    pose_at_last_node = np.array([-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856])  # Final position approx from bioviz
 
     x_bounds = BoundsList()
     q_roots_min = bio_model.bounds_from_ranges("q").min[:n_root, :]
@@ -91,8 +99,8 @@ def prepare_ocp(
     q_roots_max[:, 0] = pose_at_first_node[:n_root]
     q_joints_min[:, 0] = pose_at_first_node[n_root:]
     q_joints_max[:, 0] = pose_at_first_node[n_root:]
-    q_roots_min[2, 2] = 2*np.pi - 0.5
-    q_roots_max[2, 2] = 2*np.pi + 0.5
+    q_roots_min[2, 2] = 5.8292 - 0.5
+    q_roots_max[2, 2] = 5.8292 + 0.5
     qdot_roots_min[:, 0] = 0
     qdot_roots_max[:, 0] = 0
     qdot_joints_min[:, 0] = 0
