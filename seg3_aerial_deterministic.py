@@ -15,6 +15,7 @@ from IPython import embed
 from utils import CoM_over_toes
 
 import sys
+
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
@@ -47,13 +48,13 @@ from bioptim import (
     ControlType,
 )
 
+
 def prepare_ocp(
     biorbd_model_path: str,
     final_time: float,
     n_shooting: int,
     ode_solver: OdeSolver,
 ) -> OptimalControlProgram:
-
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
     n_root = biorbd_model.nbRoot()
@@ -69,8 +70,9 @@ def prepare_ocp(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01,
-                            quadratic=True)
+    objective_functions.add(
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
+    )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 
     # Constraints
@@ -82,8 +84,12 @@ def prepare_ocp(
     dynamics = DynamicsList()
     dynamics.add(DynamicsFcn.TORQUE_DRIVEN_FREE_FLOATING_BASE)
 
-    pose_at_first_node = np.array([-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0])  # Initial position approx from bioviz
-    pose_at_last_node = np.array([-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856])  # Final position approx from bioviz
+    pose_at_first_node = np.array(
+        [-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0]
+    )  # Initial position approx from bioviz
+    pose_at_last_node = np.array(
+        [-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856]
+    )  # Final position approx from bioviz
 
     x_bounds = BoundsList()
     q_roots_min = bio_model.bounds_from_ranges("q").min[:n_root, :]
@@ -110,25 +116,58 @@ def prepare_ocp(
     qdot_roots_min[2, 0] = 2.5 * np.pi
     qdot_roots_max[2, 0] = 2.5 * np.pi
 
-    x_bounds.add("q_roots", min_bound=q_roots_min, max_bound=q_roots_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-    x_bounds.add("q_joints", min_bound=q_joints_min, max_bound=q_joints_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-    x_bounds.add("qdot_roots", min_bound=qdot_roots_min, max_bound=qdot_roots_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
-    x_bounds.add("qdot_joints", min_bound=qdot_joints_min, max_bound=qdot_joints_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    x_bounds.add(
+        "q_roots",
+        min_bound=q_roots_min,
+        max_bound=q_roots_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "q_joints",
+        min_bound=q_joints_min,
+        max_bound=q_joints_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "qdot_roots",
+        min_bound=qdot_roots_min,
+        max_bound=qdot_roots_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "qdot_joints",
+        min_bound=qdot_joints_min,
+        max_bound=qdot_joints_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_q-n_root, 3)) * -500
-    tau_max = np.ones((n_q-n_root, 3)) * 500
-    u_bounds.add("tau_joints", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    tau_min = np.ones((n_q - n_root, 3)) * -500
+    tau_max = np.ones((n_q - n_root, 3)) * 500
+    u_bounds.add(
+        "tau_joints",
+        min_bound=tau_min,
+        max_bound=tau_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     # Initial guesses
     x_init = InitialGuessList()
-    x_init.add("q_roots", initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[:n_root, :], interpolation=InterpolationType.LINEAR)
-    x_init.add("q_joints", initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[n_root:, :], interpolation=InterpolationType.LINEAR)
-    x_init.add("qdot_roots", initial_guess=[0.01]*n_root, interpolation=InterpolationType.CONSTANT)
-    x_init.add("qdot_joints", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
+    x_init.add(
+        "q_roots",
+        initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[:n_root, :],
+        interpolation=InterpolationType.LINEAR,
+    )
+    x_init.add(
+        "q_joints",
+        initial_guess=np.vstack((pose_at_first_node, pose_at_last_node)).T[n_root:, :],
+        interpolation=InterpolationType.LINEAR,
+    )
+    x_init.add("qdot_roots", initial_guess=[0.01] * n_root, interpolation=InterpolationType.CONSTANT)
+    x_init.add("qdot_joints", initial_guess=[0.01] * (n_q - n_root), interpolation=InterpolationType.CONSTANT)
 
     u_init = InitialGuessList()
-    u_init.add("tau_joints", initial_guess=[0.01]*(n_q-n_root), interpolation=InterpolationType.CONSTANT)
+    u_init.add("tau_joints", initial_guess=[0.01] * (n_q - n_root), interpolation=InterpolationType.CONSTANT)
 
     return OptimalControlProgram(
         bio_model,
@@ -145,8 +184,8 @@ def prepare_ocp(
         n_threads=1,
     )
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     model_name = "Model2D_6Dof_0C_3M"
     biorbd_model_path = f"models/{model_name}.bioMod"
     biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
@@ -161,7 +200,7 @@ if __name__ == "__main__":
 
     # --- Solve the program --- #
     solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
-    solver.set_linear_solver('ma97')
+    solver.set_linear_solver("ma97")
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
@@ -192,6 +231,7 @@ if __name__ == "__main__":
         pickle.dump(data, file)
 
     import bioviz
+
     b = bioviz.Viz(biorbd_model_path_with_mesh)
     b.load_movement(q_sol)
     b.exec()

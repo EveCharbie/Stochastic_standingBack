@@ -1,13 +1,14 @@
-
 import numpy as np
 import casadi as cas
 import biorbd_casadi as biorbd
 
 import sys
+
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     PenaltyController,
 )
+
 
 def CoM_over_toes(controller: PenaltyController) -> cas.MX:
     q_roots = controller.states["q_roots"].cx_start

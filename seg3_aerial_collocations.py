@@ -12,9 +12,10 @@ import numpy as np
 import scipy
 from IPython import embed
 
-from utils import (CoM_over_toes, get_ref_init, get_m_init, get_cov_init)
+from utils import CoM_over_toes, get_ref_init, get_m_init, get_cov_init
 
 import sys
+
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
@@ -48,6 +49,7 @@ from bioptim import (
     ControlType,
 )
 
+
 def sensory_reference(
     time: cas.MX | cas.SX,
     states: cas.MX | cas.SX,
@@ -65,8 +67,11 @@ def sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    vestibular_and_joints_feedback = cas.vertcat(q_joints, qdot_joints, cas.reshape(q_roots[2], (1, -1)), cas.reshape(qdot_roots[2], (1, -1)))
+    vestibular_and_joints_feedback = cas.vertcat(
+        q_joints, qdot_joints, cas.reshape(q_roots[2], (1, -1)), cas.reshape(qdot_roots[2], (1, -1))
+    )
     return vestibular_and_joints_feedback
+
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
     """
@@ -87,8 +92,12 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     # What should we use as a reference?
     CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[:2]
-    CoM_vel = controller.model.center_of_mass_velocity(cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[:2]
-    CoM_ang_vel = controller.model.body_rotation_rate(cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints))[0]
+    CoM_vel = controller.model.center_of_mass_velocity(
+        cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
+    )[:2]
+    CoM_ang_vel = controller.model.body_rotation_rate(
+        cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
+    )[0]
 
     jac_CoM_q = cas.jacobian(CoM_pos, cas.vertcat(Q_root, Q_joints))
     jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
@@ -101,18 +110,22 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     vel_constraint = jac_CoM_qdot @ P_matrix_qdot @ jac_CoM_qdot.T
     rot_constraint = jac_CoM_ang_vel @ P_matrix_qdot @ jac_CoM_ang_vel.T
 
-    out = cas.vertcat(pos_constraint[0, 0], pos_constraint[1, 1], vel_constraint[0, 0], vel_constraint[1, 1], rot_constraint[0, 0])
+    out = cas.vertcat(
+        pos_constraint[0, 0], pos_constraint[1, 1], vel_constraint[0, 0], vel_constraint[1, 1], rot_constraint[0, 0]
+    )
 
     fun = cas.Function("reach_target_consistantly", [Q_root, Q_joints, Qdot_root, Qdot_joints, cov_sym], [out])
-    val = fun(controller.states["q_roots"].cx_start,
-              controller.states["q_joints"].cx_start,
-              controller.states["qdot_roots"].cx_start,
-              controller.states["qdot_joints"].cx_start,
-              controller.stochastic_variables["cov"].cx_start
-              )
+    val = fun(
+        controller.states["q_roots"].cx_start,
+        controller.states["q_joints"].cx_start,
+        controller.states["qdot_roots"].cx_start,
+        controller.states["qdot_joints"].cx_start,
+        controller.stochastic_variables["cov"].cx_start,
+    )
     # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
 
     return val
+
 
 def compute_torques_from_noise_and_feedback(
     nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise
@@ -131,6 +144,7 @@ def compute_torques_from_noise_and_feedback(
     tau_joints = tau_nominal + tau_fb + tau_motor_noise
 
     return tau_joints
+
 
 def prepare_socp(
     biorbd_model_path: str,
@@ -165,10 +179,12 @@ def prepare_socp(
     initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
 
     auto_initialization = False if k_last is not None else True
-    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
-                                        method="legendre",
-                                        auto_initialization=auto_initialization,
-                                        initial_cov=initial_cov)
+    problem_type = SocpType.COLLOCATION(
+        polynomial_degree=polynomial_degree,
+        method="legendre",
+        auto_initialization=auto_initialization,
+        initial_cov=initial_cov,
+    )
 
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
@@ -176,9 +192,9 @@ def prepare_socp(
         motor_noise_magnitude=motor_noise_magnitude,
         sensory_reference=sensory_reference,
         compute_torques_from_noise_and_feedback=compute_torques_from_noise_and_feedback,
-        n_references=2*(n_joints+1),
-        n_feedbacks=2*(n_joints+1),
-        n_noised_states=n_q*2,
+        n_references=2 * (n_joints + 1),
+        n_feedbacks=2 * (n_joints + 1),
+        n_noised_states=n_q * 2,
         n_noised_controls=n_joints,
         n_collocation_points=polynomial_degree + 1,
         friction_coefficients=friction_coefficients,
@@ -196,13 +212,13 @@ def prepare_socp(
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     if np.sum(sensory_noise_magnitude) == 0:
-        objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
+        objective_functions.add(
+            ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True
+        )
 
-    objective_functions.add(reach_landing_position_consistantly,
-                    custom_type=ObjectiveFcn.Mayer,
-                    node=Node.END,
-                    weight=1e3,
-                    quadratic=True)
+    objective_functions.add(
+        reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
+    )
 
     # Constraints
     constraints = ConstraintList()
@@ -217,8 +233,12 @@ def prepare_socp(
         with_cholesky=False,
     )
 
-    pose_at_first_node = np.array([-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0])  # Initial position approx from bioviz
-    pose_at_last_node = np.array([-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856])  # Final position approx from bioviz
+    pose_at_first_node = np.array(
+        [-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0]
+    )  # Initial position approx from bioviz
+    pose_at_last_node = np.array(
+        [-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856]
+    )  # Final position approx from bioviz
 
     x_bounds = BoundsList()
     x_bounds["q_roots"] = bio_model.bounds_from_ranges("q_roots")
@@ -241,19 +261,32 @@ def prepare_socp(
     x_bounds["qdot_roots"].max[2, 0] = 2.5 * np.pi
 
     u_bounds = BoundsList()
-    tau_min = np.ones((n_q-n_root, 3)) * -500
-    tau_max = np.ones((n_q-n_root, 3)) * 500
+    tau_min = np.ones((n_q - n_root, 3)) * -500
+    tau_max = np.ones((n_q - n_root, 3)) * 500
     tau_min[:, 0] = 0
     tau_max[:, 0] = 0
-    u_bounds.add("tau_joints", min_bound=tau_min, max_bound=tau_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    u_bounds.add(
+        "tau_joints",
+        min_bound=tau_min,
+        max_bound=tau_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     # Initial guesses
     x_init = InitialGuessList()
     if q_roots_last is None:
-        x_init.add("q_roots", initial_guess=np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T, interpolation=InterpolationType.LINEAR)
-        x_init.add("q_joints", initial_guess=np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T, interpolation=InterpolationType.LINEAR)
-        x_init.add("qdot_roots", initial_guess=[0.01]*n_root, interpolation=InterpolationType.CONSTANT)
-        x_init.add("qdot_joints", initial_guess=[0.01]*n_joints, interpolation=InterpolationType.CONSTANT)
+        x_init.add(
+            "q_roots",
+            initial_guess=np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T,
+            interpolation=InterpolationType.LINEAR,
+        )
+        x_init.add(
+            "q_joints",
+            initial_guess=np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T,
+            interpolation=InterpolationType.LINEAR,
+        )
+        x_init.add("qdot_roots", initial_guess=[0.01] * n_root, interpolation=InterpolationType.CONSTANT)
+        x_init.add("qdot_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
         x_init.add("q_roots", initial_guess=q_roots_last, interpolation=InterpolationType.ALL_POINTS)
         x_init.add("q_joints", initial_guess=q_joints_last, interpolation=InterpolationType.ALL_POINTS)
@@ -266,9 +299,9 @@ def prepare_socp(
     else:
         u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
 
-    n_ref = 2*(n_joints+1)  # ref(8)
+    n_ref = 2 * (n_joints + 1)  # ref(8)
     n_k = n_joints * n_ref  # K(3x8)
-    n_m = (2*n_q)**2 * (polynomial_degree+1)  # M(12x12x4)
+    n_m = (2 * n_q) ** 2 * (polynomial_degree + 1)  # M(12x12x4)
     n_stochastic = n_k + n_ref + n_m
     n_cov = (2 * n_q) ** 2  # Cov(12x12)
     n_stochastic += n_cov
@@ -278,26 +311,44 @@ def prepare_socp(
 
     if k_last is not None:
         s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("k", min_bound=[-500]*n_k, max_bound=[500]*n_k, interpolation=InterpolationType.CONSTANT)
+    s_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
 
-    ref_min = cas.vertcat(x_bounds["q_joints"].min, x_bounds["qdot_joints"].min,
-                          x_bounds["q_roots"].min[2, :].reshape(1, 3), x_bounds["qdot_roots"].min[2, :].reshape(1, 3))
-    ref_max = cas.vertcat(x_bounds["q_joints"].max, x_bounds["qdot_joints"].max,
-                          x_bounds["q_roots"].max[2, :].reshape(1, 3), x_bounds["qdot_roots"].max[2, :].reshape(1, 3))
+    ref_min = cas.vertcat(
+        x_bounds["q_joints"].min,
+        x_bounds["qdot_joints"].min,
+        x_bounds["q_roots"].min[2, :].reshape(1, 3),
+        x_bounds["qdot_roots"].min[2, :].reshape(1, 3),
+    )
+    ref_max = cas.vertcat(
+        x_bounds["q_joints"].max,
+        x_bounds["qdot_joints"].max,
+        x_bounds["q_roots"].max[2, :].reshape(1, 3),
+        x_bounds["qdot_roots"].max[2, :].reshape(1, 3),
+    )
 
     if ref_last is not None:
         s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    s_bounds.add(
+        "ref",
+        min_bound=ref_min,
+        max_bound=ref_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     if m_last is not None:
         s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
+    s_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
     if cov_last is not None:
         s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
+    s_bounds.add(
+        "cov",
+        min_bound=cov_min,
+        max_bound=cov_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     return StochasticOptimalControlProgram(
         bio_model,
@@ -320,7 +371,6 @@ def prepare_socp(
 
 
 def main():
-
     model_name = "Model2D_6Dof_0C_3M"
     biorbd_model_path = f"models/{model_name}.bioMod"
     biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
@@ -340,29 +390,28 @@ def main():
     wPqdot_std = 0.0024
 
     motor_noise_magnitude = cas.DM(
-        np.array([motor_noise_std ** 2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
-    sensory_noise_magnitude = cas.DM(cas.vertcat(
-        np.array([wPq_std ** 2 / dt for _ in range(n_q - n_root + 1)]),
-        np.array([wPqdot_std ** 2 / dt for _ in range(n_q - n_root + 1)])
-    ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+        np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)])
+    )  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        cas.vertcat(
+            np.array([wPq_std**2 / dt for _ in range(n_q - n_root + 1)]),
+            np.array([wPqdot_std**2 / dt for _ in range(n_q - n_root + 1)]),
+        )
+    )  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
     # Solver parameters
     solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
-    solver.set_linear_solver('ma97')
+    solver.set_linear_solver("ma97")
     solver.set_tol(1e-3)
     solver.set_dual_inf_tol(3e-4)
     solver.set_constr_viol_tol(1e-7)
     solver.set_bound_frac(1e-8)
     solver.set_bound_push(1e-8)
     solver.set_maximum_iterations(1000)
-    solver.set_hessian_approximation('limited-memory')  # Mandatory, otherwise RAM explodes!
+    solver.set_hessian_approximation("limited-memory")  # Mandatory, otherwise RAM explodes!
     solver._nlp_scaling_method = "none"
 
-    socp = prepare_socp(biorbd_model_path,
-                        final_time,
-                        n_shooting,
-                        motor_noise_magnitude,
-                        sensory_noise_magnitude)
+    socp = prepare_socp(biorbd_model_path, final_time, n_shooting, motor_noise_magnitude, sensory_noise_magnitude)
     sol = socp.solve(solver)
 
     q_roots_sol = sol.states["q_roots"]
@@ -371,12 +420,14 @@ def main():
     qdot_joints_sol = sol.states["qdot_joints"]
     tau_joints_sol = sol.controls["tau_joints"]
     time_sol = sol.parameters["time"][0][0]
-    data = {"q_roots_sol": q_roots_sol,
-            "q_joints_sol": q_joints_sol,
-            "qdot_roots_sol": qdot_roots_sol,
-            "qdot_joints_sol": qdot_joints_sol,
-            "tau_joints_sol": tau_joints_sol,
-            "time_sol": time_sol}
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+    }
 
     if sol.status != 0:
         save_path = save_path.replace(".pkl", "_DVG.pkl")
@@ -387,11 +438,11 @@ def main():
         pickle.dump(data, file)
 
     import bioviz
+
     b = bioviz.Viz(biorbd_model_path_with_mesh)
     b.load_movement(q_opt)
     b.exec()
 
+
 if __name__ == "__main__":
     main()
-
-
