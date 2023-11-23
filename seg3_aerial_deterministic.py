@@ -142,7 +142,6 @@ def prepare_ocp(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=ode_solver,
-        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
     )
 

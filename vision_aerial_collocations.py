@@ -282,7 +282,9 @@ def prepare_socp_vision(
 
     polynomial_degree = 3
 
-    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree, method="legendre")
+    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
+                                        method="legendre",
+                                        auto_initialization=True)
 
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
@@ -387,7 +389,7 @@ def prepare_socp_vision(
     if tau_joints_last is None:
         u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
-        u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.ALL_POINTS)
+        u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.ALL_POINTS)
 
     n_ref = 2*n_joints + 2 + 1  # ref(13)
     n_k = n_joints * n_ref  # K(3x13)
@@ -467,7 +469,6 @@ def prepare_socp_vision(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         problem_type=problem_type,
     )
@@ -475,13 +476,13 @@ def prepare_socp_vision(
 
 def main():
 
-    model_name = "Model2D_6Dof_0C_3M"
-    biorbd_model_path = f"models/{model_name}.bioMod"
-    biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
+    model_name = "Model2D_7Dof_0C_3M"
+    biorbd_model_path = f"models/{model_name}_vision.bioMod"
+    biorbd_model_path_with_mesh = f"models/{model_name}_vision_with_mesh.bioMod"
 
-    save_path = f"results/{model_name}_aerial_socp_collocations.pkl"
+    save_path = f"results/{model_name}_aerial_vision_socp_collocations.pkl"
 
-    n_q = 6
+    n_q = 7
     n_root = 3
 
     dt = 0.05
@@ -490,15 +491,30 @@ def main():
 
     # TODO: How do we choose the values?
     motor_noise_std = 0.05
-    wPq_std = 3e-4
-    wPqdot_std = 0.0024
+    wPq_std = 0.001
+    wPqdot_std = 0.003
 
     motor_noise_magnitude = cas.DM(
-        np.array([motor_noise_std ** 2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
-    sensory_noise_magnitude = cas.DM(cas.vertcat(
-        np.array([wPq_std ** 2 / dt for _ in range(n_q - n_root + 1)]),
-        np.array([wPqdot_std ** 2 / dt for _ in range(n_q - n_root + 1)])
-    ))  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+        np.array([motor_noise_std ** 2 / dt,
+                  motor_noise_std ** 2 / dt,
+                  motor_noise_std ** 2 / dt,
+                  motor_noise_std ** 2 / dt,
+                  motor_noise_std ** 2 / dt]))  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        np.array([wPq_std ** 2 / dt,  # Proprioceptive position
+                  wPq_std ** 2 / dt,
+                  wPq_std ** 2 / dt,
+                  wPq_std ** 2 / dt,
+                  wPq_std ** 2 / dt,
+                  wPqdot_std ** 2 / dt,  # Proprioceptive velocity
+                  wPqdot_std ** 2 / dt,
+                  wPqdot_std ** 2 / dt,
+                  wPqdot_std ** 2 / dt,
+                  wPqdot_std ** 2 / dt,
+                  wPq_std ** 2 / dt,  # Vestibular position
+                  wPq_std ** 2 / dt,  # Vestibular velocity
+                  wPq_std ** 2 / dt,  # Visual
+                  ]))
 
     # Solver parameters
     solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))

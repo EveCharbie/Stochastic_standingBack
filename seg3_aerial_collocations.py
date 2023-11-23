@@ -65,7 +65,7 @@ def sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    vestibular_and_joints_feedback = cas.vertcat(q_joints, qdot_joints, q_roots[2], qdot_roots[2])
+    vestibular_and_joints_feedback = cas.vertcat(q_joints, qdot_joints, cas.reshape(q_roots[2], (1, -1)), cas.reshape(qdot_roots[2], (1, -1)))
     return vestibular_and_joints_feedback
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
@@ -154,8 +154,6 @@ def prepare_socp(
 
     polynomial_degree = 3
 
-    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree, method="legendre")
-
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
     n_root = biorbd_model.nbRoot()
@@ -163,6 +161,13 @@ def prepare_socp(
     friction_coefficients = cas.DM.zeros(n_joints, n_joints)
     for i in range(n_joints):
         friction_coefficients[i, i] = 0.1
+
+    initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
+
+    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
+                                        method="legendre",
+                                        auto_initialization=True,
+                                        initial_cov=initial_cov)
 
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
@@ -258,7 +263,7 @@ def prepare_socp(
     if tau_joints_last is None:
         u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
-        u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.ALL_POINTS)
+        u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
 
     n_ref = 2*(n_joints+1)  # ref(8)
     n_k = n_joints * n_ref  # K(3x8)
@@ -270,9 +275,8 @@ def prepare_socp(
     s_init = InitialGuessList()
     s_bounds = BoundsList()
 
-    if k_last is None:
-        k_last = np.ones((n_k, n_shooting + 1)) * 0.01
-    s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
+    if k_last is not None:
+        s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("k", min_bound=[-500]*n_k, max_bound=[500]*n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(x_bounds["q_joints"].min, x_bounds["qdot_joints"].min,
@@ -280,45 +284,18 @@ def prepare_socp(
     ref_max = cas.vertcat(x_bounds["q_joints"].max, x_bounds["qdot_joints"].max,
                           x_bounds["q_roots"].max[2, :].reshape(1, 3), x_bounds["qdot_roots"].max[2, :].reshape(1, 3))
 
-    if ref_last is None:
-        ref_last = get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree)
-        # ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
-    s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
+    if ref_last is not None:
+        s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
-    if m_last is None:
-        m_last = get_m_init(bio_model, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, tau_joints_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
-        # m_last = np.ones((n_m, n_shooting + 1)) * 0.01
-    s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
+    if m_last is not None:
+        s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
-    P_0 = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
-    cov_vector = np.zeros((n_cov, 1))
-    for i in range(2*n_q):
-        for j in range(2*n_q):
-            cov_vector[i*n_q+j] = P_0[i, j]
-    if cov_last is None:
-        # cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
-        cov_last = get_cov_init(bio_model,
-                                polynomial_degree,
-                                n_shooting,
-                                n_stochastic,
-                                time_last,
-                                q_roots_last,
-                                q_joints_last,
-                                qdot_roots_last,
-                                qdot_joints_last,
-                                tau_joints_last,
-                                k_last,
-                                ref_last,
-                                m_last,
-                                cov_vector,
-                                motor_noise_magnitude,
-                                sensory_noise_magnitude)
-
-    s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
+    if cov_last is not None:
+        s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     return StochasticOptimalControlProgram(
@@ -336,7 +313,6 @@ def prepare_socp(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        control_type=ControlType.CONSTANT_WITH_LAST_NODE,
         n_threads=1,
         problem_type=problem_type,
     )
