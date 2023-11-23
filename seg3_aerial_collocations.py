@@ -164,9 +164,10 @@ def prepare_socp(
 
     initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
 
+    auto_initialization = False if k_last is not None else True
     problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
                                         method="legendre",
-                                        auto_initialization=True,
+                                        auto_initialization=auto_initialization,
                                         initial_cov=initial_cov)
 
     bio_model = StochasticBiorbdModel(
@@ -194,8 +195,8 @@ def prepare_socp(
         quadratic=True,
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    # if np.sum(sensory_noise_magnitude) == 0:
-    #     objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
+    if np.sum(sensory_noise_magnitude) == 0:
+        objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
 
     objective_functions.add(reach_landing_position_consistantly,
                     custom_type=ObjectiveFcn.Mayer,
@@ -313,7 +314,7 @@ def prepare_socp(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        n_threads=1,
+        n_threads=4,
         problem_type=problem_type,
     )
 

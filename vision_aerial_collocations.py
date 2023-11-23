@@ -150,7 +150,15 @@ def ff_noised_sensory_input(model, tf, time, q_roots, q_joints, qdot_roots, qdot
                                             flip=True)
     noised_somersault_velocity = somersault_velocity + somersault_velocity_noise
 
-    return noised_somersault_velocity * noised_time_to_contact
+    curent_somersault_angle = q_roots[2]
+    curent_somersault_angle_noise = gaussian_function(x=head_angular_velocity,
+                                            sigma=10,
+                                            offset=sensory_noise[2*(model.nb_q - model.nb_root)+1],
+                                            scaling_factor=10,
+                                            flip=True)
+    noised_curent_somersault_angle = curent_somersault_angle + curent_somersault_angle_noise
+
+    return noised_curent_somersault_angle + noised_somersault_velocity * noised_time_to_contact
 
 def compute_torques_from_noise_and_feedback(nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise):
 
@@ -282,10 +290,6 @@ def prepare_socp_vision(
 
     polynomial_degree = 3
 
-    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
-                                        method="legendre",
-                                        auto_initialization=True)
-
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
     n_root = biorbd_model.nbRoot()
@@ -293,6 +297,14 @@ def prepare_socp_vision(
     friction_coefficients = cas.DM.zeros(n_joints, n_joints)
     for i in range(n_joints):
         friction_coefficients[i, i] = 0.1
+
+    initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
+
+    auto_initialization = False if k_last is not None else True
+    problem_type = SocpType.COLLOCATION(polynomial_degree=polynomial_degree,
+                                        method="legendre",
+                                        auto_initialization=auto_initialization,
+                                        initial_cov=initial_cov)
 
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
@@ -319,8 +331,8 @@ def prepare_socp_vision(
         quadratic=True,
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    # if np.sum(sensory_noise_magnitude) == 0:
-    #     objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
+    if np.sum(sensory_noise_magnitude) == 0:
+        objective_functions.add(ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True)
 
     objective_functions.add(reach_landing_position_consistantly,
                     custom_type=ObjectiveFcn.Mayer,
@@ -386,9 +398,7 @@ def prepare_socp_vision(
         x_init.add("qdot_joints", initial_guess=qdot_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
     u_init = InitialGuessList()
-    if tau_joints_last is None:
-        u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
-    else:
+    if tau_joints_last is not None:
         u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.ALL_POINTS)
 
     n_ref = 2*n_joints + 2 + 1  # ref(13)
@@ -401,9 +411,8 @@ def prepare_socp_vision(
     s_init = InitialGuessList()
     s_bounds = BoundsList()
 
-    if k_last is None:
-        k_last = np.ones((n_k, n_shooting + 1)) * 0.01
-    s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
+    if k_last is not None:
+        s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("k", min_bound=[-500]*n_k, max_bound=[500]*n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(x_bounds["q_joints"].min, x_bounds["qdot_joints"].min,
@@ -413,45 +422,18 @@ def prepare_socp_vision(
                           x_bounds["q_roots"].max[2, :].reshape(1, 3)+1, x_bounds["qdot_roots"].max[2, :].reshape(1, 3)+10,
                           np.ones((1, 3)) * pose_at_last_node[2])
 
-    if ref_last is None:
-        # ref_last = get_ref_init(q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, polynomial_degree)
-        ref_last = np.ones((n_ref, n_shooting + 1)) * 0.01
-    s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
+    if ref_last is not None:
+        s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("ref", min_bound=ref_min, max_bound=ref_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
-    if m_last is None:
-        # m_last = get_m_init(bio_model, n_joints, n_stochastic, n_shooting, time_last, polynomial_degree, q_roots_last, q_joints_last, qdot_roots_last, qdot_joints_last, tau_joints_last, k_last, ref_last, motor_noise_magnitude, sensory_noise_magnitude)
-        m_last = np.ones((n_m, n_shooting + 1)) * 0.01
-    s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
+    if m_last is not None:
+        s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("m", min_bound=[-50]*n_m, max_bound=[50]*n_m, interpolation=InterpolationType.CONSTANT)
 
-    P_0 = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
-    cov_vector = np.zeros((n_cov, 1))
-    for i in range(2*n_q):
-        for j in range(2*n_q):
-            cov_vector[i*n_q+j] = P_0[i, j]
-    if cov_last is None:
-        cov_last = np.repeat(cov_vector, n_shooting + 1, axis=1)
-        # cov_last = get_cov_init(bio_model,
-        #                         polynomial_degree,
-        #                         n_shooting,
-        #                         n_stochastic,
-        #                         time_last,
-        #                         q_roots_last,
-        #                         q_joints_last,
-        #                         qdot_roots_last,
-        #                         qdot_joints_last,
-        #                         tau_joints_last,
-        #                         k_last,
-        #                         ref_last,
-        #                         m_last,
-        #                         cov_vector,
-        #                         motor_noise_magnitude,
-        #                         sensory_noise_magnitude)
-
-    s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
+    if cov_last is not None:
+        s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add("cov", min_bound=cov_min, max_bound=cov_max, interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT)
 
     return StochasticOptimalControlProgram(
@@ -469,7 +451,7 @@ def prepare_socp_vision(
         # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        n_threads=1,
+        n_threads=4,
         problem_type=problem_type,
     )
 
@@ -481,9 +463,6 @@ def main():
     biorbd_model_path_with_mesh = f"models/{model_name}_vision_with_mesh.bioMod"
 
     save_path = f"results/{model_name}_aerial_vision_socp_collocations.pkl"
-
-    n_q = 7
-    n_root = 3
 
     dt = 0.05
     final_time = 0.8
