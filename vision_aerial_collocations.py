@@ -12,7 +12,7 @@ import numpy as np
 import scipy
 from IPython import embed
 
-from utils import CoM_over_toes, get_ref_init, get_m_init, get_cov_init
+from utils import CoM_over_toes
 
 import sys
 
@@ -400,8 +400,8 @@ def prepare_socp_vision(
     x_bounds["q_roots"].max[:, 0] = pose_at_first_node[:n_root]
     x_bounds["q_joints"].min[:, 0] = pose_at_first_node[n_root:]
     x_bounds["q_joints"].max[:, 0] = pose_at_first_node[n_root:]
-    x_bounds["q_roots"].min[2, 2] = pose_at_last_node[2] - 0.2
-    x_bounds["q_roots"].max[2, 2] = pose_at_last_node[2] + 0.2
+    x_bounds["q_roots"].min[2, 2] = pose_at_last_node[2] - 0.5
+    x_bounds["q_roots"].max[2, 2] = pose_at_last_node[2] + 0.5
     x_bounds["qdot_roots"] = bio_model.bounds_from_ranges("qdot_roots")
     x_bounds["qdot_joints"] = bio_model.bounds_from_ranges("qdot_joints")
     x_bounds["qdot_roots"].min[:, 0] = 0

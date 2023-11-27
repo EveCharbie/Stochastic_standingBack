@@ -1,4 +1,5 @@
 import bioviz
+import biorbd
 import pickle
 import casadi as cas
 import numpy as np
@@ -13,10 +14,15 @@ from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
 from vision_aerial_collocations import prepare_socp_vision
 
-RUN_OCP = False
+polynomial_degree = 3
+
+RUN_OCP = True
 RUN_SOCP = True
 RUN_VISION = False
-ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3, method="legendre", duplicate_collocation_starting_point=True)
+ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
+                                   method="legendre",
+                                   duplicate_collocation_starting_point=True,
+                                   )
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -41,7 +47,7 @@ solver.set_linear_solver("ma97")
 solver.set_tol(1e-6)  # 1e-3
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
-solver.set_maximum_iterations(3000)
+# solver.set_maximum_iterations(0)
 solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
 
@@ -51,7 +57,10 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
     if RUN_OCP:
         ocp = prepare_ocp(
-            biorbd_model_path=biorbd_model_path, final_time=final_time, n_shooting=n_shooting, ode_solver=ode_solver
+            biorbd_model_path=biorbd_model_path,
+            time_last=final_time,
+            n_shooting=n_shooting,
+            ode_solver=ode_solver
         )
         sol_ocp = ocp.solve(solver=solver)
 
