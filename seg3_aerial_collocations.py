@@ -178,12 +178,12 @@ def prepare_socp(
 
     initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
 
-    # auto_initialization = False if k_last is not None else True
+    auto_initialization = False if k_last is not None else True
     problem_type = SocpType.COLLOCATION(
         polynomial_degree=polynomial_degree,
         method="legendre",
-        # auto_initialization=auto_initialization,
-        # initial_cov=initial_cov,
+        auto_initialization=auto_initialization,
+        initial_cov=initial_cov,
     )
 
     bio_model = StochasticBiorbdModel(
@@ -199,31 +199,26 @@ def prepare_socp(
         n_collocation_points=polynomial_degree + 1,
         friction_coefficients=friction_coefficients,
     )
-    # bio_model = BiorbdModel(biorbd_model_path, friction_coefficients=friction_coefficients)
-    # ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
-    #                                method="legendre",
-    #                                duplicate_collocation_starting_point=True,
-    #                                )
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01,
-                            quadratic=True)
-    # objective_functions.add(
-    #     ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
-    #     node=Node.ALL,
-    #     weight=1e3 / 2,
-    #     quadratic=True,
-    # )
+    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01,
+    #                         quadratic=True)
+    objective_functions.add(
+        ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
+        node=Node.ALL,
+        weight=1e3 / 2,
+        quadratic=True,
+    )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    # if np.sum(sensory_noise_magnitude) == 0:
-    #     objective_functions.add(
-    #         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True
-    #     )
+    if np.sum(sensory_noise_magnitude) == 0:
+        objective_functions.add(
+            ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True
+        )
 
-    # objective_functions.add(
-    #     reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
-    # )
+    objective_functions.add(
+        reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
+    )
 
     # Constraints
     constraints = ConstraintList()
@@ -238,7 +233,6 @@ def prepare_socp(
         with_cholesky=False,
         with_friction=True,
     )
-    # dynamics.add(DynamicsFcn.TORQUE_DRIVEN_FREE_FLOATING_BASE)
 
     pose_at_first_node = np.array(
         [-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0]
@@ -335,74 +329,72 @@ def prepare_socp(
     else:
         u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
 
-    # n_ref = 2 * (n_joints + 1)  # ref(8)
-    # n_k = n_joints * n_ref  # K(3x8)
-    # n_m = (2 * n_q) ** 2 * (polynomial_degree + 1)  # M(12x12x4)
-    # n_stochastic = n_k + n_ref + n_m
-    # n_cov = (2 * n_q) ** 2  # Cov(12x12)
-    # n_stochastic += n_cov
-    #
-    # s_init = InitialGuessList()
-    # s_bounds = BoundsList()
-    #
-    # if k_last is not None:
-    #     s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
-    # s_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
-    #
-    # ref_min = cas.vertcat(
-    #     x_bounds["q_joints"].min,
-    #     x_bounds["qdot_joints"].min,
-    #     x_bounds["q_roots"].min[2, :].reshape(1, 3),
-    #     x_bounds["qdot_roots"].min[2, :].reshape(1, 3),
-    # )
-    # ref_max = cas.vertcat(
-    #     x_bounds["q_joints"].max,
-    #     x_bounds["qdot_joints"].max,
-    #     x_bounds["q_roots"].max[2, :].reshape(1, 3),
-    #     x_bounds["qdot_roots"].max[2, :].reshape(1, 3),
-    # )
-    #
-    # if ref_last is not None:
-    #     s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
-    # s_bounds.add(
-    #     "ref",
-    #     min_bound=ref_min,
-    #     max_bound=ref_max,
-    #     interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-    # )
-    #
-    # if m_last is not None:
-    #     s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
-    # s_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
-    #
-    # cov_min = np.ones((n_cov, 3)) * -500
-    # cov_max = np.ones((n_cov, 3)) * 500
-    # if cov_last is not None:
-    #     s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
-    # s_bounds.add(
-    #     "cov",
-    #     min_bound=cov_min,
-    #     max_bound=cov_max,
-    #     interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
-    # )
+    n_ref = 2 * (n_joints + 1)  # ref(8)
+    n_k = n_joints * n_ref  # K(3x8)
+    n_m = (2 * n_q) ** 2 * (polynomial_degree + 1)  # M(12x12x4)
+    n_stochastic = n_k + n_ref + n_m
+    n_cov = (2 * n_q) ** 2  # Cov(12x12)
+    n_stochastic += n_cov
+
+    s_init = InitialGuessList()
+    s_bounds = BoundsList()
+
+    if k_last is not None:
+        s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+
+    ref_min = cas.vertcat(
+        x_bounds["q_joints"].min,
+        x_bounds["qdot_joints"].min,
+        x_bounds["q_roots"].min[2, :].reshape(1, 3),
+        x_bounds["qdot_roots"].min[2, :].reshape(1, 3),
+    )
+    ref_max = cas.vertcat(
+        x_bounds["q_joints"].max,
+        x_bounds["qdot_joints"].max,
+        x_bounds["q_roots"].max[2, :].reshape(1, 3),
+        x_bounds["qdot_roots"].max[2, :].reshape(1, 3),
+    )
+
+    if ref_last is not None:
+        s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add(
+        "ref",
+        min_bound=ref_min,
+        max_bound=ref_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+
+    if m_last is not None:
+        s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
+
+    cov_min = np.ones((n_cov, 3)) * -500
+    cov_max = np.ones((n_cov, 3)) * 500
+    if cov_last is not None:
+        s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
+    s_bounds.add(
+        "cov",
+        min_bound=cov_min,
+        max_bound=cov_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     return StochasticOptimalControlProgram(
-    # return OptimalControlProgram(
         bio_model,
         dynamics,
         n_shooting,
         time_last,
         x_init=x_init,
         u_init=u_init,
-        # s_init=s_init,
+        s_init=s_init,
         x_bounds=x_bounds,
         u_bounds=u_bounds,
-        # s_bounds=s_bounds,
+        s_bounds=s_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        n_threads=4,
+        n_threads=10,
         problem_type=problem_type,
-        # ode_solver=ode_solver,
     )
 
 
