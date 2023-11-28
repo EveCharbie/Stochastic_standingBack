@@ -17,8 +17,8 @@ from vision_aerial_collocations import prepare_socp_vision
 polynomial_degree = 3
 
 RUN_OCP = False
-RUN_SOCP = True
-RUN_VISION = False
+RUN_SOCP = False
+RUN_VISION = True
 ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
                                    method="legendre",
                                    duplicate_collocation_starting_point=True,
@@ -44,7 +44,7 @@ n_shooting = int(final_time / dt)
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
-solver.set_tol(1e-6)  # 1e-3
+solver.set_tol(1e-3)  # 1e-3
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
@@ -145,7 +145,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         b.exec()
 
     # --- Run the SOCP collocation with increasing noise --- #
-    noise_factors = [0, 0.05, 0.1, 0.5, 1.0]
+    noise_factors = [1.0]  # 0.05, 0.1, 0.5,
 
     for i_noise, noise_factor in enumerate(noise_factors):
         # TODO: How do we choose the values?
@@ -174,40 +174,40 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #     print(f"Already did {save_path}!")
             #     continue
 
-            if noise_factor == 0:
-                path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
-                with open(path_to_results, "rb") as file:
-                    data = pickle.load(file)
-                    q_roots_last = data["q_roots_sol"]
-                    q_joints_last = data["q_joints_sol"]
-                    qdot_roots_last = data["qdot_roots_sol"]
-                    qdot_joints_last = data["qdot_joints_sol"]
-                    tau_joints_last = data["tau_joints_sol"]
-                    time_last = data["time_sol"]
-                    k_last = None
-                    ref_last = None
-                    m_last = None
-                    cov_last = None
+            # if noise_factor == 0:
+            path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
+            with open(path_to_results, "rb") as file:
+                data = pickle.load(file)
+                q_roots_last = data["q_roots_sol"]
+                q_joints_last = data["q_joints_sol"]
+                qdot_roots_last = data["qdot_roots_sol"]
+                qdot_joints_last = data["qdot_joints_sol"]
+                tau_joints_last = data["tau_joints_sol"]
+                time_last = data["time_sol"]
+                k_last = None
+                ref_last = None
+                m_last = None
+                cov_last = None
 
-            else:
-                path_to_results = (
-                    f"results/{model_name}_aerial_socp_collocations_{round(0.05 * noise_factors[i_noise-1], 6)}_"
-                    f"{round(3e-4 * noise_factors[i_noise-1], 6)}_"
-                    f"{round(0.0024 * noise_factors[i_noise-1], 6)}_CVG.pkl"
-                )
-
-                with open(path_to_results, "rb") as file:
-                    data = pickle.load(file)
-                    q_roots_last = data["q_roots_sol"]
-                    q_joints_last = data["q_joints_sol"]
-                    qdot_roots_last = data["qdot_roots_sol"]
-                    qdot_joints_last = data["qdot_joints_sol"]
-                    tau_joints_last = data["tau_joints_sol"]
-                    time_last = data["time_sol"]
-                    k_last = data["k_sol"]
-                    ref_last = data["ref_sol"]
-                    m_last = data["m_sol"]
-                    cov_last = data["cov_sol"]
+            # else:
+            #     path_to_results = (
+            #         f"results/{model_name}_aerial_socp_collocations_{round(0.05 * noise_factors[i_noise-1], 6)}_"
+            #         f"{round(3e-4 * noise_factors[i_noise-1], 6)}_"
+            #         f"{round(0.0024 * noise_factors[i_noise-1], 6)}_CVG.pkl"
+            #     )
+            #
+            #     with open(path_to_results, "rb") as file:
+            #         data = pickle.load(file)
+            #         q_roots_last = data["q_roots_sol"]
+            #         q_joints_last = data["q_joints_sol"]
+            #         qdot_roots_last = data["qdot_roots_sol"]
+            #         qdot_joints_last = data["qdot_joints_sol"]
+            #         tau_joints_last = data["tau_joints_sol"]
+            #         time_last = data["time_sol"]
+            #         k_last = data["k_sol"]
+            #         ref_last = data["ref_sol"]
+            #         m_last = data["m_sol"]
+            #         cov_last = data["cov_sol"]
 
             socp = prepare_socp(
                 biorbd_model_path=biorbd_model_path,
@@ -418,30 +418,25 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #     print(f"Already did {save_path}!")
             #     continue
 
-            # with open(save_path, 'rb') as file:
-            #     data = pickle.load(file)
-            #     q_roots_last = data['q_roots_sol']
-            #     q_joints_last = data['q_joints_sol']
-            #     qdot_roots_last = data['qdot_roots_sol']
-            #     qdot_joints_last = data['qdot_joints_sol']
-            #     tau_joints_last = data['tau_joints_sol']
-            #     time_last = data['time_sol']
-            #     k_last = data['k_sol']
-            #     ref_last = data['ref_sol']
-            #     m_last = data['m_sol']
-            #     cov_last = data['cov_sol']
-            # q_joints_last = np.vstack((np.zeros((1, q_joints_last.shape[1])), q_joints_last))
-            # qdot_joints_last = np.vstack((np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last))
-
-            q_roots_last = None
-            q_joints_last = None
-            qdot_roots_last = None
-            qdot_joints_last = None
-            tau_joints_last = None
-            time_last = 0.8
+            with open(save_path.replace(".pkl", "_CVG.pkl"), 'rb') as file:
+                data = pickle.load(file)
+                q_roots_last = data['q_roots_sol']
+                q_joints_last = data['q_joints_sol']
+                qdot_roots_last = data['qdot_roots_sol']
+                qdot_joints_last = data['qdot_joints_sol']
+                tau_joints_last = data['tau_joints_sol']
+                time_last = data['time_sol']
+                k_last = data['k_sol']
+                ref_last = data['ref_sol']
+                m_last = data['m_sol']
+                cov_last = data['cov_sol']
+            q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
+            qdot_joints_last = np.vstack((qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :]))
+            tau_joints_last = np.vstack((tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :]))
 
             socp = prepare_socp_vision(
                 biorbd_model_path=biorbd_model_path_vision,
+                polynomial_degree=polynomial_degree,
                 time_last=time_last,
                 n_shooting=n_shooting,
                 motor_noise_magnitude=motor_noise_magnitude,

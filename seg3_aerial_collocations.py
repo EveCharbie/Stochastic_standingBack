@@ -393,7 +393,7 @@ def prepare_socp(
         s_bounds=s_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        n_threads=10,
+        n_threads=32,
         problem_type=problem_type,
     )
 

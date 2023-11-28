@@ -208,7 +208,7 @@ def prepare_ocp(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=ode_solver,
-        n_threads=4,
+        n_threads=32,
     )
 
 

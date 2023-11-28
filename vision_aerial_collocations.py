@@ -89,9 +89,9 @@ def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, s
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
 
-    sensory_input = sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints)
+    sensory_input = sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, 0, 0)
     proprioceptive_feedback = sensory_input[: 2 * n_joints]
-    vestibular_feedback = sensory_input[2 * n_joints :]
+    vestibular_feedback = sensory_input[2 * n_joints :-1]
 
     proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
@@ -210,7 +210,7 @@ def compute_torques_from_noise_and_feedback(
     return tau
 
 
-def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints):
+def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, tf, time):
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
     proprioceptive_feedback = cas.vertcat(q_joints, qdot_joints)
@@ -218,7 +218,15 @@ def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints):
     head_orientation = model.segment_orientation(q, head_idx)
     head_velocity = model.segment_angular_velocity(q, qdot, head_idx)
     vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
-    return cas.vertcat(proprioceptive_feedback, vestibular_feedback)
+
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+    time_to_contact = tf - time
+    somersault_velocity = model.body_rotation_rate(q, qdot)[0]
+    curent_somersault_angle = q_roots[2]
+    visual_feedforward = curent_somersault_angle + somersault_velocity * time_to_contact
+
+    return cas.vertcat(proprioceptive_feedback, vestibular_feedback, visual_feedforward)
 
 
 def sensory_reference(
@@ -238,7 +246,8 @@ def sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints)
+    tf = nlp.tf
+    return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf, time)
 
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
@@ -297,6 +306,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
 def prepare_socp_vision(
     biorbd_model_path: str,
+    polynomial_degree: int,
     time_last: float,
     n_shooting: int,
     motor_noise_magnitude: cas.DM,
@@ -317,8 +327,6 @@ def prepare_socp_vision(
     - vestibular: head orientation and angular velocity (1+1)
     - visual: vision (1)
     """
-
-    polynomial_degree = 3
 
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
@@ -358,7 +366,7 @@ def prepare_socp_vision(
     #                         quadratic=True)
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
-        node=Node.ALL,
+        node=Node.ALL_SHOOTING,
         weight=1e3 / 2,
         quadratic=True,
     )
@@ -384,6 +392,7 @@ def prepare_socp_vision(
         problem_type=problem_type,
         with_cholesky=False,
         phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+        with_friction=True,
     )
 
     pose_at_first_node = np.array(
@@ -393,31 +402,60 @@ def prepare_socp_vision(
         [-0.0346, 0.1207, 5.8292, -0.1801, -0.2954, 0.5377, 0.8506, -0.6856]
     )  # Final position approx from bioviz
 
+
     x_bounds = BoundsList()
-    x_bounds["q_roots"] = bio_model.bounds_from_ranges("q_roots")
-    x_bounds["q_joints"] = bio_model.bounds_from_ranges("q_joints")
-    x_bounds["q_roots"].min[:, 0] = pose_at_first_node[:n_root]
-    x_bounds["q_roots"].max[:, 0] = pose_at_first_node[:n_root]
-    x_bounds["q_joints"].min[:, 0] = pose_at_first_node[n_root:]
-    x_bounds["q_joints"].max[:, 0] = pose_at_first_node[n_root:]
-    x_bounds["q_roots"].min[2, 2] = pose_at_last_node[2] - 0.5
-    x_bounds["q_roots"].max[2, 2] = pose_at_last_node[2] + 0.5
-    x_bounds["qdot_roots"] = bio_model.bounds_from_ranges("qdot_roots")
-    x_bounds["qdot_joints"] = bio_model.bounds_from_ranges("qdot_joints")
-    x_bounds["qdot_roots"].min[:, 0] = 0
-    x_bounds["qdot_roots"].max[:, 0] = 0
-    x_bounds["qdot_joints"].min[:, 0] = 0
-    x_bounds["qdot_joints"].max[:, 0] = 0
-    x_bounds["qdot_roots"].min[1, 0] = 2
-    x_bounds["qdot_roots"].max[1, 0] = 2
-    x_bounds["qdot_roots"].min[2, 0] = 2.5 * np.pi
-    x_bounds["qdot_roots"].max[2, 0] = 2.5 * np.pi
+    q_roots_min = bio_model.bounds_from_ranges("q_roots").min
+    q_roots_max = bio_model.bounds_from_ranges("q_roots").max
+    q_joints_min = bio_model.bounds_from_ranges("q_joints").min
+    q_joints_max = bio_model.bounds_from_ranges("q_joints").max
+    qdot_roots_min = bio_model.bounds_from_ranges("qdot_roots").min
+    qdot_roots_max = bio_model.bounds_from_ranges("qdot_roots").max
+    qdot_joints_min = bio_model.bounds_from_ranges("qdot_joints").min
+    qdot_joints_max = bio_model.bounds_from_ranges("qdot_joints").max
+
+    q_roots_min[:, 0] = pose_at_first_node[:n_root]
+    q_roots_max[:, 0] = pose_at_first_node[:n_root]
+    q_joints_min[:, 0] = pose_at_first_node[n_root:]
+    q_joints_max[:, 0] = pose_at_first_node[n_root:]
+    q_roots_min[2, 2] = pose_at_last_node[2] - 0.5
+    q_roots_max[2, 2] = pose_at_last_node[2] + 0.5
+    qdot_roots_min[:, 0] = 0
+    qdot_roots_max[:, 0] = 0
+    qdot_joints_min[:, 0] = 0
+    qdot_joints_max[:, 0] = 0
+    qdot_roots_min[1, 0] = 2
+    qdot_roots_max[1, 0] = 2
+    qdot_roots_min[2, 0] = 2.5 * np.pi
+    qdot_roots_max[2, 0] = 2.5 * np.pi
+
+    x_bounds.add(
+        "q_roots",
+        min_bound=q_roots_min,
+        max_bound=q_roots_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "q_joints",
+        min_bound=q_joints_min,
+        max_bound=q_joints_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "qdot_roots",
+        min_bound=qdot_roots_min,
+        max_bound=qdot_roots_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
+    x_bounds.add(
+        "qdot_joints",
+        min_bound=qdot_joints_min,
+        max_bound=qdot_joints_max,
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     u_bounds = BoundsList()
     tau_min = np.ones((n_q - n_root, 3)) * -500
     tau_max = np.ones((n_q - n_root, 3)) * 500
-    tau_min[:, 0] = 0
-    tau_max[:, 0] = 0
     u_bounds.add(
         "tau_joints",
         min_bound=tau_min,
@@ -448,7 +486,7 @@ def prepare_socp_vision(
 
     u_init = InitialGuessList()
     if tau_joints_last is not None:
-        u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.ALL_POINTS)
+        u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
 
     n_ref = 2 * n_joints + 2 + 1  # ref(13)
     n_k = n_joints * n_ref  # K(3x13)
@@ -514,11 +552,9 @@ def prepare_socp_vision(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         s_bounds=s_bounds,
-        # u_scaling=u_scaling,
-        # s_scaling=s_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
-        n_threads=4,
+        n_threads=1,
         problem_type=problem_type,
     )
 
