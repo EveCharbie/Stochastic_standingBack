@@ -10,9 +10,10 @@ segment	Pelvis
 		-2.5 2.5
 		 -1.0 3.0
 		-3.0 9.0
-	rangesQdot	-31.42 31.42
-		-31.42 31.42
-		-31.42 31.42
+	rangesQdot	
+		-100 100
+		-100 100
+		-100 100
 	mass	11.58
 	inertia
 		0.0692	0.0	0.0
@@ -37,6 +38,8 @@ segment	Head
 	rotations	 x
 	rangesQ
 		-70*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
 	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
 	mass	5.12
 	inertia
@@ -56,8 +59,10 @@ segment	Arm
 		0 0 0 1
 	mass	4.72
 	rotations	 x
-	rangesQ	-0.7 3.1
-	rangesQdot	-31.42 31.42
+	rangesQ	
+		-0.7 3.1
+	rangesQdot	
+		-100 100
 	inertia
 		0.03770325476957999	0.0	0.0
 		0.0	0.03770325476957999	0.0
@@ -112,8 +117,10 @@ segment	Thigh
 		0 0 1 0.0
 		0 0 0 1
 	rotations	 x
-	rangesQ	-0.4 2.6
-	rangesQdot	-31.42 31.42
+	rangesQ	
+		-0.4 2.6
+	rangesQdot	
+		-100 100
 	mass	18.98
 	inertia
 		0.3444	0.0	0.0
@@ -131,8 +138,10 @@ segment	Leg
 		0 0 1 -0.462839073
 		0 0 0 1
 	rotations	 x
-	rangesQ	-2.3 0.02
-	rangesQdot	-31.42 31.42
+	rangesQ	
+		-2.3 0.02
+	rangesQdot	
+		-100 100
 	mass	8.36
 	inertia
 		0.1702	0.0	0.0
