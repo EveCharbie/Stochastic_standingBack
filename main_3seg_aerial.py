@@ -118,10 +118,10 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_opt[i_state, -1]
         #
         # # OK
-        # u_multi_thread = np.zeros((8, ns))
-        # u_multi_thread[:4, :] = tau_joints_sol[:, :ns]
-        # u_multi_thread[4:, :] = tau_joints_sol[:, 1:ns + 1]
-        # u_multi_thread[4:, -1] = tau_joints_sol[:, -2]
+        # u_multi_thread = np.zeros((tau_joints_sol.shape[0]*2, ns))
+        # u_multi_thread[:tau_joints_sol.shape[0], :] = tau_joints_sol[:, :ns]
+        # u_multi_thread[tau_joints_sol.shape[0]:, :] = tau_joints_sol[:, 1:ns + 1]
+        # u_multi_thread[tau_joints_sol.shape[0]:, -1] = tau_joints_sol[:, -2]
         #
         # constraint_value = ocp.nlp[0].g_internal[0].function[0](time_sol,
         #                                                          x_multi_thread,
@@ -308,10 +308,10 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #         else:
             #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_opt[i_state, -1]
             #
-            # u_multi_thread = np.zeros((8, ns))
-            # u_multi_thread[:4, :] = tau_joints_sol[:, :ns]
-            # u_multi_thread[4:, :] = tau_joints_sol[:, 1:ns + 1]
-            # u_multi_thread[4:, -1] = tau_joints_sol[:, -2]
+            # u_multi_thread = np.zeros((tau_joints_sol.shape[0]*2, ns))
+            # u_multi_thread[:tau_joints_sol.shape[0], :] = tau_joints_sol[:, :ns]
+            # u_multi_thread[tau_joints_sol.shape[0]:, :] = tau_joints_sol[:, 1:ns + 1]
+            # u_multi_thread[tau_joints_sol.shape[0]:, -1] = tau_joints_sol[:, -2]
             #
             # s_multi_thread = np.zeros((s_sol.shape[0]*2, ns))
             # s_multi_thread[:s_sol.shape[0], :] = s_sol[:, :ns]
@@ -381,7 +381,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
         if RUN_VISION:
             # --- Run the vision --- #
-            model_name = "Model2D_6Dof_0C_3M_vision"
+            n_q += 1
 
             motor_noise_magnitude = cas.DM(
                 np.array(
@@ -418,18 +418,34 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #     print(f"Already did {save_path}!")
             #     continue
 
-            with open(save_path.replace(".pkl", "_CVG.pkl"), 'rb') as file:
+            # with open(save_path.replace(".pkl", "_CVG.pkl"), 'rb') as file:
+            #     data = pickle.load(file)
+            #     q_roots_last = data['q_roots_sol']
+            #     q_joints_last = data['q_joints_sol']
+            #     qdot_roots_last = data['qdot_roots_sol']
+            #     qdot_joints_last = data['qdot_joints_sol']
+            #     tau_joints_last = data['tau_joints_sol']
+            #     time_last = data['time_sol']
+            #     k_last = data['k_sol']
+            #     ref_last = data['ref_sol']
+            #     m_last = data['m_sol']
+            #     cov_last = data['cov_sol']
+
+            path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG.pkl"
+            with open(path_to_results, "rb") as file:
                 data = pickle.load(file)
-                q_roots_last = data['q_roots_sol']
-                q_joints_last = data['q_joints_sol']
-                qdot_roots_last = data['qdot_roots_sol']
-                qdot_joints_last = data['qdot_joints_sol']
-                tau_joints_last = data['tau_joints_sol']
-                time_last = data['time_sol']
-                k_last = data['k_sol']
-                ref_last = data['ref_sol']
-                m_last = data['m_sol']
-                cov_last = data['cov_sol']
+                q_roots_last = data["q_roots_sol"]
+                q_joints_last = data["q_joints_sol"]
+                qdot_roots_last = data["qdot_roots_sol"]
+                qdot_joints_last = data["qdot_joints_sol"]
+                tau_joints_last = data["tau_joints_sol"]
+                time_last = data["time_sol"]
+                k_last = None
+                ref_last = None
+                m_last = None
+                cov_last = None
+
+
             q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
             qdot_joints_last = np.vstack((qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :]))
             tau_joints_last = np.vstack((tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :]))
@@ -476,6 +492,101 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 "m_sol": m_sol,
                 "cov_sol": cov_sol,
             }
+
+
+            # polynomial_degree = socp.nlp[0].ode_solver.polynomial_degree
+            # time_vector = np.linspace(0, time_sol, n_shooting + 1)
+            # n_cx = socp.nlp[0].ode_solver.n_cx - 1
+            # ns = socp.nlp[0].ns
+            #
+            # # Constraint values
+            # x_opt = cas.vertcat(q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol)
+            # x_sol = np.zeros((x_opt.shape[0], n_cx, ns))
+            # for i_node in range(ns):
+            #     x_sol[:, :, i_node] = x_opt[:, i_node * n_cx:(i_node + 1) * n_cx]
+            # s_sol = cas.vertcat(k_sol, ref_sol, m_sol, cov_sol)
+            #
+            # constraint_value = socp.nlp[0].g[0].function[0](0,
+            #                                              x_opt[:, -1],
+            #                                              tau_joints_sol[:, -1],
+            #                                              time_sol,
+            #                                              s_sol[:, -1],
+            #                                              )
+            # print("Toe marker on the ground at landing: ", constraint_value)
+            #
+            # constraint_value = socp.nlp[0].g[1].function[0](0,
+            #                                              x_opt[:, -1],
+            #                                              tau_joints_sol[:, -1],
+            #                                              time_sol,
+            #                                              s_sol[:, -1],
+            #                                              )
+            # print("CoM over toes at landing: ", constraint_value)
+            #
+            # for i_node in range(socp.n_shooting):
+            #     constraint_value = socp.nlp[0].g[2].function[i_node](0,
+            #                               x_sol[:, :, i_node].flatten(order="F"),
+            #                               tau_joints_sol[:, i_node],
+            #                               time_sol,
+            #                               s_sol[:, i_node],
+            #                               )
+            #     print("Sensory input = reference: ", constraint_value)
+            #
+            # for i_node in range(socp.n_shooting):
+            #     constraint_value = socp.nlp[0].g[3].function[i_node](0,
+            #                               x_sol[:, :, i_node].flatten(order="F"),
+            #                               tau_joints_sol[:, i_node],
+            #                               time_sol,
+            #                               s_sol[:, i_node],
+            #                               )
+            #     print("Constraint on M: ", constraint_value[:100])
+            #     print("Constraint on M: ", constraint_value[100:])
+            #
+            # x_multi_thread = np.zeros((2 * n_q * (n_cx + 1), ns))
+            # for i_state in range(2 * n_q):
+            #     for i_node in range(ns):
+            #         for i_coll in range(n_cx):
+            #             x_multi_thread[i_coll * 2 * n_q + i_state, i_node] = x_sol[i_state, i_coll, i_node]
+            #         if i_node < ns - 1:
+            #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_sol[i_state, 0, i_node + 1]
+            #         else:
+            #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_opt[i_state, -1]
+            #
+            # u_multi_thread = np.zeros((tau_joints_sol.shape[0]*2, ns))
+            # u_multi_thread[:tau_joints_sol.shape[0], :] = tau_joints_sol[:, :ns]
+            # u_multi_thread[tau_joints_sol.shape[0]:, :] = tau_joints_sol[:, 1:ns + 1]
+            # u_multi_thread[tau_joints_sol.shape[0]:, -1] = tau_joints_sol[:, -2]
+            #
+            # s_multi_thread = np.zeros((s_sol.shape[0]*2, ns))
+            # s_multi_thread[:s_sol.shape[0], :] = s_sol[:, :ns]
+            # s_multi_thread[s_sol.shape[0]:, :] = s_sol[:, 1:ns + 1]
+            # s_multi_thread[s_sol.shape[0]:, -1] = np.reshape(s_sol[:, -2], (-1, ))
+            #
+            # constraint_value = socp.nlp[0].g[4].function[0](0,
+            #                           x_multi_thread,
+            #                           u_multi_thread,
+            #                           time_sol,
+            #                           s_multi_thread,
+            #                           )
+            # print("Covariance continuity: ", constraint_value[:100])  # 14x14x16
+            # print("Covariance continuity: ", constraint_value[100:])  # 14x14x16
+            #
+            # constraint_value = socp.nlp[0].g_internal[0].function[0](time_sol,
+            #                                                          x_multi_thread,
+            #                                                          u_multi_thread,
+            #                                                          time_sol,
+            #                                                          [],
+            #                                                          )
+            # print("States continuity: ", constraint_value)
+            #
+            # for i_node in range(socp.n_shooting):
+            #     constraint_value = socp.nlp[0].g_internal[1].function[i_node](0,
+            #                               x_sol[:, :, i_node].flatten(order="F"),
+            #                               tau_joints_sol[:, i_node],
+            #                               time_sol,
+            #                               s_sol[:, i_node],
+            #                               )
+            #     print("First collocation point equals state: ", constraint_value)
+
 
             if sol_socp.status != 0:
                 save_path_vision = save_path_vision.replace(".pkl", "_DVG.pkl")
