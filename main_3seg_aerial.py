@@ -486,7 +486,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             with open(save_path_vision, "wb") as file:
                 pickle.dump(data, file)
 
-            b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+            b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
             b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
             b.exec()
 

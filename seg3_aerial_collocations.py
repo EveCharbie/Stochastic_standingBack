@@ -206,7 +206,7 @@ def prepare_socp(
     #                         quadratic=True)
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
-        node=Node.ALL,
+        node=Node.ALL_SHOOTING,
         weight=1e3 / 2,
         quadratic=True,
     )

@@ -50,7 +50,7 @@ from bioptim import (
     PhaseDynamics,
 )
 
-
+from seg3_aerial_collocations import reach_landing_position_consistantly
 def gaussian_function(x, sigma=1, mhu=0, offset=0, scaling_factor=1, flip=False):
     """
     Gaussian function
@@ -230,7 +230,7 @@ def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, tf
 
 
 def sensory_reference(
-    time: cas.MX,
+    time: cas.MX | cas.SX,
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
     parameters: cas.MX | cas.SX,
@@ -248,60 +248,6 @@ def sensory_reference(
     qdot_joints = states[nlp.states["qdot_joints"].index]
     tf = nlp.tf
     return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf, time)
-
-
-def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
-    """
-    Constraint the hand to reach the target consistently.
-    This is a multi-node constraint because the covariance matrix depends on all the precedent nodes, but it only
-    applies at the END node.
-    """
-    n_q = controller.model.nb_q
-    n_root = controller.model.nb_root
-    n_joints = n_q - n_root
-    Q_root = cas.MX.sym("q_root", n_root)
-    Q_joints = cas.MX.sym("q_joints", n_joints)
-    Qdot_root = cas.MX.sym("qdot_root", n_root)
-    Qdot_joints = cas.MX.sym("qdot_joints", n_joints)
-
-    cov_sym = cas.MX.sym("cov", controller.model.matrix_shape_cov[0] * controller.model.matrix_shape_cov[1])
-    cov_matrix = StochasticBioModel.reshape_to_matrix(cov_sym, controller.model.matrix_shape_cov)
-
-    # What should we use as a reference?
-    CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[:2]
-    CoM_vel = controller.model.center_of_mass_velocity(
-        cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
-    )[:2]
-    CoM_ang_vel = controller.model.body_rotation_rate(
-        cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
-    )[0]
-
-    jac_CoM_q = cas.jacobian(CoM_pos, cas.vertcat(Q_root, Q_joints))
-    jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
-    jac_CoM_ang_vel = cas.jacobian(CoM_ang_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
-
-    P_matrix_q = cov_matrix[:n_q, :n_q]
-    P_matrix_qdot = cov_matrix[:, :]
-
-    pos_constraint = jac_CoM_q @ P_matrix_q @ jac_CoM_q.T
-    vel_constraint = jac_CoM_qdot @ P_matrix_qdot @ jac_CoM_qdot.T
-    rot_constraint = jac_CoM_ang_vel @ P_matrix_qdot @ jac_CoM_ang_vel.T
-
-    out = cas.vertcat(
-        pos_constraint[0, 0], pos_constraint[1, 1], vel_constraint[0, 0], vel_constraint[1, 1], rot_constraint[0, 0]
-    )
-
-    fun = cas.Function("reach_target_consistantly", [Q_root, Q_joints, Qdot_root, Qdot_joints, cov_sym], [out])
-    val = fun(
-        controller.states["q_roots"].cx_start,
-        controller.states["q_joints"].cx_start,
-        controller.states["qdot_roots"].cx_start,
-        controller.states["qdot_joints"].cx_start,
-        controller.stochastic_variables["cov"].cx_start,
-    )
-    # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
-
-    return val
 
 
 def prepare_socp_vision(
@@ -391,7 +337,6 @@ def prepare_socp_vision(
         DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN_FREE_FLOATING_BASE,
         problem_type=problem_type,
         with_cholesky=False,
-        phase_dynamics=PhaseDynamics.ONE_PER_NODE,
         with_friction=True,
     )
 
@@ -485,7 +430,9 @@ def prepare_socp_vision(
         x_init.add("qdot_joints", initial_guess=qdot_joints_last, interpolation=InterpolationType.ALL_POINTS)
 
     u_init = InitialGuessList()
-    if tau_joints_last is not None:
+    if tau_joints_last is None:
+        u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
+    else:
         u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
 
     n_ref = 2 * n_joints + 2 + 1  # ref(13)
