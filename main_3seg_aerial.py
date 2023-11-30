@@ -16,9 +16,9 @@ from vision_aerial_collocations import prepare_socp_vision
 
 polynomial_degree = 3
 
-RUN_OCP = False
-RUN_SOCP = False
-RUN_VISION = True
+RUN_OCP = True
+RUN_SOCP = True
+RUN_VISION = False
 ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
                                    method="legendre",
                                    duplicate_collocation_starting_point=True,
@@ -44,7 +44,7 @@ n_shooting = int(final_time / dt)
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
-solver.set_tol(1e-3)  # 1e-3
+solver.set_tol(1e-4)  # 1e-3
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)

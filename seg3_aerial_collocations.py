@@ -371,8 +371,8 @@ def prepare_socp(
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
-    cov_min[:, 0] = StochasticBioModel.reshape_to_vector(initial_cov)
-    cov_max[:, 0] = StochasticBioModel.reshape_to_vector(initial_cov)
+    cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
+    cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
     if cov_last is not None:
         s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     s_bounds.add(
