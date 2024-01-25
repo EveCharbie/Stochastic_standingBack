@@ -8,7 +8,7 @@ import os
 import sys
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
-from bioptim import Solver, OdeSolver
+from bioptim import Solver, OdeSolver, SolutionMerge
 
 from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
@@ -16,12 +16,12 @@ from vision_aerial_collocations import prepare_socp_vision
 
 polynomial_degree = 3
 
-RUN_OCP = True
-RUN_SOCP = True
-RUN_VISION = False
+RUN_OCP = False
+RUN_SOCP = False
+RUN_VISION = True
 ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
                                    method="legendre",
-                                   duplicate_collocation_starting_point=True,
+                                   duplicate_starting_point=True,
                                    )
 
 model_name = "Model2D_7Dof_0C_3M"
@@ -64,12 +64,14 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         )
         sol_ocp = ocp.solve(solver=solver)
 
-        q_roots_sol = sol_ocp.states["q_roots"]
-        q_joints_sol = sol_ocp.states["q_joints"]
-        qdot_roots_sol = sol_ocp.states["qdot_roots"]
-        qdot_joints_sol = sol_ocp.states["qdot_joints"]
-        tau_joints_sol = sol_ocp.controls["tau_joints"]
-        time_sol = sol_ocp.parameters["time"][0][0]
+        states = sol_ocp.decision_states(to_merge=SolutionMerge.NODES)
+        controls = sol_ocp.decision_controls(to_merge=SolutionMerge.NODES)
+        algebraic_states = sol_ocp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+
+        q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states["qdot_roots"], states["qdot_joints"]
+        tau_joints_sol = controls["tau_joints"]
+        time_sol = sol_ocp.decision_time()[-1]
+
         data = {
             "q_roots_sol": q_roots_sol,
             "q_joints_sol": q_joints_sol,
@@ -79,7 +81,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             "time_sol": time_sol,
         }
 
-        # # These constraints are OK in duplicate_collocation_starting_point=False and True
+        # # These constraints are OK in duplicate_starting_point=False and True
         # polynomial_degree = ocp.nlp[0].ode_solver.polynomial_degree
         # time_vector = np.linspace(0, time_sol, n_shooting + 1)
         # n_cx = ocp.nlp[0].ode_solver.n_cx - 1
@@ -145,7 +147,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         b.exec()
 
     # --- Run the SOCP collocation with increasing noise --- #
-    noise_factors = [1.0]  # 0.05, 0.1, 0.5,
+    noise_factors = [0.0]  # 0.05, 0.1, 0.5,
 
     for i_noise, noise_factor in enumerate(noise_factors):
         # TODO: How do we choose the values?
@@ -229,16 +231,16 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
             sol_socp = socp.solve(solver)
 
-            q_roots_sol = sol_socp.states["q_roots"]
-            q_joints_sol = sol_socp.states["q_joints"]
-            qdot_roots_sol = sol_socp.states["qdot_roots"]
-            qdot_joints_sol = sol_socp.states["qdot_joints"]
-            tau_joints_sol = sol_socp.controls["tau_joints"]
-            time_sol = sol_socp.parameters["time"][0][0]
-            k_sol = sol_socp.stochastic_variables["k"]
-            ref_sol = sol_socp.stochastic_variables["ref"]
-            m_sol = sol_socp.stochastic_variables["m"]
-            cov_sol = sol_socp.stochastic_variables["cov"]
+            states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+            controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+            algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+
+            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states[
+                "qdot_roots"], states["qdot_joints"]
+            tau_joints_sol = controls["tau_joints"]
+            k_sol, ref_sol, m_sol, cov_sol = algebraic_states["k"], algebraic_states["ref"], algebraic_states["m"], algebraic_states["cov"]
+            time_sol = sol_socp.decision_time()[-1]
+
             data = {
                 "q_roots_sol": q_roots_sol,
                 "q_joints_sol": q_joints_sol,
@@ -470,16 +472,16 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
             sol_socp = socp.solve(solver)
 
-            q_roots_sol = sol_socp.states["q_roots"]
-            q_joints_sol = sol_socp.states["q_joints"]
-            qdot_roots_sol = sol_socp.states["qdot_roots"]
-            qdot_joints_sol = sol_socp.states["qdot_joints"]
-            tau_joints_sol = sol_socp.controls["tau_joints"]
-            time_sol = sol_socp.parameters["time"][0][0]
-            k_sol = sol_socp.stochastic_variables["k"]
-            ref_sol = sol_socp.stochastic_variables["ref"]
-            m_sol = sol_socp.stochastic_variables["m"]
-            cov_sol = sol_socp.stochastic_variables["cov"]
+            states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+            controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+            algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+
+            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states[
+                "qdot_roots"], states["qdot_joints"]
+            tau_joints_sol = controls["tau_joints"]
+            k_sol, ref_sol, m_sol, cov_sol = algebraic_states["k"], algebraic_states["ref"], algebraic_states["m"], algebraic_states["cov"]
+            time_sol = sol_socp.decision_time()[-1]
+
             data = {
                 "q_roots_sol": q_roots_sol,
                 "q_joints_sol": q_joints_sol,
@@ -492,7 +494,6 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 "m_sol": m_sol,
                 "cov_sol": cov_sol,
             }
-
 
             # polynomial_degree = socp.nlp[0].ode_solver.polynomial_degree
             # time_vector = np.linspace(0, time_sol, n_shooting + 1)

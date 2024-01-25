@@ -5,7 +5,7 @@ import bioviz
 import pickle
 
 
-def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, stochastic_variables=[], nb_random=30):
+def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, algebraic_states=[], nb_random=30):
     motor_noise_magnitude = 10
     nu = tau_sol.shape[0]
     nq = q_sol.shape[0]
@@ -17,12 +17,12 @@ def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, stochastic_va
         states_integrated[:, j, 0] = np.hstack((q_sol[:, 0], qdot_sol[:, 0]))
         for k in range(ocp.nlp[0].ns):
             controls = tau_sol[:, k] + noise[:, j, k]
-            if len(stochastic_variables) > 0:
-                stochastic_variables = np.vstack((stochastic_variables))  # TODO
+            if len(algebraic_states) > 0:
+                algebraic_states = np.vstack((algebraic_states))  # TODO
             else:
-                stochastic_variables = []
+                algebraic_states = []
             new_states = ocp.nlp[0].dynamics[k](
-                states_integrated[:, j, k], controls, time_sol, stochastic_variables, [], []  ### ?????
+                states_integrated[:, j, k], controls, time_sol, algebraic_states, [], []  ### ?????
             )[
                 0
             ]  # select "xf"

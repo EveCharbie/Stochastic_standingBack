@@ -56,7 +56,7 @@ def sensory_reference(
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
     parameters: cas.MX | cas.SX,
-    stochastic_variables: cas.MX | cas.SX,
+    algebraic_states: cas.MX | cas.SX,
     nlp: NonLinearProgram,
 ):
     """
@@ -121,7 +121,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
         controller.states["q_joints"].cx_start,
         controller.states["qdot_roots"].cx_start,
         controller.states["qdot_joints"].cx_start,
-        controller.stochastic_variables["cov"].cx_start,
+        controller.algebraic_states["cov"].cx_start,
     )
     # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
 
@@ -129,15 +129,15 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
 
 def compute_torques_from_noise_and_feedback(
-    nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise
+    nlp, time, states, controls, parameters, algebraic_states, sensory_noise, motor_noise
 ):
     tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
 
-    ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)
-    k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
+    ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)
+    k = DynamicsFunctions.get(nlp.algebraic_states["k"], algebraic_states)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
 
-    sensory_input = nlp.model.sensory_reference(time, states, controls, parameters, stochastic_variables, nlp)
+    sensory_input = nlp.model.sensory_reference(time, states, controls, parameters, algebraic_states, nlp)
     tau_fb = k_matrix @ ((sensory_input - ref) + sensory_noise)
 
     tau_motor_noise = motor_noise

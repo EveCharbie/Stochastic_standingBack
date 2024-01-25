@@ -175,7 +175,7 @@ def ff_noised_sensory_input(model, tf, time, q_roots, q_joints, qdot_roots, qdot
 
 
 def compute_torques_from_noise_and_feedback(
-    nlp, time, states, controls, parameters, stochastic_variables, sensory_noise, motor_noise
+    nlp, time, states, controls, parameters, algebraic_states, motor_noise, sensory_noise
 ):
     n_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
@@ -188,10 +188,10 @@ def compute_torques_from_noise_and_feedback(
     qdot_joints = DynamicsFunctions.get(nlp.states["qdot_joints"], states)
     tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
 
-    fb_ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)[: 2 * n_joints + 2]
-    ff_ref = DynamicsFunctions.get(nlp.stochastic_variables["ref"], stochastic_variables)[2 * n_joints + 2]
+    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * n_joints + 2]
+    ff_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[2 * n_joints + 2]
 
-    k = DynamicsFunctions.get(nlp.stochastic_variables["k"], stochastic_variables)
+    k = DynamicsFunctions.get(nlp.algebraic_states["k"], algebraic_states)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
 
     k_fb = k_matrix[:, : 2 * n_joints + 2]
@@ -234,7 +234,7 @@ def sensory_reference(
     states: cas.MX | cas.SX,
     controls: cas.MX | cas.SX,
     parameters: cas.MX | cas.SX,
-    stochastic_variables: cas.MX | cas.SX,
+    algebraic_states: cas.MX | cas.SX,
     nlp: NonLinearProgram,
 ):
     """
@@ -319,7 +319,7 @@ def prepare_socp_vision(
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     if np.sum(sensory_noise_magnitude) == 0:
         objective_functions.add(
-            ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_VARIABLE, key="k", weight=0.01, quadratic=True
+            ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True
         )
 
     objective_functions.add(
