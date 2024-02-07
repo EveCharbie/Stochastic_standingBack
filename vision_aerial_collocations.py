@@ -51,6 +51,8 @@ from bioptim import (
 )
 
 from seg3_aerial_collocations import reach_landing_position_consistantly
+
+
 def gaussian_function(x, sigma=1, mhu=0, offset=0, scaling_factor=1, flip=False):
     """
     Gaussian function
@@ -91,7 +93,7 @@ def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, s
 
     sensory_input = sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, 0, 0)
     proprioceptive_feedback = sensory_input[: 2 * n_joints]
-    vestibular_feedback = sensory_input[2 * n_joints :-1]
+    vestibular_feedback = sensory_input[2 * n_joints : -1]
 
     proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
@@ -319,9 +321,7 @@ def prepare_socp_vision(
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     if np.sum(sensory_noise_magnitude) == 0:
-        objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True
-        )
+        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True)
 
     objective_functions.add(
         reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
@@ -347,7 +347,6 @@ def prepare_socp_vision(
     pose_at_last_node = np.array(
         [-0.0346, 0.1207, 5.8292, -0.1801, -0.2954, 0.5377, 0.8506, -0.6856]
     )  # Final position approx from bioviz
-
 
     x_bounds = BoundsList()
     q_roots_min = bio_model.bounds_from_ranges("q_roots").min
@@ -480,8 +479,8 @@ def prepare_socp_vision(
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
-    cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
-    cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
+    cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
+    cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
     if cov_last is not None:
         a_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     a_bounds.add(

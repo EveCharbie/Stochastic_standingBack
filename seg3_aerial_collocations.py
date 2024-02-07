@@ -241,7 +241,6 @@ def prepare_socp(
         [-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856]
     )  # Final position approx from bioviz
 
-
     x_bounds = BoundsList()
     q_roots_min = bio_model.bounds_from_ranges("q_roots").min
     q_roots_max = bio_model.bounds_from_ranges("q_roots").max
@@ -371,8 +370,8 @@ def prepare_socp(
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
-    cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
-    cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
+    cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
+    cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
     if cov_last is not None:
         a_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
     a_bounds.add(

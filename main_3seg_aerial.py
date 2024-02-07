@@ -19,10 +19,11 @@ polynomial_degree = 3
 RUN_OCP = False
 RUN_SOCP = False
 RUN_VISION = True
-ode_solver = OdeSolver.COLLOCATION(polynomial_degree=polynomial_degree,
-                                   method="legendre",
-                                   duplicate_starting_point=True,
-                                   )
+ode_solver = OdeSolver.COLLOCATION(
+    polynomial_degree=polynomial_degree,
+    method="legendre",
+    duplicate_starting_point=True,
+)
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -57,10 +58,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
 
     if RUN_OCP:
         ocp = prepare_ocp(
-            biorbd_model_path=biorbd_model_path,
-            time_last=final_time,
-            n_shooting=n_shooting,
-            ode_solver=ode_solver
+            biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting, ode_solver=ode_solver
         )
         sol_ocp = ocp.solve(solver=solver)
 
@@ -68,7 +66,12 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         controls = sol_ocp.decision_controls(to_merge=SolutionMerge.NODES)
         algebraic_states = sol_ocp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-        q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states["qdot_roots"], states["qdot_joints"]
+        q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+            states["q_roots"],
+            states["q_joints"],
+            states["qdot_roots"],
+            states["qdot_joints"],
+        )
         tau_joints_sol = controls["tau_joints"]
         time_sol = sol_ocp.decision_time()[-1]
 
@@ -132,7 +135,6 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
         #                                                          [],
         #                                                          )
         # print("States continuity: ", constraint_value)
-
 
         if sol_ocp.status != 0:
             save_path = save_path.replace(".pkl", "_DVG.pkl")
@@ -235,10 +237,19 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
             algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states[
-                "qdot_roots"], states["qdot_joints"]
+            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+                states["q_roots"],
+                states["q_joints"],
+                states["qdot_roots"],
+                states["qdot_joints"],
+            )
             tau_joints_sol = controls["tau_joints"]
-            k_sol, ref_sol, m_sol, cov_sol = algebraic_states["k"], algebraic_states["ref"], algebraic_states["m"], algebraic_states["cov"]
+            k_sol, ref_sol, m_sol, cov_sol = (
+                algebraic_states["k"],
+                algebraic_states["ref"],
+                algebraic_states["m"],
+                algebraic_states["cov"],
+            )
             time_sol = sol_socp.decision_time()[-1]
 
             data = {
@@ -345,7 +356,6 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #                               )
             #     print("First collocation point equals state: ", constraint_value)
 
-
             if sol_socp.status != 0:
                 save_path = save_path.replace(".pkl", "_DVG.pkl")
             else:
@@ -447,10 +457,15 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
                 m_last = None
                 cov_last = None
 
-
-            q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
-            qdot_joints_last = np.vstack((qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :]))
-            tau_joints_last = np.vstack((tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :]))
+            q_joints_last = np.vstack(
+                (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
+            )
+            qdot_joints_last = np.vstack(
+                (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+            )
+            tau_joints_last = np.vstack(
+                (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+            )
 
             socp = prepare_socp_vision(
                 biorbd_model_path=biorbd_model_path_vision,
@@ -476,10 +491,19 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
             algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = states["q_roots"], states["q_joints"], states[
-                "qdot_roots"], states["qdot_joints"]
+            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+                states["q_roots"],
+                states["q_joints"],
+                states["qdot_roots"],
+                states["qdot_joints"],
+            )
             tau_joints_sol = controls["tau_joints"]
-            k_sol, ref_sol, m_sol, cov_sol = algebraic_states["k"], algebraic_states["ref"], algebraic_states["m"], algebraic_states["cov"]
+            k_sol, ref_sol, m_sol, cov_sol = (
+                algebraic_states["k"],
+                algebraic_states["ref"],
+                algebraic_states["m"],
+                algebraic_states["cov"],
+            )
             time_sol = sol_socp.decision_time()[-1]
 
             data = {
@@ -587,7 +611,6 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             #                               s_sol[:, i_node],
             #                               )
             #     print("First collocation point equals state: ", constraint_value)
-
 
             if sol_socp.status != 0:
                 save_path_vision = save_path_vision.replace(".pkl", "_DVG.pkl")
