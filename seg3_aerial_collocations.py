@@ -336,12 +336,12 @@ def prepare_socp(
     n_cov = (2 * n_q) ** 2  # Cov(12x12)
     n_stochastic += n_cov
 
-    s_init = InitialGuessList()
-    s_bounds = BoundsList()
+    a_init = InitialGuessList()
+    a_bounds = BoundsList()
 
     if k_last is not None:
-        s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+        a_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(
         x_bounds["q_joints"].min,
@@ -357,8 +357,8 @@ def prepare_socp(
     )
 
     if ref_last is not None:
-        s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add(
+        a_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add(
         "ref",
         min_bound=ref_min,
         max_bound=ref_max,
@@ -366,16 +366,16 @@ def prepare_socp(
     )
 
     if m_last is not None:
-        s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
+        a_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
     cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
     cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
     if cov_last is not None:
-        s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add(
+        a_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add(
         "cov",
         min_bound=cov_min,
         max_bound=cov_max,
@@ -389,10 +389,10 @@ def prepare_socp(
         time_last,
         x_init=x_init,
         u_init=u_init,
-        s_init=s_init,
+        a_init=a_init,
         x_bounds=x_bounds,
         u_bounds=u_bounds,
-        s_bounds=s_bounds,
+        a_bounds=a_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
         n_threads=32,

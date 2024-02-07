@@ -221,7 +221,7 @@ def sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, tf
 
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
-    time_to_contact = tf - time
+    time_to_contact = tf - time  ### TODO: change time to node_index*dt
     somersault_velocity = model.body_rotation_rate(q, qdot)[0]
     curent_somersault_angle = q_roots[2]
     visual_feedforward = curent_somersault_angle + somersault_velocity * time_to_contact
@@ -246,8 +246,9 @@ def sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    tf = nlp.tf
-    return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf, time)
+    tf_mx = nlp.tf_mx
+    # time_mx = nlp.node_time(node_idx=)
+    return sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time)
 
 
 def prepare_socp_vision(
@@ -442,12 +443,12 @@ def prepare_socp_vision(
     n_cov = (2 * n_q) ** 2  # Cov(16x16)
     n_stochastic += n_cov
 
-    s_init = InitialGuessList()
-    s_bounds = BoundsList()
+    a_init = InitialGuessList()
+    a_bounds = BoundsList()
 
     if k_last is not None:
-        s_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+        a_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(
         x_bounds["q_joints"].min,
@@ -465,8 +466,8 @@ def prepare_socp_vision(
     )
 
     if ref_last is not None:
-        s_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add(
+        a_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add(
         "ref",
         min_bound=ref_min,
         max_bound=ref_max,
@@ -474,16 +475,16 @@ def prepare_socp_vision(
     )
 
     if m_last is not None:
-        s_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
+        a_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
 
     cov_min = np.ones((n_cov, 3)) * -500
     cov_max = np.ones((n_cov, 3)) * 500
     cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
     cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1, ))
     if cov_last is not None:
-        s_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
-    s_bounds.add(
+        a_init.add("cov", initial_guess=cov_last, interpolation=InterpolationType.EACH_FRAME)
+    a_bounds.add(
         "cov",
         min_bound=cov_min,
         max_bound=cov_max,
@@ -497,10 +498,10 @@ def prepare_socp_vision(
         time_last,
         x_init=x_init,
         u_init=u_init,
-        s_init=s_init,
+        a_init=a_init,
         x_bounds=x_bounds,
         u_bounds=u_bounds,
-        s_bounds=s_bounds,
+        a_bounds=a_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
         n_threads=1,
