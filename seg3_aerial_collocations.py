@@ -381,6 +381,21 @@ def prepare_socp(
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
 
+    x_scaling = VariableScalingList()
+    x_scaling.add("q_roots", scaling=[1]*n_root)
+    x_scaling.add("q_joints", scaling=[1]*n_joints)
+    x_scaling.add("qdot_roots", scaling=[10]*n_root)
+    x_scaling.add("qdot_joints", scaling=[10]*n_joints)
+
+    u_scaling = VariableScalingList()
+    u_scaling.add("tau_joints", scaling=[100]*n_joints)
+
+    a_scaling = VariableScalingList()
+    a_scaling.add("k", scaling=[10]*n_k)
+    a_scaling.add("ref", scaling=[10]*n_ref)
+    a_scaling.add("m", scaling=[1]*n_m)
+    a_scaling.add("cov", scaling=[1e-5]*n_cov)
+
     return StochasticOptimalControlProgram(
         bio_model,
         dynamics,
@@ -392,6 +407,9 @@ def prepare_socp(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         a_bounds=a_bounds,
+        x_scaling=x_scaling,
+        u_scaling=u_scaling,
+        a_scaling=a_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
         n_threads=32,
