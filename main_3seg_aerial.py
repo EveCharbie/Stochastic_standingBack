@@ -73,7 +73,7 @@ if isinstance(ode_solver, OdeSolver.COLLOCATION):
             states["qdot_joints"],
         )
         tau_joints_sol = controls["tau_joints"]
-        time_sol = sol_ocp.decision_time()[-1]
+        time_sol = float(sol_ocp.decision_time()[-1])
 
         data = {
             "q_roots_sol": q_roots_sol,

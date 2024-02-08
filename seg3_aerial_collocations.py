@@ -326,7 +326,7 @@ def prepare_socp(
     if tau_joints_last is None:
         u_init.add("tau_joints", initial_guess=[0.01] * n_joints, interpolation=InterpolationType.CONSTANT)
     else:
-        u_init.add("tau_joints", initial_guess=tau_joints_last[:, :-1], interpolation=InterpolationType.EACH_FRAME)
+        u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.EACH_FRAME)
 
     n_ref = 2 * (n_joints + 1)  # ref(8)
     n_k = n_joints * n_ref  # K(3x8)
@@ -382,19 +382,19 @@ def prepare_socp(
     )
 
     x_scaling = VariableScalingList()
-    x_scaling.add("q_roots", scaling=[1]*n_root)
-    x_scaling.add("q_joints", scaling=[1]*n_joints)
-    x_scaling.add("qdot_roots", scaling=[10]*n_root)
-    x_scaling.add("qdot_joints", scaling=[10]*n_joints)
+    x_scaling.add("q_roots", scaling=[1] * n_root)
+    x_scaling.add("q_joints", scaling=[1] * n_joints)
+    x_scaling.add("qdot_roots", scaling=[10] * n_root)
+    x_scaling.add("qdot_joints", scaling=[10] * n_joints)
 
     u_scaling = VariableScalingList()
-    u_scaling.add("tau_joints", scaling=[100]*n_joints)
+    u_scaling.add("tau_joints", scaling=[10] * n_joints)
 
     a_scaling = VariableScalingList()
-    a_scaling.add("k", scaling=[10]*n_k)
-    a_scaling.add("ref", scaling=[10]*n_ref)
-    a_scaling.add("m", scaling=[1]*n_m)
-    a_scaling.add("cov", scaling=[1e-5]*n_cov)
+    a_scaling.add("k", scaling=[10] * n_k)
+    a_scaling.add("ref", scaling=[10] * n_ref)
+    a_scaling.add("m", scaling=[1] * n_m)
+    a_scaling.add("cov", scaling=[1e-3] * n_cov)
 
     return StochasticOptimalControlProgram(
         bio_model,
