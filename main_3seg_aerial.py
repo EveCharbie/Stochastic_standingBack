@@ -56,7 +56,7 @@ solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
 solver.set_hessian_approximation("limited-memory")
-# solver._nlp_scaling_method = "none"
+solver._nlp_scaling_method = "none"
 
 
 # --- Run the deterministic collocation --- #
