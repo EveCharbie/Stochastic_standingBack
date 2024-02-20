@@ -12,13 +12,19 @@ from bioptim import Solver, OdeSolver, SolutionMerge
 
 from seg3_aerial_deterministic import prepare_ocp
 from seg3_aerial_collocations import prepare_socp
-from vision_aerial_collocations import prepare_socp_vision
+from SOCP_VARIABLE_aerial_collocations import prepare_socp_SOCP_VARIABLE
+from SOCP_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_FEEDFORWARD
+from SOCP_VARIABLE_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
 
 polynomial_degree = 3
 
 RUN_OCP = False
 RUN_SOCP = True
-RUN_VISION = False
+RUN_SOCP_VARIABLE = False
+RUN_SOCP_FEEDFORWARD = False
+RUN_SOCP_VARIABLE_FEEDFORWARD = False
+
+
 ode_solver = OdeSolver.COLLOCATION(
     polynomial_degree=polynomial_degree,
     method="legendre",
@@ -41,462 +47,548 @@ n_root = 3
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
+tol = 1e-3   # 1e-3 OK
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
-solver.set_tol(1e-6)  # 1e-3 OK
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
 solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
 
-if isinstance(ode_solver, OdeSolver.COLLOCATION):
-    # --- Run the deterministic collocation --- #
-    save_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
 
-    if RUN_OCP:
-        ocp = prepare_ocp(
-            biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting, ode_solver=ode_solver
+
+# --- Run the deterministic collocation --- #
+save_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
+
+if RUN_OCP:
+    ocp = prepare_ocp(
+        biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting, ode_solver=ode_solver
+    )
+    solver.set_tol(1e-8)
+    sol_ocp = ocp.solve(solver=solver)
+
+    states = sol_ocp.decision_states(to_merge=SolutionMerge.NODES)
+    controls = sol_ocp.decision_controls(to_merge=SolutionMerge.NODES)
+    algebraic_states = sol_ocp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+
+    q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+        states["q_roots"],
+        states["q_joints"],
+        states["qdot_roots"],
+        states["qdot_joints"],
+    )
+    tau_joints_sol = controls["tau_joints"]
+    time_sol = float(sol_ocp.decision_time()[-1])
+
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+    }
+
+    if sol_ocp.status != 0:
+        save_path = save_path.replace(".pkl", f"_DVG_1e-8.pkl")
+    else:
+        save_path = save_path.replace(".pkl", f"_CVG_1e-8.pkl")
+
+    with open(save_path, "wb") as file:
+        pickle.dump(data, file)
+
+    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    b.exec()
+
+
+
+# --- Run the SOCP collocation --- #
+noise_factor = 1.0  # 0.05, 0.1, 0.5,
+
+# TODO: How do we choose the values?
+motor_noise_std = 0.05 * noise_factor
+wPq_std = 0.001 * noise_factor
+wPqdot_std = 0.003 * noise_factor
+
+save_path = (
+    f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std, 6)}_"
+    f"{round(wPq_std, 6)}_"
+    f"{round(wPqdot_std, 6)}.pkl"
+)
+
+motor_noise_magnitude = cas.DM(
+    np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)])
+)  # All DoFs except root
+sensory_noise_magnitude = cas.DM(
+    cas.vertcat(
+        np.array([wPq_std**2 / dt for _ in range(n_q - n_root + 1)]),
+        np.array([wPqdot_std**2 / dt for _ in range(n_q - n_root + 1)]),
+    )
+)  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+
+if RUN_SOCP:
+
+    path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+    with open(path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_roots_last = data["q_roots_sol"]
+        q_joints_last = data["q_joints_sol"]
+        qdot_roots_last = data["qdot_roots_sol"]
+        qdot_joints_last = data["qdot_joints_sol"]
+        tau_joints_last = data["tau_joints_sol"]
+        time_last = data["time_sol"]
+        k_last = None
+        ref_last = None
+        m_last = None
+        cov_last = None
+
+    socp = prepare_socp(
+        biorbd_model_path=biorbd_model_path,
+        polynomial_degree=polynomial_degree,
+        time_last=time_last,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        q_roots_last=q_roots_last,
+        q_joints_last=q_joints_last,
+        qdot_roots_last=qdot_roots_last,
+        qdot_joints_last=qdot_joints_last,
+        tau_joints_last=tau_joints_last,
+        k_last=k_last,
+        ref_last=ref_last,
+        m_last=m_last,
+        cov_last=cov_last,
+    )
+
+    solver.set_tol(tol)
+    sol_socp = socp.solve(solver)
+
+    states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+    controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+
+    q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+        states["q_roots"],
+        states["q_joints"],
+        states["qdot_roots"],
+        states["qdot_joints"],
+    )
+    tau_joints_sol = controls["tau_joints"]
+    k_sol, ref_sol, m_sol, cov_sol = (
+        algebraic_states["k"],
+        algebraic_states["ref"],
+        algebraic_states["m"],
+        algebraic_states["cov"],
+    )
+    time_sol = sol_socp.decision_time()[-1]
+
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+        "k_sol": k_sol,
+        "ref_sol": ref_sol,
+        "m_sol": m_sol,
+        "cov_sol": cov_sol,
+    }
+
+    if sol_socp.status != 0:
+        save_path = save_path.replace(".pkl", f"_DVG_{tol}.pkl")
+    else:
+        save_path = save_path.replace(".pkl", f"_CVG_{tol}.pkl")
+
+    # --- Save the results --- #
+    with open(save_path, "wb") as file:
+        pickle.dump(data, file)
+
+    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    b.exec()
+
+
+
+
+# --- Run the SOCP+ collocation (variable noise) --- #
+save_path_vision = save_path.replace(".pkl", "_VARIABLE.pkl")
+
+if RUN_SOCP_VARIABLE:
+
+    motor_noise_magnitude = cas.DM(
+        np.array(
+            [
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+            ]
         )
-        sol_ocp = ocp.solve(solver=solver)
-
-        states = sol_ocp.decision_states(to_merge=SolutionMerge.NODES)
-        controls = sol_ocp.decision_controls(to_merge=SolutionMerge.NODES)
-        algebraic_states = sol_ocp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
-
-        q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
-            states["q_roots"],
-            states["q_joints"],
-            states["qdot_roots"],
-            states["qdot_joints"],
+    )  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        np.array(
+            [
+                wPq_std**2 / dt,  # Proprioceptive position
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPqdot_std**2 / dt,  # Proprioceptive velocity
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPq_std**2 / dt,  # Vestibular position
+                wPq_std**2 / dt,  # Vestibular velocity
+            ]
         )
-        tau_joints_sol = controls["tau_joints"]
-        time_sol = float(sol_ocp.decision_time()[-1])
+    )
 
-        data = {
-            "q_roots_sol": q_roots_sol,
-            "q_joints_sol": q_joints_sol,
-            "qdot_roots_sol": qdot_roots_sol,
-            "qdot_joints_sol": qdot_joints_sol,
-            "tau_joints_sol": tau_joints_sol,
-            "time_sol": time_sol,
-        }
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    with open(path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_roots_last = data["q_roots_sol"]
+        q_joints_last = data["q_joints_sol"]
+        qdot_roots_last = data["qdot_roots_sol"]
+        qdot_joints_last = data["qdot_joints_sol"]
+        tau_joints_last = data["tau_joints_sol"]
+        time_last = data["time_sol"]
+        k_last = None
+        ref_last = None
+        m_last = None
+        cov_last = None
 
-        if sol_ocp.status != 0:
-            save_path = save_path.replace(".pkl", "_DVG.pkl")
-        else:
-            save_path = save_path.replace(".pkl", "_CVG.pkl")
+    q_joints_last = np.vstack(
+        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
+    )
+    qdot_joints_last = np.vstack(
+        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+    )
+    tau_joints_last = np.vstack(
+        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+    )
 
-        with open(save_path, "wb") as file:
-            pickle.dump(data, file)
+    socp = prepare_socp_SOCP_VARIABLE(
+        biorbd_model_path=biorbd_model_path_vision,
+        polynomial_degree=polynomial_degree,
+        time_last=time_last,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        q_roots_last=q_roots_last,
+        q_joints_last=q_joints_last,
+        qdot_roots_last=qdot_roots_last,
+        qdot_joints_last=qdot_joints_last,
+        tau_joints_last=tau_joints_last,
+        k_last=None,
+        ref_last=None,
+        m_last=None,
+        cov_last=None,
+    )
 
-        b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-        b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-        b.exec()
+    sol_socp = socp.solve(solver)
 
-    # --- Run the SOCP collocation with increasing noise --- #
-    noise_factors = [1.0]  # 0.05, 0.1, 0.5,
+    states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+    controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-    for i_noise, noise_factor in enumerate(noise_factors):
-        # TODO: How do we choose the values?
-        motor_noise_std = 0.05 * noise_factor
-        wPq_std = 0.001 * noise_factor
-        wPqdot_std = 0.003 * noise_factor
+    q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+        states["q_roots"],
+        states["q_joints"],
+        states["qdot_roots"],
+        states["qdot_joints"],
+    )
+    tau_joints_sol = controls["tau_joints"]
+    k_sol, ref_sol, m_sol, cov_sol = (
+        algebraic_states["k"],
+        algebraic_states["ref"],
+        algebraic_states["m"],
+        algebraic_states["cov"],
+    )
+    time_sol = sol_socp.decision_time()[-1]
 
-        save_path = (
-            f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std, 6)}_"
-            f"{round(wPq_std, 6)}_"
-            f"{round(wPqdot_std, 6)}.pkl"
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+        "k_sol": k_sol,
+        "ref_sol": ref_sol,
+        "m_sol": m_sol,
+        "cov_sol": cov_sol,
+    }
+
+    if sol_socp.status != 0:
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+    else:
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
+
+    # --- Save the results --- #
+    with open(save_path_vision, "wb") as file:
+        pickle.dump(data, file)
+
+    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    b.exec()
+
+
+
+
+# --- Run the SOCP+ collocation (feedforward) --- #
+save_path_vision = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
+n_q += 1
+
+if RUN_SOCP_FEEDFORWARD:
+
+    motor_noise_magnitude = cas.DM(
+        np.array(
+            [
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+            ]
         )
+    )  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        np.array(
+            [
+                wPq_std**2 / dt,  # Proprioceptive position
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPqdot_std**2 / dt,  # Proprioceptive velocity
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPq_std**2 / dt,  # Vestibular position
+                wPq_std**2 / dt,  # Vestibular velocity
+                wPq_std**2 / dt,  # Visual
+            ]
+        )
+    )
 
-        motor_noise_magnitude = cas.DM(
-            np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)])
-        )  # All DoFs except root
-        sensory_noise_magnitude = cas.DM(
-            cas.vertcat(
-                np.array([wPq_std**2 / dt for _ in range(n_q - n_root + 1)]),
-                np.array([wPqdot_std**2 / dt for _ in range(n_q - n_root + 1)]),
-            )
-        )  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    with open(path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_roots_last = data["q_roots_sol"]
+        q_joints_last = data["q_joints_sol"]
+        qdot_roots_last = data["qdot_roots_sol"]
+        qdot_joints_last = data["qdot_joints_sol"]
+        tau_joints_last = data["tau_joints_sol"]
+        time_last = data["time_sol"]
+        k_last = None
+        ref_last = None
+        m_last = None
+        cov_last = None
 
-        if RUN_SOCP:
-            # if save_path.replace(".pkl", "_CVG.pkl") in os.listdir("results"):
-            #     print(f"Already did {save_path}!")
-            #     continue
+    q_joints_last = np.vstack(
+        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
+    )
+    qdot_joints_last = np.vstack(
+        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+    )
+    tau_joints_last = np.vstack(
+        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+    )
 
-            # if noise_factor == 0:
-            path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG.pkl"
-            with open(path_to_results, "rb") as file:
-                data = pickle.load(file)
-                q_roots_last = data["q_roots_sol"]
-                q_joints_last = data["q_joints_sol"]
-                qdot_roots_last = data["qdot_roots_sol"]
-                qdot_joints_last = data["qdot_joints_sol"]
-                tau_joints_last = data["tau_joints_sol"]
-                time_last = data["time_sol"]
-                k_last = None
-                ref_last = None
-                m_last = None
-                cov_last = None
+    socp = prepare_socp_SOCP_FEEDFORWARD(
+        biorbd_model_path=biorbd_model_path_vision,
+        polynomial_degree=polynomial_degree,
+        time_last=time_last,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        q_roots_last=q_roots_last,
+        q_joints_last=q_joints_last,
+        qdot_roots_last=qdot_roots_last,
+        qdot_joints_last=qdot_joints_last,
+        tau_joints_last=tau_joints_last,
+        k_last=None,
+        ref_last=None,
+        m_last=None,
+        cov_last=None,
+    )
 
-            # else:
-            #     path_to_results = (
-            #         f"results/{model_name}_aerial_socp_collocations_{round(0.05 * noise_factors[i_noise-1], 6)}_"
-            #         f"{round(3e-4 * noise_factors[i_noise-1], 6)}_"
-            #         f"{round(0.0024 * noise_factors[i_noise-1], 6)}_CVG.pkl"
-            #     )
-            #
-            #     with open(path_to_results, "rb") as file:
-            #         data = pickle.load(file)
-            #         q_roots_last = data["q_roots_sol"]
-            #         q_joints_last = data["q_joints_sol"]
-            #         qdot_roots_last = data["qdot_roots_sol"]
-            #         qdot_joints_last = data["qdot_joints_sol"]
-            #         tau_joints_last = data["tau_joints_sol"]
-            #         time_last = data["time_sol"]
-            #         k_last = data["k_sol"]
-            #         ref_last = data["ref_sol"]
-            #         m_last = data["m_sol"]
-            #         cov_last = data["cov_sol"]
+    sol_socp = socp.solve(solver)
 
-            socp = prepare_socp(
-                biorbd_model_path=biorbd_model_path,
-                polynomial_degree=polynomial_degree,
-                time_last=time_last,
-                n_shooting=n_shooting,
-                motor_noise_magnitude=motor_noise_magnitude,
-                sensory_noise_magnitude=sensory_noise_magnitude,
-                q_roots_last=q_roots_last,
-                q_joints_last=q_joints_last,
-                qdot_roots_last=qdot_roots_last,
-                qdot_joints_last=qdot_joints_last,
-                tau_joints_last=tau_joints_last,
-                k_last=k_last,
-                ref_last=ref_last,
-                m_last=m_last,
-                cov_last=cov_last,
-            )
+    states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+    controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-            sol_socp = socp.solve(solver)
+    q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+        states["q_roots"],
+        states["q_joints"],
+        states["qdot_roots"],
+        states["qdot_joints"],
+    )
+    tau_joints_sol = controls["tau_joints"]
+    k_sol, ref_sol, m_sol, cov_sol = (
+        algebraic_states["k"],
+        algebraic_states["ref"],
+        algebraic_states["m"],
+        algebraic_states["cov"],
+    )
+    time_sol = sol_socp.decision_time()[-1]
 
-            states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
-            controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-            algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+        "k_sol": k_sol,
+        "ref_sol": ref_sol,
+        "m_sol": m_sol,
+        "cov_sol": cov_sol,
+    }
 
-            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
-                states["q_roots"],
-                states["q_joints"],
-                states["qdot_roots"],
-                states["qdot_joints"],
-            )
-            tau_joints_sol = controls["tau_joints"]
-            k_sol, ref_sol, m_sol, cov_sol = (
-                algebraic_states["k"],
-                algebraic_states["ref"],
-                algebraic_states["m"],
-                algebraic_states["cov"],
-            )
-            time_sol = sol_socp.decision_time()[-1]
+    if sol_socp.status != 0:
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+    else:
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
 
-            data = {
-                "q_roots_sol": q_roots_sol,
-                "q_joints_sol": q_joints_sol,
-                "qdot_roots_sol": qdot_roots_sol,
-                "qdot_joints_sol": qdot_joints_sol,
-                "tau_joints_sol": tau_joints_sol,
-                "time_sol": time_sol,
-                "k_sol": k_sol,
-                "ref_sol": ref_sol,
-                "m_sol": m_sol,
-                "cov_sol": cov_sol,
-            }
+    # --- Save the results --- #
+    with open(save_path_vision, "wb") as file:
+        pickle.dump(data, file)
 
-            if sol_socp.status != 0:
-                save_path = save_path.replace(".pkl", "_DVG.pkl")
-            else:
-                save_path = save_path.replace(".pkl", "_CVG.pkl")
+    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    b.exec()
 
-            # --- Save the results --- #
-            with open(save_path, "wb") as file:
-                pickle.dump(data, file)
 
-            b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-            b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-            b.exec()
 
-        else:
-            print("to be checked")
-            # # --- Load the results --- #
-            # with open(save_path, 'rb') as file:
-            #     data = pickle.load(file)
-            #     q_roots_sol = data['q_roots_sol']
-            #     q_joints_sol = data['q_joints_sol']
-            #     qdot_roots_sol = data['qdot_roots_sol']
-            #     qdot_joints_sol = data['qdot_joints_sol']
-            #     tau_joints_sol = data['tau_joints_sol']
-            #     time_sol = data['time_sol']
-            #     k_sol = data['k_sol']
-            #     ref_sol = data['ref_sol']
-            #     m_sol = data['m_sol']
-            #     cov_sol = data['cov_sol']
+# --- Run the SOCP+ collocation (variable noise & feedforward) --- #
+save_path_vision = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
+n_q += 1
 
-            # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-            # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-            # b.exec()
+if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
-        save_path_vision = save_path.replace(".pkl", "_vision.pkl")
+    motor_noise_magnitude = cas.DM(
+        np.array(
+            [
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+            ]
+        )
+    )  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        np.array(
+            [
+                wPq_std**2 / dt,  # Proprioceptive position
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPqdot_std**2 / dt,  # Proprioceptive velocity
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPq_std**2 / dt,  # Vestibular position
+                wPq_std**2 / dt,  # Vestibular velocity
+                wPq_std**2 / dt,  # Visual
+            ]
+        )
+    )
 
-        if RUN_VISION:
-            # --- Run the vision --- #
-            n_q += 1
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    with open(path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_roots_last = data["q_roots_sol"]
+        q_joints_last = data["q_joints_sol"]
+        qdot_roots_last = data["qdot_roots_sol"]
+        qdot_joints_last = data["qdot_joints_sol"]
+        tau_joints_last = data["tau_joints_sol"]
+        time_last = data["time_sol"]
+        k_last = None
+        ref_last = None
+        m_last = None
+        cov_last = None
 
-            motor_noise_magnitude = cas.DM(
-                np.array(
-                    [
-                        motor_noise_std**2 / dt,
-                        motor_noise_std**2 / dt,
-                        motor_noise_std**2 / dt,
-                        motor_noise_std**2 / dt,
-                        motor_noise_std**2 / dt,
-                    ]
-                )
-            )  # All DoFs except root
-            sensory_noise_magnitude = cas.DM(
-                np.array(
-                    [
-                        wPq_std**2 / dt,  # Proprioceptive position
-                        wPq_std**2 / dt,
-                        wPq_std**2 / dt,
-                        wPq_std**2 / dt,
-                        wPq_std**2 / dt,
-                        wPqdot_std**2 / dt,  # Proprioceptive velocity
-                        wPqdot_std**2 / dt,
-                        wPqdot_std**2 / dt,
-                        wPqdot_std**2 / dt,
-                        wPqdot_std**2 / dt,
-                        wPq_std**2 / dt,  # Vestibular position
-                        wPq_std**2 / dt,  # Vestibular velocity
-                        wPq_std**2 / dt,  # Visual
-                    ]
-                )
-            )
+    q_joints_last = np.vstack(
+        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
+    )
+    qdot_joints_last = np.vstack(
+        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+    )
+    tau_joints_last = np.vstack(
+        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+    )
 
-            # if save_path.replace(".pkl", "_CVG.pkl") in os.listdir("results"):
-            #     print(f"Already did {save_path}!")
-            #     continue
+    socp = prepare_socp_SOCP_VARIABLE_FEEDFORWARD(
+        biorbd_model_path=biorbd_model_path_vision,
+        polynomial_degree=polynomial_degree,
+        time_last=time_last,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        q_roots_last=q_roots_last,
+        q_joints_last=q_joints_last,
+        qdot_roots_last=qdot_roots_last,
+        qdot_joints_last=qdot_joints_last,
+        tau_joints_last=tau_joints_last,
+        k_last=None,
+        ref_last=None,
+        m_last=None,
+        cov_last=None,
+    )
 
-            # with open(save_path.replace(".pkl", "_CVG.pkl"), 'rb') as file:
-            #     data = pickle.load(file)
-            #     q_roots_last = data['q_roots_sol']
-            #     q_joints_last = data['q_joints_sol']
-            #     qdot_roots_last = data['qdot_roots_sol']
-            #     qdot_joints_last = data['qdot_joints_sol']
-            #     tau_joints_last = data['tau_joints_sol']
-            #     time_last = data['time_sol']
-            #     k_last = data['k_sol']
-            #     ref_last = data['ref_sol']
-            #     m_last = data['m_sol']
-            #     cov_last = data['cov_sol']
+    sol_socp = socp.solve(solver)
 
-            path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG.pkl"
-            with open(path_to_results, "rb") as file:
-                data = pickle.load(file)
-                q_roots_last = data["q_roots_sol"]
-                q_joints_last = data["q_joints_sol"]
-                qdot_roots_last = data["qdot_roots_sol"]
-                qdot_joints_last = data["qdot_joints_sol"]
-                tau_joints_last = data["tau_joints_sol"]
-                time_last = data["time_sol"]
-                k_last = None
-                ref_last = None
-                m_last = None
-                cov_last = None
+    states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
+    controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
+    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
-            q_joints_last = np.vstack(
-                (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
-            )
-            qdot_joints_last = np.vstack(
-                (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
-            )
-            tau_joints_last = np.vstack(
-                (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
-            )
+    q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
+        states["q_roots"],
+        states["q_joints"],
+        states["qdot_roots"],
+        states["qdot_joints"],
+    )
+    tau_joints_sol = controls["tau_joints"]
+    k_sol, ref_sol, m_sol, cov_sol = (
+        algebraic_states["k"],
+        algebraic_states["ref"],
+        algebraic_states["m"],
+        algebraic_states["cov"],
+    )
+    time_sol = sol_socp.decision_time()[-1]
 
-            socp = prepare_socp_vision(
-                biorbd_model_path=biorbd_model_path_vision,
-                polynomial_degree=polynomial_degree,
-                time_last=time_last,
-                n_shooting=n_shooting,
-                motor_noise_magnitude=motor_noise_magnitude,
-                sensory_noise_magnitude=sensory_noise_magnitude,
-                q_roots_last=q_roots_last,
-                q_joints_last=q_joints_last,
-                qdot_roots_last=qdot_roots_last,
-                qdot_joints_last=qdot_joints_last,
-                tau_joints_last=tau_joints_last,
-                k_last=None,
-                ref_last=None,
-                m_last=None,
-                cov_last=None,
-            )
+    data = {
+        "q_roots_sol": q_roots_sol,
+        "q_joints_sol": q_joints_sol,
+        "qdot_roots_sol": qdot_roots_sol,
+        "qdot_joints_sol": qdot_joints_sol,
+        "tau_joints_sol": tau_joints_sol,
+        "time_sol": time_sol,
+        "k_sol": k_sol,
+        "ref_sol": ref_sol,
+        "m_sol": m_sol,
+        "cov_sol": cov_sol,
+    }
 
-            sol_socp = socp.solve(solver)
+    if sol_socp.status != 0:
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+    else:
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
 
-            states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
-            controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-            algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
+    # --- Save the results --- #
+    with open(save_path_vision, "wb") as file:
+        pickle.dump(data, file)
 
-            q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
-                states["q_roots"],
-                states["q_joints"],
-                states["qdot_roots"],
-                states["qdot_joints"],
-            )
-            tau_joints_sol = controls["tau_joints"]
-            k_sol, ref_sol, m_sol, cov_sol = (
-                algebraic_states["k"],
-                algebraic_states["ref"],
-                algebraic_states["m"],
-                algebraic_states["cov"],
-            )
-            time_sol = sol_socp.decision_time()[-1]
-
-            data = {
-                "q_roots_sol": q_roots_sol,
-                "q_joints_sol": q_joints_sol,
-                "qdot_roots_sol": qdot_roots_sol,
-                "qdot_joints_sol": qdot_joints_sol,
-                "tau_joints_sol": tau_joints_sol,
-                "time_sol": time_sol,
-                "k_sol": k_sol,
-                "ref_sol": ref_sol,
-                "m_sol": m_sol,
-                "cov_sol": cov_sol,
-            }
-
-            # polynomial_degree = socp.nlp[0].ode_solver.polynomial_degree
-            # time_vector = np.linspace(0, time_sol, n_shooting + 1)
-            # n_cx = socp.nlp[0].ode_solver.n_cx - 1
-            # ns = socp.nlp[0].ns
-            #
-            # # Constraint values
-            # x_opt = cas.vertcat(q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol)
-            # x_sol = np.zeros((x_opt.shape[0], n_cx, ns))
-            # for i_node in range(ns):
-            #     x_sol[:, :, i_node] = x_opt[:, i_node * n_cx:(i_node + 1) * n_cx]
-            # s_sol = cas.vertcat(k_sol, ref_sol, m_sol, cov_sol)
-            #
-            # constraint_value = socp.nlp[0].g[0].function[0](0,
-            #                                              x_opt[:, -1],
-            #                                              tau_joints_sol[:, -1],
-            #                                              time_sol,
-            #                                              s_sol[:, -1],
-            #                                              )
-            # print("Toe marker on the ground at landing: ", constraint_value)
-            #
-            # constraint_value = socp.nlp[0].g[1].function[0](0,
-            #                                              x_opt[:, -1],
-            #                                              tau_joints_sol[:, -1],
-            #                                              time_sol,
-            #                                              s_sol[:, -1],
-            #                                              )
-            # print("CoM over toes at landing: ", constraint_value)
-            #
-            # for i_node in range(socp.n_shooting):
-            #     constraint_value = socp.nlp[0].g[2].function[i_node](0,
-            #                               x_sol[:, :, i_node].flatten(order="F"),
-            #                               tau_joints_sol[:, i_node],
-            #                               time_sol,
-            #                               s_sol[:, i_node],
-            #                               )
-            #     print("Sensory input = reference: ", constraint_value)
-            #
-            # for i_node in range(socp.n_shooting):
-            #     constraint_value = socp.nlp[0].g[3].function[i_node](0,
-            #                               x_sol[:, :, i_node].flatten(order="F"),
-            #                               tau_joints_sol[:, i_node],
-            #                               time_sol,
-            #                               s_sol[:, i_node],
-            #                               )
-            #     print("Constraint on M: ", constraint_value[:100])
-            #     print("Constraint on M: ", constraint_value[100:])
-            #
-            # x_multi_thread = np.zeros((2 * n_q * (n_cx + 1), ns))
-            # for i_state in range(2 * n_q):
-            #     for i_node in range(ns):
-            #         for i_coll in range(n_cx):
-            #             x_multi_thread[i_coll * 2 * n_q + i_state, i_node] = x_sol[i_state, i_coll, i_node]
-            #         if i_node < ns - 1:
-            #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_sol[i_state, 0, i_node + 1]
-            #         else:
-            #             x_multi_thread[(i_coll + 1) * 2 * n_q + i_state, i_node] = x_opt[i_state, -1]
-            #
-            # u_multi_thread = np.zeros((tau_joints_sol.shape[0]*2, ns))
-            # u_multi_thread[:tau_joints_sol.shape[0], :] = tau_joints_sol[:, :ns]
-            # u_multi_thread[tau_joints_sol.shape[0]:, :] = tau_joints_sol[:, 1:ns + 1]
-            # u_multi_thread[tau_joints_sol.shape[0]:, -1] = tau_joints_sol[:, -2]
-            #
-            # s_multi_thread = np.zeros((s_sol.shape[0]*2, ns))
-            # s_multi_thread[:s_sol.shape[0], :] = s_sol[:, :ns]
-            # s_multi_thread[s_sol.shape[0]:, :] = s_sol[:, 1:ns + 1]
-            # s_multi_thread[s_sol.shape[0]:, -1] = np.reshape(s_sol[:, -2], (-1, ))
-            #
-            # constraint_value = socp.nlp[0].g[4].function[0](0,
-            #                           x_multi_thread,
-            #                           u_multi_thread,
-            #                           time_sol,
-            #                           s_multi_thread,
-            #                           )
-            # print("Covariance continuity: ", constraint_value[:100])  # 14x14x16
-            # print("Covariance continuity: ", constraint_value[100:])  # 14x14x16
-            #
-            # constraint_value = socp.nlp[0].g_internal[0].function[0](time_sol,
-            #                                                          x_multi_thread,
-            #                                                          u_multi_thread,
-            #                                                          time_sol,
-            #                                                          [],
-            #                                                          )
-            # print("States continuity: ", constraint_value)
-            #
-            # for i_node in range(socp.n_shooting):
-            #     constraint_value = socp.nlp[0].g_internal[1].function[i_node](0,
-            #                               x_sol[:, :, i_node].flatten(order="F"),
-            #                               tau_joints_sol[:, i_node],
-            #                               time_sol,
-            #                               s_sol[:, i_node],
-            #                               )
-            #     print("First collocation point equals state: ", constraint_value)
-
-            if sol_socp.status != 0:
-                save_path_vision = save_path_vision.replace(".pkl", "_DVG.pkl")
-            else:
-                save_path_vision = save_path_vision.replace(".pkl", "_CVG.pkl")
-
-            # --- Save the results --- #
-            with open(save_path_vision, "wb") as file:
-                pickle.dump(data, file)
-
-            b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
-            b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-            b.exec()
-
-        else:
-            # --- Load the results --- #
-            with open(save_path_vision, "rb") as file:
-                data = pickle.load(file)
-                q_roots_sol = data["q_roots_sol"]
-                q_joints_sol = data["q_joints_sol"]
-                qdot_roots_sol = data["qdot_roots_sol"]
-                qdot_joints_sol = data["qdot_joints_sol"]
-                tau_joints_sol = data["tau_joints_sol"]
-                time_sol = data["time_sol"]
-                k_sol = data["k_sol"]
-                ref_sol = data["ref_sol"]
-                m_sol = data["m_sol"]
-                cov_sol = data["cov_sol"]
-
-            # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-            # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-            # b.exec()
+    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    b.exec()
