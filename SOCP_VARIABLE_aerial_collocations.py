@@ -91,8 +91,9 @@ def prepare_socp_SOCP_VARIABLE(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
-                            quadratic=True)
+    objective_functions.add(
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01, quadratic=True
+    )
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
         node=Node.ALL_SHOOTING,

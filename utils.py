@@ -158,7 +158,9 @@ def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, s
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
 
-    sensory_input = SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(model, q_roots, q_joints, qdot_roots, qdot_joints, 0, 0)
+    sensory_input = SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
+        model, q_roots, q_joints, qdot_roots, qdot_joints, 0, 0
+    )
     proprioceptive_feedback = sensory_input[: 2 * n_joints]
     vestibular_feedback = sensory_input[2 * n_joints : -1]
 
@@ -374,4 +376,6 @@ def SOCP_VARIABLE_FEEDFORWARD_sensory_reference(
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
     tf_mx = nlp.tf_mx
-    return SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time)
+    return SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
+        nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time
+    )

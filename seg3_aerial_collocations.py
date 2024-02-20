@@ -8,7 +8,12 @@ import casadi as cas
 import numpy as np
 
 
-from utils import CoM_over_toes, SOCP_sensory_reference, reach_landing_position_consistantly, compute_SOCP_torques_from_noise_and_feedback
+from utils import (
+    CoM_over_toes,
+    SOCP_sensory_reference,
+    reach_landing_position_consistantly,
+    compute_SOCP_torques_from_noise_and_feedback,
+)
 
 import sys
 
@@ -90,8 +95,9 @@ def prepare_socp(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01,
-                            quadratic=True)
+    objective_functions.add(
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01, quadratic=True
+    )
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
         node=Node.ALL_SHOOTING,
@@ -100,9 +106,7 @@ def prepare_socp(
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     if np.sum(sensory_noise_magnitude) == 0:
-        objective_functions.add(
-            ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True
-        )
+        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True)
 
     objective_functions.add(
         reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True

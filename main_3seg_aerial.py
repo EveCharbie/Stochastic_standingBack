@@ -47,7 +47,7 @@ n_root = 3
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-3   # 1e-3 OK
+tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
@@ -57,7 +57,6 @@ solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
 solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
-
 
 
 # --- Run the deterministic collocation --- #
@@ -105,7 +104,6 @@ if RUN_OCP:
     b.exec()
 
 
-
 # --- Run the SOCP collocation --- #
 noise_factor = 1.0  # 0.05, 0.1, 0.5,
 
@@ -120,9 +118,7 @@ save_path = (
     f"{round(wPqdot_std, 6)}.pkl"
 )
 
-motor_noise_magnitude = cas.DM(
-    np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)])
-)  # All DoFs except root
+motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 sensory_noise_magnitude = cas.DM(
     cas.vertcat(
         np.array([wPq_std**2 / dt for _ in range(n_q - n_root + 1)]),
@@ -213,8 +209,6 @@ if RUN_SOCP:
     b.exec()
 
 
-
-
 # --- Run the SOCP+ collocation (variable noise) --- #
 save_path_vision = save_path.replace(".pkl", "_VARIABLE.pkl")
 
@@ -261,9 +255,7 @@ if RUN_SOCP_VARIABLE:
         m_last = None
         cov_last = None
 
-    q_joints_last = np.vstack(
-        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
-    )
+    q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
         (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
     )
@@ -337,8 +329,6 @@ if RUN_SOCP_VARIABLE:
     b.exec()
 
 
-
-
 # --- Run the SOCP+ collocation (feedforward) --- #
 save_path_vision = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
 n_q += 1
@@ -390,9 +380,7 @@ if RUN_SOCP_FEEDFORWARD:
         m_last = None
         cov_last = None
 
-    q_joints_last = np.vstack(
-        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
-    )
+    q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
         (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
     )
@@ -466,7 +454,6 @@ if RUN_SOCP_FEEDFORWARD:
     b.exec()
 
 
-
 # --- Run the SOCP+ collocation (variable noise & feedforward) --- #
 save_path_vision = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
 n_q += 1
@@ -518,9 +505,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         m_last = None
         cov_last = None
 
-    q_joints_last = np.vstack(
-        (q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :])
-    )
+    q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
         (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
     )

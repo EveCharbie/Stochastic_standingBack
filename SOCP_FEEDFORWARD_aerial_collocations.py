@@ -7,7 +7,11 @@ import biorbd_casadi as biorbd
 import casadi as cas
 import numpy as np
 
-from utils import CoM_over_toes, SOCP_VARIABLE_FEEDFORWARD_sensory_reference, SOCP_FEEDFORWARD_compute_torques_from_noise_and_feedback
+from utils import (
+    CoM_over_toes,
+    SOCP_VARIABLE_FEEDFORWARD_sensory_reference,
+    SOCP_FEEDFORWARD_compute_torques_from_noise_and_feedback,
+)
 
 import sys
 
@@ -92,8 +96,9 @@ def prepare_socp_SOCP_FEEDFORWARD(
 
     # Add objective functions
     objective_functions = ObjectiveList()
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01,
-                            quadratic=True)
+    objective_functions.add(
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01, quadratic=True
+    )
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
         node=Node.ALL_SHOOTING,
