@@ -104,9 +104,8 @@ def prepare_socp(
         weight=1e3 / 2,
         quadratic=True,
     )
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    if np.sum(sensory_noise_magnitude) == 0:
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.01, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True)
 
     objective_functions.add(
         reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
