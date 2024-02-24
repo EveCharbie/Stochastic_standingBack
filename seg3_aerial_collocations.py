@@ -35,6 +35,7 @@ from bioptim import (
     DynamicsFcn,
     Axis,
     SocpType,
+    VariableScalingList,
 )
 
 
@@ -281,11 +282,11 @@ def prepare_socp(
     # u_scaling = VariableScalingList()
     # u_scaling.add("tau_joints", scaling=[10] * n_joints)
     #
-    # a_scaling = VariableScalingList()
-    # a_scaling.add("k", scaling=[10] * n_k)
-    # a_scaling.add("ref", scaling=[10] * n_ref)
-    # a_scaling.add("m", scaling=[1] * n_m)
-    # a_scaling.add("cov", scaling=[1e-3] * n_cov)
+    a_scaling = VariableScalingList()
+    a_scaling.add("k", scaling=[10] * n_k)
+    a_scaling.add("ref", scaling=[10] * n_ref)
+    a_scaling.add("m", scaling=[1] * n_m)
+    a_scaling.add("cov", scaling=[1e-5] * n_cov)
 
     return StochasticOptimalControlProgram(
         bio_model,
@@ -300,7 +301,7 @@ def prepare_socp(
         a_bounds=a_bounds,
         # x_scaling=x_scaling,
         # u_scaling=u_scaling,
-        # a_scaling=a_scaling,
+        a_scaling=a_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
         n_threads=32,
