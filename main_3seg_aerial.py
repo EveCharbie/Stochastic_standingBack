@@ -19,8 +19,8 @@ from SOCP_VARIABLE_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_VARI
 polynomial_degree = 3
 
 RUN_OCP = False
-RUN_SOCP = True
-RUN_SOCP_VARIABLE = False
+RUN_SOCP = False
+RUN_SOCP_VARIABLE = True
 RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 
@@ -50,7 +50,7 @@ n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -114,10 +114,14 @@ motor_noise_std = 0.05 * noise_factor
 wPq_std = 0.001 * noise_factor
 wPqdot_std = 0.003 * noise_factor
 
+print_motor_noise_std = "{:.1e}".format(motor_noise_std)
+print_wPq_std = "{:.1e}".format(wPq_std)
+print_wPqdot_std = "{:.1e}".format(wPqdot_std)
+print_tol = "{:.1e}".format(tol)
 save_path = (
-    f"results/{model_name}_aerial_socp_collocations_{round(motor_noise_std, 6)}_"
-    f"{round(wPq_std, 6)}_"
-    f"{round(wPqdot_std, 6)}.pkl"
+    f"results/{model_name}_aerial_socp_collocations_{print_motor_noise_std}_"
+    f"{print_wPq_std}_"
+    f"{print_wPqdot_std}.pkl"
 )
 
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
@@ -199,9 +203,9 @@ if RUN_SOCP:
     }
 
     if sol_socp.status != 0:
-        save_path = save_path.replace(".pkl", f"_DVG_{tol}.pkl")
+        save_path = save_path.replace(".pkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace(".pkl", f"_CVG_{tol}.pkl")
+        save_path = save_path.replace(".pkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -245,7 +249,7 @@ if RUN_SOCP_VARIABLE:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -259,16 +263,8 @@ if RUN_SOCP_VARIABLE:
         m_last = None
         cov_last = None
 
-    q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
-    qdot_joints_last = np.vstack(
-        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
-    )
-    tau_joints_last = np.vstack(
-        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
-    )
-
     socp = prepare_socp_SOCP_VARIABLE(
-        biorbd_model_path=biorbd_model_path_vision,
+        biorbd_model_path=biorbd_model_path,
         polynomial_degree=polynomial_degree,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -320,16 +316,16 @@ if RUN_SOCP_VARIABLE:
     }
 
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
     import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     b.exec()
 
@@ -371,7 +367,7 @@ if RUN_SOCP_FEEDFORWARD:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -446,9 +442,9 @@ if RUN_SOCP_FEEDFORWARD:
     }
 
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
@@ -497,7 +493,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_{tol}.pkl"
+    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -572,9 +568,9 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     }
 
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
