@@ -18,8 +18,8 @@ from SOCP_VARIABLE_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_VARI
 
 polynomial_degree = 3
 
-RUN_OCP = True
-RUN_SOCP = False
+RUN_OCP = False
+RUN_SOCP = True
 RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
@@ -41,7 +41,15 @@ n_q = 7
 n_root = 3
 
 # import bioviz
-# b = bioviz.Viz(biorbd_model_path)
+# b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
+#                background_color=(1, 1, 1),
+#                show_local_ref_frame=False,
+#                show_markers=False,
+#                show_segments_center_of_mass=False,
+#                show_global_center_of_mass=False,
+#                show_global_ref_frame=False,
+#                show_gravity_vector=False,
+#                )
 # b.exec()
 
 dt = 0.05
@@ -50,7 +58,7 @@ n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -67,6 +75,9 @@ if RUN_OCP:
     ocp = prepare_ocp(
         biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting, ode_solver=ode_solver
     )
+    ocp.add_plot_penalty()
+    ocp.add_plot_check_conditioning()
+
     solver.set_tol(1e-8)
     sol_ocp = ocp.solve(solver=solver)
 
@@ -100,6 +111,7 @@ if RUN_OCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
+    print(save_path)
     import bioviz
     b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -166,6 +178,7 @@ if RUN_SOCP:
         cov_last=cov_last,
     )
     socp.add_plot_penalty()
+    # socp.add_plot_check_conditioning()
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
@@ -211,6 +224,7 @@ if RUN_SOCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
+    print(save_path)
     import bioviz
     b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -326,6 +340,7 @@ if RUN_SOCP_VARIABLE:
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
+    print(save_path)
     import bioviz
     b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -453,6 +468,7 @@ if RUN_SOCP_FEEDFORWARD:
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
+    print(save_path)
     import bioviz
     b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -580,6 +596,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
+    print(save_path)
     import bioviz
     b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))

@@ -94,9 +94,25 @@ def plot_CoM(states_integrated, model, n_shooting, name, nb_random=30):
     plt.show()
 
 
-model_name = "Model2D_6Dof_0C_3M"
+model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
 biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
+biorbd_model_path_vision = f"models/{model_name}_vision.bioMod"
+biorbd_model_path_vision_with_mesh = f"models/{model_name}_vision_with_mesh.bioMod"
+
+
+import bioviz
+b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
+               background_color=(1, 1, 1),
+               show_local_ref_frame=False,
+               show_markers=False,
+               show_segments_center_of_mass=False,
+               show_global_center_of_mass=False,
+               show_global_ref_frame=False,
+               show_gravity_vector=False,
+               )
+b.exec()
+
 
 dt = 0.05
 final_time = 0.8

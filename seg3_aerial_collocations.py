@@ -122,7 +122,7 @@ def prepare_socp(
     dynamics = DynamicsList()
     dynamics.add(
         DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN_FREE_FLOATING_BASE,
-        dynamics_type=PhaseDynamics.SHARED_DURING_THE_PHASE,
+        phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
         problem_type=problem_type,
         with_cholesky=False,
         with_friction=True,
