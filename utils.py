@@ -19,7 +19,8 @@ def CoM_over_toes(controller: PenaltyController) -> cas.MX:
     q = cas.vertcat(q_roots, q_joints)
     CoM_pos = controller.model.center_of_mass(q)
     CoM_pos_y = CoM_pos[1]
-    marker_pos = controller.model.markers(q)[4]
+    marker_index = controller.model.marker_index("Foot_Toe")
+    marker_pos = controller.model.markers(q)[marker_index]
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 
@@ -53,22 +54,21 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     This is a multi-node constraint because the covariance matrix depends on all the precedent nodes, but it only
     applies at the END node.
     """
-    n_q = controller.model.nb_q
-    n_root = controller.model.nb_root
-    n_joints = n_q - n_root
-    Q_root = cas.MX.sym("q_root", n_root)
-    Q_joints = cas.MX.sym("q_joints", n_joints)
-    Qdot_root = cas.MX.sym("qdot_root", n_root)
-    Qdot_joints = cas.MX.sym("qdot_joints", n_joints)
 
-    cov_sym = cas.MX.sym("cov", controller.model.matrix_shape_cov[0] * controller.model.matrix_shape_cov[1])
+    n_q = controller.model.nb_q
+
+    Q_root = controller.states["q_roots"].mx
+    Q_joints = controller.states["q_joints"].mx
+    Qdot_root = controller.states["qdot_roots"].mx
+    Qdot_joints = controller.states["qdot_joints"].mx
+    cov_sym = controller.algebraic_states["cov"].mx
     cov_matrix = StochasticBioModel.reshape_to_matrix(cov_sym, controller.model.matrix_shape_cov)
 
     # What should we use as a reference?
-    CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[:2]
+    CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[1:]
     CoM_vel = controller.model.center_of_mass_velocity(
         cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
-    )[:2]
+    )[1:]
     CoM_ang_vel = controller.model.body_rotation_rate(
         cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
     )[0]
@@ -90,11 +90,11 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     fun = cas.Function("reach_target_consistantly", [Q_root, Q_joints, Qdot_root, Qdot_joints, cov_sym], [out])
     val = fun(
-        controller.states["q_roots"].cx_start,
-        controller.states["q_joints"].cx_start,
-        controller.states["qdot_roots"].cx_start,
-        controller.states["qdot_joints"].cx_start,
-        controller.algebraic_states["cov"].cx_start,
+        controller.states["q_roots"].cx,
+        controller.states["q_joints"].cx,
+        controller.states["qdot_roots"].cx,
+        controller.states["qdot_joints"].cx,
+        controller.algebraic_states["cov"].cx,
     )
     # Since the stochastic variables are defined with ns+1, the cx_start actually refers to the last node (when using node=Node.END)
 

@@ -33,6 +33,8 @@ from bioptim import (
     DynamicsFcn,
     Axis,
     SocpType,
+    PhaseDynamics,
+    VariableScalingList,
 )
 
 from seg3_aerial_collocations import reach_landing_position_consistantly
@@ -97,7 +99,7 @@ def prepare_socp_SOCP_FEEDFORWARD(
     # Add objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau", weight=0.01, quadratic=True
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01, quadratic=True
     )
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
@@ -105,17 +107,16 @@ def prepare_socp_SOCP_FEEDFORWARD(
         weight=1e3 / 2,
         quadratic=True,
     )
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    if np.sum(sensory_noise_magnitude) == 0:
-        objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.01, quadratic=True)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.001, quadratic=True)
 
     objective_functions.add(
-        reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=1e3, quadratic=True
+        reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=10000, quadratic=True
     )
 
     # Constraints
     constraints = ConstraintList()
-    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
+    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index="Foot_Toe", axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_toes, node=Node.END)
 
     # Dynamics
@@ -123,6 +124,7 @@ def prepare_socp_SOCP_FEEDFORWARD(
     dynamics.add(
         DynamicsFcn.STOCHASTIC_TORQUE_DRIVEN_FREE_FLOATING_BASE,
         problem_type=problem_type,
+        dynamics_type=PhaseDynamics.ONE_PER_NODE,
         with_cholesky=False,
         with_friction=True,
     )
@@ -263,8 +265,8 @@ def prepare_socp_SOCP_FEEDFORWARD(
         a_init.add("m", initial_guess=m_last, interpolation=InterpolationType.EACH_FRAME)
     a_bounds.add("m", min_bound=[-50] * n_m, max_bound=[50] * n_m, interpolation=InterpolationType.CONSTANT)
 
-    cov_min = np.ones((n_cov, 3)) * -500
-    cov_max = np.ones((n_cov, 3)) * 500
+    cov_min = np.ones((n_cov, 3)) * -50
+    cov_max = np.ones((n_cov, 3)) * 50
     cov_min[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
     cov_max[:, 0] = np.reshape(StochasticBioModel.reshape_to_vector(initial_cov), (-1,))
     if cov_last is not None:
@@ -275,6 +277,12 @@ def prepare_socp_SOCP_FEEDFORWARD(
         max_bound=cov_max,
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
+
+    a_scaling = VariableScalingList()
+    a_scaling.add("k", scaling=[10] * n_k)
+    a_scaling.add("ref", scaling=[10] * n_ref)
+    a_scaling.add("m", scaling=[1] * n_m)
+    a_scaling.add("cov", scaling=[1e-5] * n_cov)
 
     return StochasticOptimalControlProgram(
         bio_model,
@@ -287,6 +295,7 @@ def prepare_socp_SOCP_FEEDFORWARD(
         x_bounds=x_bounds,
         u_bounds=u_bounds,
         a_bounds=a_bounds,
+        a_scaling=a_scaling,
         objective_functions=objective_functions,
         constraints=constraints,
         n_threads=1,

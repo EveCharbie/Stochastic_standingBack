@@ -18,9 +18,9 @@ from SOCP_VARIABLE_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_VARI
 
 polynomial_degree = 3
 
-RUN_OCP = False
+RUN_OCP = True
 RUN_SOCP = False
-RUN_SOCP_VARIABLE = True
+RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 
@@ -50,14 +50,14 @@ n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
 solver.set_hessian_approximation("limited-memory")
-solver._nlp_scaling_method = "none"
-solver.set_check_derivatives_for_naninf("yes")
+# solver._nlp_scaling_method = "none"
+# solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
 
 # --- Run the deterministic collocation --- #
@@ -281,6 +281,8 @@ if RUN_SOCP_VARIABLE:
         cov_last=None,
     )
 
+    socp.add_plot_penalty()
+    # socp.add_plot_check_conditioning()
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
@@ -407,6 +409,7 @@ if RUN_SOCP_FEEDFORWARD:
         cov_last=None,
     )
 
+    socp.add_plot_penalty()
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
@@ -533,6 +536,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         cov_last=None,
     )
 
+    socp.add_plot_penalty()
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
