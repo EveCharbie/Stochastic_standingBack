@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import casadi as cas
 import biorbd
 import bioviz
 import pickle
+
+from seg3_aerial_collocations import prepare_socp
 
 
 def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, algebraic_states=[], nb_random=30):
@@ -100,6 +103,73 @@ biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
 biorbd_model_path_vision = f"models/{model_name}_vision.bioMod"
 biorbd_model_path_vision_with_mesh = f"models/{model_name}_vision_with_mesh.bioMod"
 
+polynomial_degree = 3
+
+n_q = 7
+n_root = 3
+
+dt = 0.05
+final_time = 0.8
+n_shooting = int(final_time / dt)
+
+# --- Run the SOCP collocation --- #
+noise_factor = 1.0  # 0.05, 0.1, 0.5,
+
+# TODO: How do we choose the values?
+motor_noise_std = 0.05 * noise_factor
+wPq_std = 0.001 * noise_factor
+wPqdot_std = 0.003 * noise_factor
+
+print_motor_noise_std = "{:.1e}".format(motor_noise_std)
+print_wPq_std = "{:.1e}".format(wPq_std)
+print_wPqdot_std = "{:.1e}".format(wPqdot_std)
+print_tol = "{:.1e}".format(tol)
+save_path = (
+    f"results/{model_name}_aerial_socp_collocations_{print_motor_noise_std}_"
+    f"{print_wPq_std}_"
+    f"{print_wPqdot_std}.pkl"
+)
+
+motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
+sensory_noise_magnitude = cas.DM(
+    cas.vertcat(
+        np.array([wPq_std**2 / dt for _ in range(n_q - n_root + 1)]),
+        np.array([wPqdot_std**2 / dt for _ in range(n_q - n_root + 1)]),
+    )
+)  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
+
+
+path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+with open(path_to_results, "rb") as file:
+    data = pickle.load(file)
+    q_roots_last = data["q_roots_sol"]
+    q_joints_last = data["q_joints_sol"]
+    qdot_roots_last = data["qdot_roots_sol"]
+    qdot_joints_last = data["qdot_joints_sol"]
+    tau_joints_last = data["tau_joints_sol"]
+    time_last = data["time_sol"]
+    k_last = None
+    ref_last = None
+    m_last = None
+    cov_last = None
+
+socp = prepare_socp(
+    biorbd_model_path=biorbd_model_path,
+    polynomial_degree=polynomial_degree,
+    time_last=time_last,
+    n_shooting=n_shooting,
+    motor_noise_magnitude=motor_noise_magnitude,
+    sensory_noise_magnitude=sensory_noise_magnitude,
+    q_roots_last=q_roots_last,
+    q_joints_last=q_joints_last,
+    qdot_roots_last=qdot_roots_last,
+    qdot_joints_last=qdot_joints_last,
+    tau_joints_last=tau_joints_last,
+    k_last=k_last,
+    ref_last=ref_last,
+    m_last=m_last,
+    cov_last=cov_last,
+)
 
 import bioviz
 b = bioviz.Viz(biorbd_model_path_vision_with_mesh,

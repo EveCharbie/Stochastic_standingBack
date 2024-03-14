@@ -65,10 +65,10 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     cov_matrix = StochasticBioModel.reshape_to_matrix(cov_sym, controller.model.matrix_shape_cov)
 
     # What should we use as a reference?
-    CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[1:]
+    CoM_pos = controller.model.center_of_mass(cas.vertcat(Q_root, Q_joints))[1]
     CoM_vel = controller.model.center_of_mass_velocity(
         cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
-    )[1:]
+    )[1]
     CoM_ang_vel = controller.model.body_rotation_rate(
         cas.vertcat(Q_root, Q_joints), cas.vertcat(Qdot_root, Qdot_joints)
     )[0]
@@ -85,7 +85,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     rot_constraint = jac_CoM_ang_vel @ P_matrix_qdot @ jac_CoM_ang_vel.T
 
     out = cas.vertcat(
-        pos_constraint[0, 0], pos_constraint[1, 1], vel_constraint[0, 0], vel_constraint[1, 1], rot_constraint[0, 0]
+        pos_constraint, vel_constraint, rot_constraint
     )
 
     fun = cas.Function("reach_target_consistantly", [Q_root, Q_joints, Qdot_root, Qdot_joints, cov_sym], [out])

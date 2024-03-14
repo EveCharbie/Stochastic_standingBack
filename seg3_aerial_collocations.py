@@ -95,7 +95,7 @@ def prepare_socp(
         friction_coefficients=friction_coefficients,
     )
 
-    # Add objective functions
+    # Objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, node=Node.ALL_SHOOTING, key="tau_joints", weight=0.01, quadratic=True
@@ -103,15 +103,18 @@ def prepare_socp(
     objective_functions.add(
         ObjectiveFcn.Lagrange.STOCHASTIC_MINIMIZE_EXPECTED_FEEDBACK_EFFORTS,
         node=Node.ALL_SHOOTING,
-        weight=1e3 / 2,
+        weight=500,
         quadratic=True,
     )
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.001, quadratic=True)
-
     objective_functions.add(
         reach_landing_position_consistantly, custom_type=ObjectiveFcn.Mayer, node=Node.END, weight=10000, quadratic=True
     )
+
+    # Regularization
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.0001, quadratic=True)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="m", weight=0.0001, quadratic=True)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="cov", weight=0.0001, quadratic=True)
 
     # Constraints
     constraints = ConstraintList()
@@ -234,7 +237,7 @@ def prepare_socp(
 
     if k_last is not None:
         a_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
-    a_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+    a_bounds.add("k", min_bound=[-100] * n_k, max_bound=[100] * n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = cas.vertcat(
         x_bounds["q_joints"].min,
