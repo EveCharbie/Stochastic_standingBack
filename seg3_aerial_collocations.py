@@ -111,7 +111,7 @@ def prepare_socp(
     )
 
     # Regularization
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.0001, quadratic=True)
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="m", weight=0.0001, quadratic=True)
     objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="cov", weight=0.0001, quadratic=True)
@@ -288,9 +288,9 @@ def prepare_socp(
     # u_scaling.add("tau_joints", scaling=[10] * n_joints)
     #
     a_scaling = VariableScalingList()
-    a_scaling.add("k", scaling=[10] * n_k)
-    a_scaling.add("ref", scaling=[10] * n_ref)
-    a_scaling.add("m", scaling=[1] * n_m)
+    # a_scaling.add("k", scaling=[10] * n_k)
+    # a_scaling.add("ref", scaling=[10] * n_ref)
+    # a_scaling.add("m", scaling=[1] * n_m)
     a_scaling.add("cov", scaling=[1e-5] * n_cov)
 
     return StochasticOptimalControlProgram(
