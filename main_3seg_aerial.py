@@ -52,19 +52,21 @@ n_root = 3
 #                )
 # b.exec()
 
+# dt = 0.025
 dt = 0.05
+# final_time = 0.5
 final_time = 0.8
 n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)
 solver.set_hessian_approximation("limited-memory")
-# solver._nlp_scaling_method = "none"
+solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
 
@@ -111,11 +113,11 @@ if RUN_OCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # print(save_path)
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()
 
 
 # --- Run the SOCP collocation --- #
