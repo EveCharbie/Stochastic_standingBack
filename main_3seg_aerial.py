@@ -64,7 +64,7 @@ solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
-solver.set_maximum_iterations(10000)
+solver.set_maximum_iterations(10000)  # 32
 solver.set_hessian_approximation("limited-memory")
 solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
@@ -180,7 +180,7 @@ if RUN_SOCP:
         cov_last=cov_last,
     )
     socp.add_plot_penalty()
-    # socp.add_plot_check_conditioning()
+    # socp.check_conditioning()
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
