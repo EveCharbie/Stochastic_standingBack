@@ -238,7 +238,7 @@ def prepare_socp(
     - vestibular: head orientation and angular velocity (1+1)
     """
 
-    nb_random = 3
+    nb_random = 20
 
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()

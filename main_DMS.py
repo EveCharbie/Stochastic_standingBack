@@ -49,7 +49,7 @@ n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -166,7 +166,7 @@ if RUN_SOCP:
         ref_last=ref_last,
     )
     socp.add_plot_penalty()
-    socp.add_plot_ipopt_outputs()
+    # socp.add_plot_ipopt_outputs()
     # socp.check_conditioning()
 
     solver.set_tol(tol)
@@ -205,11 +205,11 @@ if RUN_SOCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # print(save_path)
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()
 
 
 # --- Run the SOCP+ collocation (variable noise) --- #

@@ -242,7 +242,7 @@ b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
                show_global_ref_frame=False,
                show_gravity_vector=False,
                )
-b.load_movement()
+b.load_movement(q_mean_last)
 b.exec()
 
 
