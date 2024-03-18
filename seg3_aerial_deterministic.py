@@ -79,11 +79,11 @@ def prepare_ocp(
     objective_functions.add(
         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
     )
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 
     # Constraints
     constraints = ConstraintList()
-    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index="Foot_Toe", axes=Axis.Z, node=Node.END)
+    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_toes, node=Node.END)
 
     # Dynamics
