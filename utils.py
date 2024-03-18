@@ -47,12 +47,9 @@ def SOCP_sensory_reference(
     )
     return vestibular_and_joints_feedback
 
-
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
     """
-    Constraint the hand to reach the target consistently.
-    This is a multi-node constraint because the covariance matrix depends on all the precedent nodes, but it only
-    applies at the END node.
+    Encourage the model to land consistently in approximately the same position and orientation.
     """
 
     n_q = controller.model.nb_q
@@ -84,8 +81,11 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     vel_constraint = jac_CoM_qdot @ P_matrix_qdot @ jac_CoM_qdot.T
     rot_constraint = jac_CoM_ang_vel @ P_matrix_qdot @ jac_CoM_ang_vel.T
 
+    # out = cas.vertcat(
+    #     pos_constraint, vel_constraint, rot_constraint
+    # )
     out = cas.vertcat(
-        pos_constraint, vel_constraint, rot_constraint
+        pos_constraint[0, 0], pos_constraint[1, 1], vel_constraint[0, 0], vel_constraint[1, 1], rot_constraint[0, 0]
     )
 
     fun = cas.Function("reach_target_consistantly", [Q_root, Q_joints, Qdot_root, Qdot_joints, cov_sym], [out])
@@ -379,3 +379,190 @@ def SOCP_VARIABLE_FEEDFORWARD_sensory_reference(
     return SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
         nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time
     )
+
+
+# ------------------- DMS ------------------- #
+
+def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_noise_numerical, sensory_noise_numerical) -> cas.MX:
+    nb_root = controller.model.nb_root
+    nb_q = controller.model.nb_q
+    nb_joints = nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+    qdot_roots = controller.states["qdot_roots"].mx
+    qdot_joints = controller.states["qdot_joints"].mx
+    tau_joints = controller.controls["tau_joints"].mx
+    k = controller.controls["k"].mx
+    k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
+    ref = controller.controls["ref"].mx
+
+    all_tau = 0
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root: (i + 1) * nb_root],
+            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+        tau_this_time = tau_joints[:]
+
+        # Joint friction
+        tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
+
+        # Motor noise
+        tau_this_time += motor_noise_numerical[:, controller.node_index, i]
+
+        # Feedback
+        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, controller.node_index, i])
+        all_tau += cas.sum1(tau_this_time ** 2)
+
+    all_tau_cx = controller.mx_to_cx("all_tau",
+                                     all_tau,
+                                     controller.states["q_roots"],
+                                     controller.states["q_joints"],
+                                     controller.states["qdot_roots"],
+                                     controller.states["qdot_joints"],
+                                     controller.controls["tau_joints"],
+                                     controller.controls["k"],
+                                     controller.controls["ref"])
+
+    return all_tau_cx
+
+def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
+    """
+    Encourage the model to land consistently in approximately the same position and orientation.
+    """
+
+    nb_root = controller.model.nb_root
+    nb_joints = controller.model.nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+    qdot_roots = controller.states["qdot_roots"].mx
+    qdot_joints = controller.states["qdot_joints"].mx
+
+    CoM_pos = cas.MX()
+    CoM_vel = cas.MX()
+    CoM_ang_vel = cas.MX()
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root: (i + 1) * nb_root],
+            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+
+        CoM_pos = cas.vertcat(CoM_pos, controller.model.center_of_mass(q_this_time)[1])
+        CoM_vel = cas.vertcat(CoM_vel, controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1])
+        CoM_ang_vel = cas.vertcat(CoM_ang_vel, controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0])
+
+    min_CoM_pos = cas.mmin(CoM_pos)
+    max_CoM_pos = cas.mmax(CoM_pos)
+    min_CoM_vel = cas.mmin(CoM_vel)
+    max_CoM_vel = cas.mmax(CoM_vel)
+    min_CoM_ang_vel = cas.mmin(CoM_ang_vel)
+    max_CoM_ang_vel = cas.mmax(CoM_ang_vel)
+    out = (max_CoM_pos - min_CoM_pos) ** 2 + (max_CoM_vel - min_CoM_vel) ** 2 + (max_CoM_ang_vel - min_CoM_ang_vel) ** 2
+
+    val = controller.mx_to_cx("reach_target_consistantly",
+                                out,
+                                controller.states["q_roots"],
+                                controller.states["q_joints"],
+                                controller.states["qdot_roots"],
+                                controller.states["qdot_joints"])
+
+    return val
+
+
+def DMS_sensory_reference(nb_roots, q_this_time, qdot_this_time):
+    joints_and_vestibular_feedback = cas.vertcat(
+        q_this_time[nb_roots:],  # Joint proprioception position
+        qdot_this_time[nb_roots:],  # Joint proprioception velocity
+        cas.reshape(q_this_time[:nb_roots][2], (1, -1)),  # Vestibular position
+        cas.reshape(qdot_this_time[:nb_roots][2], (1, -1))  # Vestibular velocity
+    )
+    return joints_and_vestibular_feedback
+
+
+def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
+
+    nb_root = controller.model.nb_root
+    nb_joints = controller.model.nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+
+    toe_idx = controller.model.marker_index("Foot_Toe")
+    toe_marker_height = controller.cx()
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+
+        toe_marker_height = cas.vertcat(toe_marker_height, controller.model.marker(q_this_time, toe_idx)[2])
+
+    mean_height = cas.sum1(toe_marker_height)  # Since it is zero, we do not need to divide to get the mean
+
+    mean_height_cx = controller.mx_to_cx("mean_height", mean_height, controller.states["q_roots"], controller.states["q_joints"])
+
+    return mean_height_cx
+
+def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
+
+    nb_root = controller.model.nb_root
+    nb_joints = controller.model.nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+    qdot_roots = controller.states["qdot_roots"].mx
+    qdot_joints = controller.states["qdot_joints"].mx
+    ref = controller.controls["ref"].mx
+
+    ref_measured = cas.MX.zeros(ref.shape[0])
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root: (i + 1) * nb_root],
+            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+
+        ref_this_time = DMS_sensory_reference(nb_root, q_this_time, qdot_this_time)
+        ref_measured += ref_this_time
+
+    ref_measured /= controller.model.nb_random
+
+    mean_ref_cx = controller.mx_to_cx("mean_ref",
+                                      ref - ref_measured,  # Difference between the reference and the mean sensory input
+                                      controller.states["q_roots"], controller.states["q_joints"],
+                                      controller.states["qdot_roots"], controller.states["qdot_joints"], controller.controls["ref"])
+    return mean_ref_cx
+
+def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
+
+    nb_root = controller.model.nb_root
+    nb_joints = controller.model.nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+
+    toe_idx = controller.model.marker_index("Foot_Toe")
+    CoM_pos = cas.MX()
+    marker_pos = cas.MX()
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+
+        CoM_pos = cas.vertcat(CoM_pos, controller.model.center_of_mass(q_this_time)[1])
+        marker_pos = cas.vertcat(marker_pos, controller.model.marker(q_this_time, toe_idx)[1])
+
+    mean_CoM_pos = cas.sum1(CoM_pos) / controller.model.nb_random
+    mean_marker_pos = cas.sum1(marker_pos) / controller.model.nb_random
+
+    mean_distance_cx = controller.mx_to_cx("mean_distance",
+                                         mean_marker_pos - mean_CoM_pos,  # Difference between the CoM and the toe marker
+                                         controller.states["q_roots"], controller.states["q_joints"])
+
+    return mean_distance_cx

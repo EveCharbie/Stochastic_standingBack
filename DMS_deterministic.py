@@ -53,7 +53,6 @@ def prepare_ocp(
     biorbd_model_path: str,
     time_last: float,
     n_shooting: int,
-    ode_solver: OdeSolver,
     q_roots_last: np.ndarray = None,
     q_joints_last: np.ndarray = None,
     qdot_roots_last: np.ndarray = None,
@@ -79,11 +78,11 @@ def prepare_ocp(
     objective_functions.add(
         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
     )
-    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
+    objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.001, min_bound=0.3, max_bound=1)
 
     # Constraints
     constraints = ConstraintList()
-    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index=2, axes=Axis.Z, node=Node.END)
+    constraints.add(ConstraintFcn.TRACK_MARKERS, marker_index="Foot_Toe", axes=Axis.Z, node=Node.END)
     constraints.add(CoM_over_toes, node=Node.END)
 
     # Dynamics
@@ -207,58 +206,7 @@ def prepare_ocp(
         u_bounds=u_bounds,
         objective_functions=objective_functions,
         constraints=constraints,
-        ode_solver=ode_solver,
+        ode_solver=OdeSolver.RK4(),
         n_threads=32,
     )
 
-
-if __name__ == "__main__":
-    model_name = "Model2D_6Dof_0C_3M"
-    biorbd_model_path = f"models/{model_name}.bioMod"
-    biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
-    save_path = f"results/{model_name}_aerial_ocp.pkl"
-
-    dt = 0.05
-    final_time = 0.8
-    n_shooting = int(final_time / dt)
-    ode_solver = OdeSolver.COLLOCATION(polynomial_degree=3)
-
-    ocp = prepare_ocp(biorbd_model_path, final_time, n_shooting, ode_solver)
-
-    # --- Solve the program --- #
-    solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
-    solver.set_linear_solver("ma97")
-    solver.set_tol(1e-3)
-    solver.set_dual_inf_tol(3e-4)
-    solver.set_constr_viol_tol(1e-7)
-    solver.set_maximum_iterations(1000)
-    sol = ocp.solve(solver)
-
-    q_roots_sol = sol.states["q_roots"]
-    q_joints_sol = sol.states["q_joints"]
-    qdot_roots_sol = sol.states["qdot_roots"]
-    qdot_joints_sol = sol.states["qdot_joints"]
-    tau_sol = sol.controls["tau_joints"]
-    time_sol = sol.parameters["time"][0][0]
-    data = {
-        "q_roots": q_roots_sol,
-        "q_joints": q_joints_sol,
-        "qdot_roots": qdot_roots_sol,
-        "qdot_joints": qdot_joints_sol,
-        "tau": tau_sol,
-        "time": time_sol,
-    }
-
-    if sol.status != 0:
-        save_path = save_path.replace(".pkl", "_DVG.pkl")
-    else:
-        save_path = save_path.replace(".pkl", "_CVG.pkl")
-
-    with open(save_path, "wb") as file:
-        pickle.dump(data, file)
-
-    import bioviz
-
-    b = bioviz.Viz(biorbd_model_path_with_mesh)
-    b.load_movement(q_sol)
-    b.exec()
