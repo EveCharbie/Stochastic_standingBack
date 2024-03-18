@@ -10,26 +10,17 @@ import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import Solver, OdeSolver, SolutionMerge
 
-from seg3_aerial_deterministic import prepare_ocp
-from seg3_aerial_collocations import prepare_socp
-from SOCP_VARIABLE_aerial_collocations import prepare_socp_SOCP_VARIABLE
-from SOCP_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_FEEDFORWARD
-from SOCP_VARIABLE_FEEDFORWARD_aerial_collocations import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
-
-polynomial_degree = 3
+from DMS_deterministic import prepare_ocp
+from DMS_SOCP import prepare_socp
+# from DMS_SOCP_VARIABLE import prepare_socp_SOCP_VARIABLE
+# from DMS_SOCP_FEEDFORWARD import prepare_socp_SOCP_FEEDFORWARD
+# from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
 RUN_SOCP = True
 RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
-
-
-ode_solver = OdeSolver.COLLOCATION(
-    polynomial_degree=polynomial_degree,
-    method="legendre",
-    duplicate_starting_point=True,
-)
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -64,19 +55,20 @@ solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)  # 32
 solver.set_hessian_approximation("limited-memory")
-solver._nlp_scaling_method = "none"
+# solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
 
 # --- Run the deterministic collocation --- #
-save_path = f"results/{model_name}_aerial_ocp_collocations.pkl"
+save_path = f"results/{model_name}_ocp_DMS.pkl"
 
 if RUN_OCP:
     ocp = prepare_ocp(
-        biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting, ode_solver=ode_solver
+        biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting
     )
     ocp.add_plot_penalty()
     # ocp.add_plot_check_conditioning()
+    ocp.add_plot_ipopt_outputs()
 
     solver.set_tol(1e-8)
     sol_ocp = ocp.solve(solver=solver)
@@ -103,19 +95,20 @@ if RUN_OCP:
         "time_sol": time_sol,
     }
 
+    save_path = save_path.replace(".", "p")
     if sol_ocp.status != 0:
-        save_path = save_path.replace(".pkl", f"_DVG_1e-8.pkl")
+        save_path = save_path.replace("ppkl", f"_DVG_1e-8.pkl")
     else:
-        save_path = save_path.replace(".pkl", f"_CVG_1e-8.pkl")
+        save_path = save_path.replace("ppkl", f"_CVG_1e-8.pkl")
 
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # print(save_path)
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()
 
 
 # --- Run the SOCP collocation --- #
@@ -131,7 +124,7 @@ print_wPq_std = "{:.1e}".format(wPq_std)
 print_wPqdot_std = "{:.1e}".format(wPqdot_std)
 print_tol = "{:.1e}".format(tol)
 save_path = (
-    f"results/{model_name}_aerial_socp_collocations_{print_motor_noise_std}_"
+    f"results/{model_name}_socp_DMS_{print_motor_noise_std}_"
     f"{print_wPq_std}_"
     f"{print_wPqdot_std}.pkl"
 )
@@ -146,7 +139,7 @@ sensory_noise_magnitude = cas.DM(
 
 if RUN_SOCP:
 
-    path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -157,12 +150,9 @@ if RUN_SOCP:
         time_last = data["time_sol"]
         k_last = None
         ref_last = None
-        m_last = None
-        cov_last = None
 
     socp = prepare_socp(
         biorbd_model_path=biorbd_model_path,
-        polynomial_degree=polynomial_degree,
         time_last=time_last,
         n_shooting=n_shooting,
         motor_noise_magnitude=motor_noise_magnitude,
@@ -174,11 +164,9 @@ if RUN_SOCP:
         tau_joints_last=tau_joints_last,
         k_last=k_last,
         ref_last=ref_last,
-        m_last=m_last,
-        cov_last=cov_last,
     )
     socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    socp.add_plot_ipopt_outputs()
     # socp.check_conditioning()
 
     solver.set_tol(tol)
@@ -186,7 +174,6 @@ if RUN_SOCP:
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
     controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
     q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
         states["q_roots"],
@@ -194,13 +181,8 @@ if RUN_SOCP:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol = controls["tau_joints"]
-    k_sol, ref_sol, m_sol, cov_sol = (
-        algebraic_states["k"],
-        algebraic_states["ref"],
-        algebraic_states["m"],
-        algebraic_states["cov"],
-    )
+    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
+
     time_sol = sol_socp.decision_time()[-1]
 
     data = {
@@ -212,8 +194,6 @@ if RUN_SOCP:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
-        "m_sol": m_sol,
-        "cov_sol": cov_sol,
     }
 
     if sol_socp.status != 0:

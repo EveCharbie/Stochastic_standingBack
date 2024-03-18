@@ -6,6 +6,7 @@ import bioviz
 import pickle
 
 from seg3_aerial_collocations import prepare_socp
+from utils import DMS_sensory_reference
 
 
 def get_integrated_states(ocp, q_sol, qdot_sol, tau_sol, time_sol, algebraic_states=[], nb_random=30):
@@ -107,10 +108,13 @@ polynomial_degree = 3
 
 n_q = 7
 n_root = 3
+n_joints = n_q - n_root
 
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
+tol = 1e-3
+nb_random = 3
 
 # --- Run the SOCP collocation --- #
 noise_factor = 1.0  # 0.05, 0.1, 0.5,
@@ -139,7 +143,8 @@ sensory_noise_magnitude = cas.DM(
 )  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
 
-path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+# path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_CVG_1p0e-03.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -148,28 +153,84 @@ with open(path_to_results, "rb") as file:
     qdot_joints_last = data["qdot_joints_sol"]
     tau_joints_last = data["tau_joints_sol"]
     time_last = data["time_sol"]
-    k_last = None
-    ref_last = None
-    m_last = None
-    cov_last = None
+    k_last = data["k_sol"]
+    ref_last = data["ref_sol"]
+    # k_last = None
+    # ref_last = None
+    # m_last = None
+    # cov_last = None
 
-socp = prepare_socp(
-    biorbd_model_path=biorbd_model_path,
-    polynomial_degree=polynomial_degree,
-    time_last=time_last,
-    n_shooting=n_shooting,
-    motor_noise_magnitude=motor_noise_magnitude,
-    sensory_noise_magnitude=sensory_noise_magnitude,
-    q_roots_last=q_roots_last,
-    q_joints_last=q_joints_last,
-    qdot_roots_last=qdot_roots_last,
-    qdot_joints_last=qdot_joints_last,
-    tau_joints_last=tau_joints_last,
-    k_last=k_last,
-    ref_last=ref_last,
-    m_last=m_last,
-    cov_last=cov_last,
-)
+# socp = prepare_socp(
+#     biorbd_model_path=biorbd_model_path,
+#     polynomial_degree=polynomial_degree,
+#     time_last=time_last,
+#     n_shooting=n_shooting,
+#     motor_noise_magnitude=motor_noise_magnitude,
+#     sensory_noise_magnitude=sensory_noise_magnitude,
+#     q_roots_last=q_roots_last,
+#     q_joints_last=q_joints_last,
+#     qdot_roots_last=qdot_roots_last,
+#     qdot_joints_last=qdot_joints_last,
+#     tau_joints_last=tau_joints_last,
+#     k_last=k_last,
+#     ref_last=ref_last,
+#     m_last=m_last,
+#     cov_last=cov_last,
+# )
+
+is_label_dof_set = False
+is_label_mean_set = False
+is_label_ref_mean_set = False
+
+time_vector = np.linspace(0, float(time_last), n_shooting + 1)
+
+fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+axs = np.ravel(axs)
+q_last = np.vstack((np.array(q_roots_last[:n_root]), np.array(q_joints_last[:n_joints])))[:, :, np.newaxis]
+qdot_last = np.vstack((np.array(qdot_roots_last[:n_root]), np.array(qdot_joints_last[:n_joints])))[:, :, np.newaxis]
+for i_random in range(1, nb_random):
+    q_last = np.concatenate((q_last,
+                             np.vstack((np.array(q_roots_last[i_random*n_root:(i_random+1)*n_root]),
+                                        np.array(q_joints_last[i_random*n_joints:(i_random+1)*n_joints])))[:, :, np.newaxis]),
+                            axis=2)
+    qdot_last = np.concatenate((qdot_last,
+                                 np.vstack((np.array(qdot_roots_last[i_random*n_root:(i_random+1)*n_root]),
+                                            np.array(qdot_joints_last[i_random*n_joints:(i_random+1)*n_joints])))[:, :, np.newaxis]),
+                                axis=2)
+    for i_dof in range(n_q):
+        if not is_label_dof_set:
+            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
+            is_label_dof_set = True
+        else:
+            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
+q_mean_last = np.mean(q_last, axis=2)
+qdot_mean_last = np.mean(qdot_last, axis=2)
+for i_dof in range(n_q):
+    if not is_label_mean_set:
+        axs[i_dof].plot(time_vector, q_mean_last[i_dof, :], "--", color="tab:red", label="Mean noised states")
+        is_label_mean_set = True
+    else:
+        axs[i_dof].plot(time_vector, q_mean_last[i_dof, :], "--", color="tab:red")
+    axs[i_dof].set_title(f"DOF {i_dof}")
+ref_mean_last = np.array(DMS_sensory_reference(n_root, q_mean_last, qdot_mean_last))
+if not is_label_ref_mean_set:
+    axs[3].plot(time_vector, ref_mean_last[0, :], color="tab:blue", label="Mean reference")
+    axs[3].plot(time_vector[:-1], ref_last[0, :], "--", color="tab:orange", label="Reference (optim variables)")
+    is_label_ref_mean_set = True
+else:
+    axs[3].plot(time_vector, ref_mean_last[0, :], color="tab:blue")
+    axs[3].plot(time_vector[:-1], ref_last[0, :], "--", color="tab:orange")
+axs[4].plot(time_vector, ref_mean_last[1, :], color="tab:blue")
+axs[4].plot(time_vector[:-1], ref_last[1, :], "--", color="tab:orange")
+axs[5].plot(time_vector, ref_mean_last[2, :], color="tab:blue")
+axs[5].plot(time_vector[:-1], ref_last[2, :], "--", color="tab:orange")
+axs[6].plot(time_vector, ref_mean_last[3, :], color="tab:blue")
+axs[6].plot(time_vector[:-1], ref_last[3, :], "--", color="tab:orange")
+axs[2].plot(time_vector, ref_mean_last[8, :], color="tab:blue")
+axs[2].plot(time_vector[:-1], ref_last[8, :], "--", color="tab:orange")
+axs[0].legend()
+axs[3].legend()
+plt.show()
 
 import bioviz
 b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
@@ -181,6 +242,7 @@ b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
                show_global_ref_frame=False,
                show_gravity_vector=False,
                )
+b.load_movement()
 b.exec()
 
 
