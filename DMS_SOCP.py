@@ -12,7 +12,6 @@ from utils import (
     DMS_CoM_over_toes,
     DMS_sensory_reference,
     always_reach_landing_position,
-    compute_SOCP_torques_from_noise_and_feedback,
     minimize_nominal_and_feedback_efforts,
     toe_marker_on_floor,
     ref_equals_mean_sensory,
@@ -88,7 +87,7 @@ def custom_dynamics(
             tau_this_time += motor_noise_numerical[:, j, i]
 
             # Feedback
-            tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, j, i])
+            tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nlp.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, j, i])
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
             ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
@@ -238,7 +237,7 @@ def prepare_socp(
     - vestibular: head orientation and angular velocity (1+1)
     """
 
-    nb_random = 20
+    nb_random = 30
 
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
@@ -253,7 +252,7 @@ def prepare_socp(
         sensory_noise_magnitude=sensory_noise_magnitude,
         motor_noise_magnitude=motor_noise_magnitude,
         sensory_reference=DMS_sensory_reference,
-        compute_torques_from_noise_and_feedback=compute_SOCP_torques_from_noise_and_feedback,
+        compute_torques_from_noise_and_feedback=None,
         n_references=2 * (n_joints + 1),
         n_feedbacks=2 * (n_joints + 1),
         n_noised_states=n_q * 2,
@@ -343,10 +342,10 @@ def prepare_socp(
         qdot_joints_max = np.vstack((qdot_joints_max, bio_model.bounds_from_ranges("qdot_joints").max))
 
     # initial variability
-    initial_cov = cas.DM_eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
+    initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     noised_states = np.random.multivariate_normal(
         np.hstack((pose_at_first_node, np.array([0, 2, 2.5*np.pi, 0, 0, 0, 0]))),
-        initial_cov.full(),
+        initial_cov,
         nb_random).T
 
     for i in range(nb_random):
@@ -449,20 +448,12 @@ def prepare_socp(
 
     u_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
 
-    # ref_min = cas.vertcat(
-    #     bio_model.bounds_from_ranges("q_joints").min,
-    #     bio_model.bounds_from_ranges("qdot_joints").min,
-    #     np.ones((1, 3)) * -2*np.pi,
-    #     np.ones((1, 3)) * -10*np.pi,
-    # )
-    # ref_max = cas.vertcat(
-    #     bio_model.bounds_from_ranges("q_joints").max,
-    #     bio_model.bounds_from_ranges("qdot_joints").max,
-    #     np.ones((1, 3)) * 2*np.pi,
-    #     np.ones((1, 3)) * 10*np.pi,
-    # )
     ref_min = [-1000] * n_ref
     ref_max = [1000] * n_ref
+
+    q_sym = cas.MX.sym("q", n_q, 1)
+    qdot_sym = cas.MX.sym("qdot", n_q, 1)
+    ref_fun = cas.Function("ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym)])
 
     if ref_last is not None:
         u_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
@@ -480,7 +471,7 @@ def prepare_socp(
                 qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i]))
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
-            ref_init[:, i] = np.reshape(DMS_sensory_reference(n_root, q_mean, qdot_mean), (n_ref,))
+            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
 
     u_bounds.add(
         "ref",
