@@ -12,7 +12,7 @@ from bioptim import Solver, OdeSolver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
 from DMS_SOCP import prepare_socp
-# from DMS_SOCP_VARIABLE import prepare_socp_SOCP_VARIABLE
+from DMS_SOCP_VARIABLE import prepare_socp_SOCP_VARIABLE
 # from DMS_SOCP_FEEDFORWARD import prepare_socp_SOCP_FEEDFORWARD
 # from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
 
@@ -59,7 +59,7 @@ solver.set_hessian_approximation("limited-memory")
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
 
-# --- Run the deterministic collocation --- #
+# --- Run the deterministic --- #
 save_path = f"results/{model_name}_ocp_DMS.pkl"
 
 if RUN_OCP:
@@ -111,7 +111,7 @@ if RUN_OCP:
     # b.exec()
 
 
-# --- Run the SOCP collocation --- #
+# --- Run the SOCP --- #
 noise_factor = 1.0  # 0.05, 0.1, 0.5,
 
 # TODO: How do we choose the values?
@@ -196,10 +196,11 @@ if RUN_SOCP:
         "ref_sol": ref_sol,
     }
 
+    save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace(".pkl", f"_DVG_{print_tol}.pkl")
+        save_path = save_path.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace(".pkl", f"_CVG_{print_tol}.pkl")
+        save_path = save_path.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -212,7 +213,7 @@ if RUN_SOCP:
     # b.exec()
 
 
-# --- Run the SOCP+ collocation (variable noise) --- #
+# --- Run the SOCP+ (variable noise) --- #
 save_path_vision = save_path.replace(".pkl", "_VARIABLE.pkl")
 
 if RUN_SOCP_VARIABLE:
@@ -244,7 +245,7 @@ if RUN_SOCP_VARIABLE:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
+    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -255,12 +256,9 @@ if RUN_SOCP_VARIABLE:
         time_last = data["time_sol"]
         k_last = None
         ref_last = None
-        m_last = None
-        cov_last = None
 
     socp = prepare_socp_SOCP_VARIABLE(
         biorbd_model_path=biorbd_model_path,
-        polynomial_degree=polynomial_degree,
         time_last=time_last,
         n_shooting=n_shooting,
         motor_noise_magnitude=motor_noise_magnitude,
@@ -272,17 +270,15 @@ if RUN_SOCP_VARIABLE:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
-        m_last=None,
-        cov_last=None,
     )
 
     socp.add_plot_penalty()
     # socp.add_plot_check_conditioning()
+    solver.set_tol(tol)
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
     controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
     q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
         states["q_roots"],
@@ -290,13 +286,7 @@ if RUN_SOCP_VARIABLE:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol = controls["tau_joints"]
-    k_sol, ref_sol, m_sol, cov_sol = (
-        algebraic_states["k"],
-        algebraic_states["ref"],
-        algebraic_states["m"],
-        algebraic_states["cov"],
-    )
+    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
 
     data = {
@@ -308,14 +298,13 @@ if RUN_SOCP_VARIABLE:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
-        "m_sol": m_sol,
-        "cov_sol": cov_sol,
     }
 
+    save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
@@ -328,7 +317,7 @@ if RUN_SOCP_VARIABLE:
     b.exec()
 
 
-# --- Run the SOCP+ collocation (feedforward) --- #
+# --- Run the SOCP+ (feedforward) --- #
 save_path_vision = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
 n_q += 1
 
@@ -365,7 +354,7 @@ if RUN_SOCP_FEEDFORWARD:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
+    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -376,8 +365,6 @@ if RUN_SOCP_FEEDFORWARD:
         time_last = data["time_sol"]
         k_last = None
         ref_last = None
-        m_last = None
-        cov_last = None
 
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
@@ -389,7 +376,6 @@ if RUN_SOCP_FEEDFORWARD:
 
     socp = prepare_socp_SOCP_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
-        polynomial_degree=polynomial_degree,
         time_last=time_last,
         n_shooting=n_shooting,
         motor_noise_magnitude=motor_noise_magnitude,
@@ -401,16 +387,15 @@ if RUN_SOCP_FEEDFORWARD:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
-        m_last=None,
-        cov_last=None,
     )
 
     socp.add_plot_penalty()
+
+    solver.set_tol(tol)
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
     controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
     q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
         states["q_roots"],
@@ -418,13 +403,7 @@ if RUN_SOCP_FEEDFORWARD:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol = controls["tau_joints"]
-    k_sol, ref_sol, m_sol, cov_sol = (
-        algebraic_states["k"],
-        algebraic_states["ref"],
-        algebraic_states["m"],
-        algebraic_states["cov"],
-    )
+    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
 
     data = {
@@ -436,27 +415,26 @@ if RUN_SOCP_FEEDFORWARD:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
-        "m_sol": m_sol,
-        "cov_sol": cov_sol,
     }
 
+    save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
-    print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # print(save_path)
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()
 
 
-# --- Run the SOCP+ collocation (variable noise & feedforward) --- #
+# --- Run the SOCP+ (variable noise & feedforward) --- #
 save_path_vision = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
 n_q += 1
 
@@ -493,7 +471,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         )
     )
 
-    path_to_results = f"results/Model2D_7Dof_0C_3M_aerial_ocp_collocations_CVG_1e-8.pkl"
+    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -504,8 +482,6 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         time_last = data["time_sol"]
         k_last = None
         ref_last = None
-        m_last = None
-        cov_last = None
 
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
@@ -517,7 +493,6 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     socp = prepare_socp_SOCP_VARIABLE_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
-        polynomial_degree=polynomial_degree,
         time_last=time_last,
         n_shooting=n_shooting,
         motor_noise_magnitude=motor_noise_magnitude,
@@ -529,16 +504,15 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
-        m_last=None,
-        cov_last=None,
     )
 
     socp.add_plot_penalty()
+
+    solver.set_tol(tol)
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
     controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
-    algebraic_states = sol_socp.decision_algebraic_states(to_merge=SolutionMerge.NODES)
 
     q_roots_sol, q_joints_sol, qdot_roots_sol, qdot_joints_sol = (
         states["q_roots"],
@@ -546,13 +520,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol = controls["tau_joints"]
-    k_sol, ref_sol, m_sol, cov_sol = (
-        algebraic_states["k"],
-        algebraic_states["ref"],
-        algebraic_states["m"],
-        algebraic_states["cov"],
-    )
+    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
 
     data = {
@@ -564,21 +532,20 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
-        "m_sol": m_sol,
-        "cov_sol": cov_sol,
     }
 
+    save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
-    print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # print(save_path)
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()

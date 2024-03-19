@@ -43,7 +43,7 @@ def SOCP_sensory_reference(
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
     vestibular_and_joints_feedback = cas.vertcat(
-        q_joints, qdot_joints, cas.reshape(q_roots[2], (1, -1)), cas.reshape(qdot_roots[2], (1, -1))
+        q_joints, qdot_joints, q_roots[2], qdot_roots[2]
     )
     return vestibular_and_joints_feedback
 
@@ -154,13 +154,13 @@ def motor_acuity(motor_noise, tau_nominal):
 
 
 def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
-    n_joints = model.nb_q - model.nb_root
+    nb_roots = model.nb_root
+    n_joints = model.nb_q - nb_roots
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
 
-    sensory_input = SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
-        model, q_roots, q_joints, qdot_roots, qdot_joints, 0, 0
-    )
+    sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
+
     proprioceptive_feedback = sensory_input[: 2 * n_joints]
     vestibular_feedback = sensory_input[2 * n_joints : -1]
 
@@ -284,6 +284,7 @@ def SOCP_VARIABLE_FEEDFORWARD_compute_torques_from_noise_and_feedback(
 def SOCP_VARIABLE_compute_torques_from_noise_and_feedback(
     nlp, time, states, controls, parameters, algebraic_states, motor_noise, sensory_noise
 ):
+    # TODO: friction is missing?
     n_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
     n_joints = n_q - n_root
@@ -348,8 +349,6 @@ def SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(model, q_roots, q_joints, q
     head_velocity = model.segment_angular_velocity(q, qdot, head_idx)
     vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
 
-    q = cas.vertcat(q_roots, q_joints)
-    qdot = cas.vertcat(qdot_roots, qdot_joints)
     time_to_contact = tf - time
     somersault_velocity = model.body_rotation_rate(q, qdot)[0]
     curent_somersault_angle = q_roots[2]
@@ -414,7 +413,7 @@ def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_n
         tau_this_time += motor_noise_numerical[:, controller.node_index, i]
 
         # Feedback
-        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, controller.node_index, i])
+        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, controller.node_index, i])
         all_tau += cas.sum1(tau_this_time ** 2)
 
     all_tau_cx = controller.mx_to_cx("all_tau",
@@ -475,14 +474,15 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
     return val
 
 
-def DMS_sensory_reference(nb_roots, q_this_time, qdot_this_time):
-    joints_and_vestibular_feedback = cas.vertcat(
-        q_this_time[nb_roots:],  # Joint proprioception position
-        qdot_this_time[nb_roots:],  # Joint proprioception velocity
-        cas.reshape(q_this_time[:nb_roots][2], (1, -1)),  # Vestibular position
-        cas.reshape(qdot_this_time[:nb_roots][2], (1, -1))  # Vestibular velocity
-    )
-    return joints_and_vestibular_feedback
+def DMS_sensory_reference(model, nb_roots, q_this_time, qdot_this_time):
+
+    proprioceptive_feedback = cas.vertcat(q_this_time[nb_roots:], qdot_this_time[nb_roots:])
+    head_idx = model.segment_index("Head")
+    head_orientation = model.segment_orientation(q_this_time, head_idx)
+    head_velocity = model.segment_angular_velocity(q_this_time, qdot_this_time, head_idx)
+    vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
+
+    return cas.vertcat(proprioceptive_feedback, vestibular_feedback)
 
 
 def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
@@ -528,7 +528,7 @@ def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
             qdot_roots[i * nb_root: (i + 1) * nb_root],
             qdot_joints[i * nb_joints: (i + 1) * nb_joints])
 
-        ref_this_time = DMS_sensory_reference(nb_root, q_this_time, qdot_this_time)
+        ref_this_time = controller.model.sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time)
         ref_measured += ref_this_time
 
     ref_measured /= controller.model.nb_random
@@ -566,3 +566,85 @@ def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
                                          controller.states["q_roots"], controller.states["q_joints"])
 
     return mean_distance_cx
+
+
+def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController, motor_noise_numerical, sensory_noise_numerical) -> cas.MX:
+    nb_root = controller.model.nb_root
+    nb_q = controller.model.nb_q
+    nb_joints = nb_q - nb_root
+
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+    qdot_roots = controller.states["qdot_roots"].mx
+    qdot_joints = controller.states["qdot_joints"].mx
+    tau_joints = controller.controls["tau_joints"].mx
+    k = controller.controls["k"].mx
+    k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
+    fb_ref = controller.controls["ref"].mx
+
+    all_tau = 0
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root: (i + 1) * nb_root],
+            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+        tau_this_time = tau_joints[:]
+
+        # Joint friction
+        tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
+
+        # Motor noise
+        tau_this_time += motor_acuity(motor_noise_numerical[:, controller.node_index, i], tau_joints)
+
+        # Feedback
+        tau_this_time += k_matrix @ (DMS_fb_noised_sensory_input_VARIABLE(controller.model,
+                                                                            q_this_time[:nb_root],
+                                                                            q_this_time[nb_root:],
+                                                                            qdot_this_time[:nb_root],
+                                                                            qdot_this_time[nb_root:],
+                                                                            sensory_noise_numerical[:, controller.node_index, i]) - fb_ref)
+        all_tau += cas.sum1(tau_this_time ** 2)
+
+    all_tau_cx = controller.mx_to_cx("all_tau",
+                                     all_tau,
+                                     controller.states["q_roots"],
+                                     controller.states["q_joints"],
+                                     controller.states["qdot_roots"],
+                                     controller.states["qdot_joints"],
+                                     controller.controls["tau_joints"],
+                                     controller.controls["k"],
+                                     controller.controls["ref"])
+
+    return all_tau_cx
+
+
+def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
+    nb_roots = model.nb_root
+    n_joints = model.nb_q - nb_roots
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+
+    sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
+
+    proprioceptive_feedback = sensory_input[: 2 * n_joints]
+    vestibular_feedback = sensory_input[2 * n_joints :]
+
+    proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
+    noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
+
+    head_idx = model.segment_index("Head")
+    vestibular_noise = cas.MX.zeros(2, 1)
+    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    for i in range(2):
+        vestibular_noise[i] = gaussian_function(
+            x=head_velocity,
+            sigma=10,
+            offset=sensory_noise[2 * (model.nb_q - model.nb_root) + i],
+            scaling_factor=10,
+            flip=True,
+        )
+    noised_vestibular_feedback = vestibular_feedback + vestibular_noise
+
+    return cas.vertcat(noised_propriceptive_feedback, noised_vestibular_feedback)
