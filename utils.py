@@ -269,10 +269,10 @@ def SOCP_VARIABLE_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     k_ff = k_matrix[:, 2 * n_joints + 2 :]
 
     tau_fb = k_fb @ (
-        fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise) - fb_ref
+        fb_ref - fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise)
     )
     tau_ff = k_ff @ (
-        ff_noised_sensory_input(nlp.model, tf, time, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise) - ff_ref
+        ff_ref - ff_noised_sensory_input(nlp.model, tf, time, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise)
     )
     tau_motor_noise = motor_acuity(motor_noise, tau_nominal)
 
@@ -301,7 +301,7 @@ def SOCP_VARIABLE_compute_torques_from_noise_and_feedback(
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
 
     tau_fb = k_matrix @ (
-        fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise) - fb_ref
+        fb_ref - fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise)
     )
     tau_motor_noise = motor_acuity(motor_noise, tau_nominal)
 
@@ -332,8 +332,8 @@ def SOCP_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     fb_sensory_input = sensory_input[: 2 * n_joints + 2]
     ff_sensory_input = sensory_input[2 * n_joints + 2]
 
-    tau_fb = k_fb @ ((fb_sensory_input - fb_ref) + sensory_noise[: 2 * n_joints + 2])
-    tau_ff = k_ff @ ((ff_sensory_input - ff_ref) + sensory_noise[2 * n_joints + 2])
+    tau_fb = k_fb @ ((fb_ref - fb_sensory_input) + sensory_noise[: 2 * n_joints + 2])
+    tau_ff = k_ff @ ((ff_ref - ff_sensory_input) + sensory_noise[2 * n_joints + 2])
 
     tau = tau_nominal + tau_fb + tau_ff + motor_noise
 
@@ -456,13 +456,10 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
         CoM_vel = cas.vertcat(CoM_vel, controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1])
         CoM_ang_vel = cas.vertcat(CoM_ang_vel, controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0])
 
-    min_CoM_pos = cas.mmin(CoM_pos)
-    max_CoM_pos = cas.mmax(CoM_pos)
-    min_CoM_vel = cas.mmin(CoM_vel)
-    max_CoM_vel = cas.mmax(CoM_vel)
-    min_CoM_ang_vel = cas.mmin(CoM_ang_vel)
-    max_CoM_ang_vel = cas.mmax(CoM_ang_vel)
-    out = (max_CoM_pos - min_CoM_pos) ** 2 + (max_CoM_vel - min_CoM_vel) ** 2 + (max_CoM_ang_vel - min_CoM_ang_vel) ** 2
+    mean_CoM_pos = cas.sum1(CoM_pos) / controller.model.nb_random
+    mean_CoM_vel = cas.sum1(CoM_vel) / controller.model.nb_random
+    mean_CoM_ang_vel = cas.sum1(CoM_ang_vel) / controller.model.nb_random
+    out = cas.sum1((CoM_pos - mean_CoM_pos) ** 2) + cas.sum1((CoM_vel - mean_CoM_vel) ** 2) + cas.sum1((CoM_ang_vel - mean_CoM_ang_vel) ** 2)
 
     val = controller.mx_to_cx("reach_target_consistantly",
                                 out,
@@ -502,7 +499,7 @@ def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
 
         toe_marker_height = cas.vertcat(toe_marker_height, controller.model.marker(q_this_time, toe_idx)[2])
 
-    mean_height = cas.sum1(toe_marker_height)  # Since it is zero, we do not need to divide to get the mean
+    mean_height = cas.sum1(toe_marker_height) / controller.model.nb_random
 
     mean_height_cx = controller.mx_to_cx("mean_height", mean_height, controller.states["q_roots"], controller.states["q_joints"])
 
@@ -599,12 +596,12 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
         tau_this_time += motor_acuity(motor_noise_numerical[:, controller.node_index, i], tau_joints)
 
         # Feedback
-        tau_this_time += k_matrix @ (DMS_fb_noised_sensory_input_VARIABLE(controller.model,
+        tau_this_time += k_matrix @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(controller.model,
                                                                             q_this_time[:nb_root],
                                                                             q_this_time[nb_root:],
                                                                             qdot_this_time[:nb_root],
                                                                             qdot_this_time[nb_root:],
-                                                                            sensory_noise_numerical[:, controller.node_index, i]) - fb_ref)
+                                                                            sensory_noise_numerical[:, controller.node_index, i]))
         all_tau += cas.sum1(tau_this_time ** 2)
 
     all_tau_cx = controller.mx_to_cx("all_tau",
@@ -648,3 +645,12 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
     noised_vestibular_feedback = vestibular_feedback + vestibular_noise
 
     return cas.vertcat(noised_propriceptive_feedback, noised_vestibular_feedback)
+
+def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
+
+    time_to_contact = tf - time
+    somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]
+    curent_somersault_angle = q_this_time[2]
+    visual_feedforward = curent_somersault_angle + somersault_velocity * time_to_contact
+
+    return visual_feedforward

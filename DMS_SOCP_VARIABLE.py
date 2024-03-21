@@ -89,12 +89,12 @@ def custom_dynamics(
             tau_this_time += motor_acuity(motor_noise_numerical[:, j, i], tau_joints)
 
             # Feedback
-            tau_this_time += k_matrix @ (DMS_fb_noised_sensory_input_VARIABLE(nlp.model,
+            tau_this_time += k_matrix @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(nlp.model,
                                                                  q_this_time[:nb_root],
                                                                  q_this_time[nb_root:],
                                                                  qdot_this_time[:nb_root],
                                                                  qdot_this_time[nb_root:],
-                                                                 sensory_noise_numerical[:, j, i]) - fb_ref)
+                                                                 sensory_noise_numerical[:, j, i]))
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
             ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
