@@ -2,21 +2,20 @@
 ...
 """
 
-import pickle
 import biorbd_casadi as biorbd
 import casadi as cas
 import numpy as np
 
-
 from utils import (
     DMS_CoM_over_toes,
     always_reach_landing_position,
-    minimize_nominal_and_feedback_efforts_VARIABLE,
+    minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD,
     toe_marker_on_floor,
     ref_equals_mean_sensory,
-    motor_acuity,
-    DMS_fb_noised_sensory_input_VARIABLE,
     DMS_sensory_reference,
+    DMS_fb_noised_sensory_input_VARIABLE,
+    motor_acuity,
+    DMS_ff_noised_sensory_input,
 )
 
 import sys
@@ -39,6 +38,9 @@ from bioptim import (
     DynamicsFunctions,
     ConfigureProblem,
     OdeSolver,
+    VariableScaling,
+    ParameterList,
+    BiMapping,
 )
 
 
@@ -65,7 +67,12 @@ def custom_dynamics(
     tau_joints = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
     k = DynamicsFunctions.get(nlp.controls["k"], controls)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
-    fb_ref = DynamicsFunctions.get(nlp.controls["ref"], controls)[: 2 * nb_joints + 2]
+    fb_ref = DynamicsFunctions.get(nlp.controls["ref"], controls)
+    ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
+    tf = nlp.tf_mx
+
+    k_fb = k_matrix[:, : 2 * nb_joints + 2]
+    k_ff = k_matrix[:, 2 * nb_joints + 2:]
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
     dxdt = cas.MX(nlp.states.shape, nlp.ns)
@@ -89,12 +96,18 @@ def custom_dynamics(
             tau_this_time += motor_acuity(motor_noise_numerical[:, j, i], tau_joints)
 
             # Feedback
-            tau_this_time += k_matrix @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(nlp.model,
+            tau_this_time += k_fb @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(nlp.model,
                                                                  q_this_time[:nb_root],
                                                                  q_this_time[nb_root:],
                                                                  qdot_this_time[:nb_root],
                                                                  qdot_this_time[nb_root:],
-                                                                 sensory_noise_numerical[:, j, i]))
+                                                                 sensory_noise_numerical[:nlp.model.n_feedbacks, j, i]))
+
+            # Feedforward
+            tau_this_time += k_ff @ (ff_ref - DMS_ff_noised_sensory_input(nlp.model, tf, time, q_this_time,
+                                                           qdot_this_time, sensory_noise_numerical[2 * nb_joints + 2:,
+                                                                             j, i]))
+
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
             ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
@@ -210,6 +223,7 @@ def custom_configure(ocp, nlp, motor_noise_numerical, sensory_noise_numerical):
         as_states_dot=False,
         as_algebraic_states=False,
     )
+    ref_names = [f"feedback_{i}" for i in range(nlp.model.n_feedbacks)]
     ConfigureProblem.configure_new_variable(
         "ref",
         ref_names,
@@ -224,7 +238,7 @@ def custom_configure(ocp, nlp, motor_noise_numerical, sensory_noise_numerical):
     ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics, motor_noise_numerical=motor_noise_numerical, sensory_noise_numerical=sensory_noise_numerical)
 
 
-def prepare_socp_VARIABLE(
+def prepare_socp_VARIABLE_FEEDFORWARD(
     biorbd_model_path: str,
     time_last: float,
     n_shooting: int,
@@ -259,7 +273,7 @@ def prepare_socp_VARIABLE(
         motor_noise_magnitude=motor_noise_magnitude,
         sensory_reference=DMS_sensory_reference,
         compute_torques_from_noise_and_feedback=None,
-        n_references=2 * (n_joints + 1),
+        n_references=2 * (n_joints + 1) + 1,
         n_feedbacks=2 * (n_joints + 1),
         n_noised_states=n_q * 2,
         n_noised_controls=n_joints,
@@ -267,10 +281,27 @@ def prepare_socp_VARIABLE(
     )
     bio_model.nb_random = nb_random
 
+
+    # Define the parameter to optimize: final somersault target
+    parameters = ParameterList(use_sx=False)
+    parameters.add(
+        "final_somersault",
+        None,
+        size=1,
+        scaling=VariableScaling("final_somersault", np.array([1.0])),
+        mapping=BiMapping([0], [0]),
+    )
+    parameter_bounds = BoundsList()
+    parameter_bounds.add("final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2*np.pi], interpolation=InterpolationType.CONSTANT)
+    parameter_init = InitialGuessList()
+    parameter_init["final_somersault"] = 2 * np.pi
+
+
     # Prepare the noises
+    # TODO: the sensory noise on the ff is used both for visual and vestibular, should be separated
     np.random.seed(0)
     motor_noise_numerical = np.zeros((n_joints, n_shooting, nb_random))
-    sensory_noise_numerical = np.zeros((2 * (n_joints + 1), n_shooting, nb_random))
+    sensory_noise_numerical = np.zeros((2 * (n_joints + 1) + 1, n_shooting, nb_random))
     for i_random in range(nb_random):
         for i_shooting in range(n_shooting):
             motor_noise_numerical[:, i_shooting, i_random] = np.random.normal(
@@ -279,13 +310,13 @@ def prepare_socp_VARIABLE(
                 size=n_joints)
             sensory_noise_numerical[:, i_shooting, i_random] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
-                scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1),)),
-                size=2 * (n_joints + 1))
+                scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1) + 1,)),
+                size=2 * (n_joints + 1) + 1)
 
     # Objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
-        minimize_nominal_and_feedback_efforts_VARIABLE,
+        minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD,
         motor_noise_numerical=motor_noise_numerical,
         sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
@@ -303,7 +334,7 @@ def prepare_socp_VARIABLE(
 
     # Regularization
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="k", weight=0.001, quadratic=True)
+    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.0001, quadratic=True)
 
     # Constraints
     constraints = ConstraintList()
@@ -322,10 +353,10 @@ def prepare_socp_VARIABLE(
     )
 
     pose_at_first_node = np.array(
-        [-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0]
+        [-0.0346, 0.1207, 0.2255, 0.0, 0.0045, 3.1, -0.1787, 0.0]
     )  # Initial position approx from bioviz
     pose_at_last_node = np.array(
-        [-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856]
+        [-0.0346, 0.1207, 5.8292, -0.1801, -0.2954, 0.5377, 0.8506, -0.6856]
     )  # Final position approx from bioviz
 
     x_bounds = BoundsList()
@@ -350,7 +381,7 @@ def prepare_socp_VARIABLE(
     # initial variability
     initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     noised_states = np.random.multivariate_normal(
-        np.hstack((pose_at_first_node, np.array([0, 2, 2.5*np.pi, 0, 0, 0, 0]))),
+        np.hstack((pose_at_first_node, np.array([0, 2, 2.5*np.pi, 0, 0, 0, 0, 0]))),
         initial_cov,
         nb_random).T
 
@@ -404,11 +435,11 @@ def prepare_socp_VARIABLE(
     # Initial guesses
     x_init = InitialGuessList()
     if q_roots_last is None:
-        q_roots_init = np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root]))
-        q_joints_init = np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:]))
+        q_roots_init = np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T
+        q_joints_init = np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T
         for i in range(1, nb_random):
-            q_roots_init = np.hstack((q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root]))))
-            q_joints_init = np.hstack((q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:]))))
+            q_roots_init = np.vstack((q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T))
+            q_joints_init = np.vstack((q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T))
         x_init.add(
             "q_roots",
             initial_guess=q_roots_init,
@@ -419,8 +450,10 @@ def prepare_socp_VARIABLE(
             initial_guess=q_joints_init,
             interpolation=InterpolationType.LINEAR,
         )
-        x_init.add("qdot_roots", initial_guess=[0.01] * n_root * nb_random, interpolation=InterpolationType.CONSTANT)
-        x_init.add("qdot_joints", initial_guess=[0.01] * n_joints * nb_random, interpolation=InterpolationType.CONSTANT)
+        qdot_roots_init = np.ones((n_root * nb_random, )) * 0.01
+        qdot_joints_init = np.ones((n_joints * nb_random, )) * 0.01
+        x_init.add("qdot_roots", initial_guess=qdot_roots_init, interpolation=InterpolationType.CONSTANT)
+        x_init.add("qdot_joints", initial_guess=qdot_joints_init, interpolation=InterpolationType.CONSTANT)
     else:
         q_roots_init = q_roots_last
         q_joints_init = q_joints_last
@@ -444,8 +477,8 @@ def prepare_socp_VARIABLE(
 
 
     # The stochastic variables will be put in the controls for simplicity
-    n_ref = 2 * (n_joints + 1)  # ref(8)
-    n_k = n_joints * n_ref  # K(3x8)
+    n_ref = 2 * (n_joints + 1)  # ref(10)
+    n_k = n_joints * (n_ref+1)  # K(5x11)
 
     if k_last is not None:
         u_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
@@ -466,15 +499,15 @@ def prepare_socp_VARIABLE(
     else:
         ref_init = np.zeros((n_ref, n_shooting+1))
         for i in range(n_shooting):
-            q_roots_this_time = q_roots_init[:n_root, i]
-            q_joints_this_time = q_joints_init[:n_joints, i]
-            qdot_roots_this_time = qdot_roots_init[:n_root, i]
-            qdot_joints_this_time = qdot_joints_init[:n_joints, i]
+            q_roots_this_time = q_roots_init[:n_root, 0].T
+            q_joints_this_time = q_joints_init[:n_joints, 0].T
+            qdot_roots_this_time = qdot_roots_init[:n_root].T
+            qdot_joints_this_time = qdot_joints_init[:n_joints].T
             for j in range(1, nb_random):
-                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root, i]))
-                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i]))
-                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root, i]))
-                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i]))
+                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root].T))
+                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
+                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root].T))
+                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
             ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
@@ -486,7 +519,7 @@ def prepare_socp_VARIABLE(
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
 
-    ocp = OptimalControlProgram(
+    return OptimalControlProgram(
         bio_model,
         dynamics,
         n_shooting,
@@ -495,8 +528,64 @@ def prepare_socp_VARIABLE(
         u_init=u_init,
         x_bounds=x_bounds,
         u_bounds=u_bounds,
+        parameters=parameters,
+        parameter_bounds=parameter_bounds,
+        parameter_init=parameter_init,
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
     )
-    return motor_noise_numerical, sensory_noise_numerical, ocp
+
+
+if __name__ == "__main__":
+
+    model_name = "Model2D_7Dof_0C_3M"
+    biorbd_model_path_vision = f"models/{model_name}_vision.bioMod"
+
+    dt = 0.05
+    final_time = 0.8
+    n_shooting = int(final_time / dt)
+    tol = 1e-3  # 1e-3 OK
+
+    motor_noise_std = 0.05
+    wPq_std = 0.001
+    wPqdot_std = 0.003
+    motor_noise_magnitude = cas.DM(
+        np.array(
+            [
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+                motor_noise_std**2 / dt,
+            ]
+        )
+    )  # All DoFs except root
+    sensory_noise_magnitude = cas.DM(
+        np.array(
+            [
+                wPq_std**2 / dt,  # Proprioceptive position
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPq_std**2 / dt,
+                wPqdot_std**2 / dt,  # Proprioceptive velocity
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPqdot_std**2 / dt,
+                wPq_std**2 / dt,  # Vestibular position
+                wPq_std**2 / dt,  # Vestibular velocity
+                wPq_std**2 / dt,  # Visual
+            ]
+        )
+    )
+
+    prepare_socp_VARIABLE_FEEDFORWARD(
+        biorbd_model_path=biorbd_model_path_vision,
+        time_last=final_time,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        nb_random=3,
+    )
