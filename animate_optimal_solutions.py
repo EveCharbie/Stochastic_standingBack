@@ -5,7 +5,9 @@ import biorbd
 import bioviz
 import pickle
 
-from seg3_aerial_collocations import prepare_socp
+from bioptim import StochasticBioModel
+
+from DMS_SOCP import prepare_socp
 from utils import DMS_sensory_reference
 
 
@@ -98,6 +100,51 @@ def plot_CoM(states_integrated, model, n_shooting, name, nb_random=30):
     plt.show()
 
 
+def SOCP_dynamics(nb_random, q, qdot, tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical, ocp):
+
+    nb_root = 3
+    nb_q = 7
+
+    dxdt = cas.MX.zeros((2 * nb_q, nb_random))
+    dxdt[:nb_q, :] = qdot
+    for i_random in range(nb_random):
+
+        q_this_time = q[:, i_random]
+        qdot_this_time = qdot[:, i_random]
+
+        tau_this_time = tau[:]
+
+        # Joint friction
+        tau_this_time += ocp.nlp[0].model.friction_coefficients @ qdot_this_time[nb_root:]
+
+        # Motor noise
+        tau_this_time += motor_noise_numerical[:, i_random]
+
+        # Feedback
+        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(ocp.nlp[0].model, nb_root, q_this_time,
+                                                                 qdot_this_time) + sensory_noise_numerical[:, i_random])
+        tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
+
+        dxdt[nb_q:, i_random] = ocp.nlp[0].model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
+
+    return dxdt
+
+
+def RK4(q, qdot, tau, dt, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical, n_random, dyn_fun):
+
+    nb_q = 7
+    states = np.zeros((2 * nb_q, n_random, 6))
+    states[:nb_q, :, 0] = q
+    states[nb_q:, :, 0] = qdot
+    h = dt / 5
+    for i in range(1, 6):
+        k1 = dyn_fun(q, qdot, tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k2 = dyn_fun(q + h / 2 * k1[:nb_q, :], qdot + h / 2 * k1[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k3 = dyn_fun(q + h / 2 * k2[:nb_q, :], qdot + h / 2 * k2[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k4 = dyn_fun(q + h * k3[:nb_q, :], qdot + h * k3[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        states[:, :, i] = states[:, :, i - 1] + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+    return states[:, :, -1]
+
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
 biorbd_model_path_with_mesh = f"models/{model_name}_with_mesh.bioMod"
@@ -109,6 +156,7 @@ polynomial_degree = 3
 n_q = 7
 n_root = 3
 n_joints = n_q - n_root
+n_ref = 2*n_joints + 2
 
 dt = 0.05
 final_time = 0.8
@@ -143,7 +191,33 @@ sensory_noise_magnitude = cas.DM(
 )  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
 
-# path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+with open(path_to_results, "rb") as file:
+    data = pickle.load(file)
+    q_roots_last = data["q_roots_sol"]
+    q_joints_last = data["q_joints_sol"]
+    qdot_roots_last = data["qdot_roots_sol"]
+    qdot_joints_last = data["qdot_joints_sol"]
+    tau_joints_last = data["tau_joints_sol"]
+    time_last = data["time_sol"]
+
+motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp(
+    biorbd_model_path=biorbd_model_path,
+    time_last=time_last,
+    n_shooting=n_shooting,
+    motor_noise_magnitude=motor_noise_magnitude,
+    sensory_noise_magnitude=sensory_noise_magnitude,
+    q_roots_last=q_roots_last,
+    q_joints_last=q_joints_last,
+    qdot_roots_last=qdot_roots_last,
+    qdot_joints_last=qdot_joints_last,
+    tau_joints_last=tau_joints_last,
+    k_last=None,
+    ref_last=None,
+    nb_random=nb_random,
+    )
+
+
 path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_CVG_1p0e-03.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
@@ -155,32 +229,28 @@ with open(path_to_results, "rb") as file:
     time_last = data["time_sol"]
     k_last = data["k_sol"]
     ref_last = data["ref_sol"]
-    # k_last = None
-    # ref_last = None
-    # m_last = None
-    # cov_last = None
-
-# socp = prepare_socp(
-#     biorbd_model_path=biorbd_model_path,
-#     polynomial_degree=polynomial_degree,
-#     time_last=time_last,
-#     n_shooting=n_shooting,
-#     motor_noise_magnitude=motor_noise_magnitude,
-#     sensory_noise_magnitude=sensory_noise_magnitude,
-#     q_roots_last=q_roots_last,
-#     q_joints_last=q_joints_last,
-#     qdot_roots_last=qdot_roots_last,
-#     qdot_joints_last=qdot_joints_last,
-#     tau_joints_last=tau_joints_last,
-#     k_last=k_last,
-#     ref_last=ref_last,
-#     m_last=m_last,
-#     cov_last=cov_last,
-# )
 
 is_label_dof_set = False
 is_label_mean_set = False
 is_label_ref_mean_set = False
+
+q_sym = cas.MX.sym("Q", n_q)
+qdot_sym = cas.MX.sym("Qdot", n_q)
+
+out = DMS_sensory_reference(socp.nlp[0].model, n_root, q_sym, qdot_sym)
+DMS_sensory_reference_func = cas.Function("DMS_sensory_reference", [q_sym, qdot_sym], [out])
+
+q_sym = cas.MX.sym("Q", n_q, nb_random)
+qdot_sym = cas.MX.sym("Qdot", n_q, nb_random)
+tau_sym = cas.MX.sym("Tau", n_joints)
+k_matrix_sym = cas.MX.sym("k_matrix", n_joints, n_ref)
+ref_sym = cas.MX.sym("Ref", n_ref)
+motor_noise_sym = cas.MX.sym("Motor_noise", n_joints, nb_random)
+sensory_noise_sym = cas.MX.sym("sensory_noise", n_ref, nb_random)
+
+dyn_fun_out = SOCP_dynamics(nb_random, q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym, socp)
+dyn_fun = cas.Function("dynamics", [q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym], [dyn_fun_out])
+
 
 time_vector = np.linspace(0, float(time_last), n_shooting + 1)
 
@@ -188,6 +258,8 @@ fig, axs = plt.subplots(2, 4, figsize=(15, 10))
 axs = np.ravel(axs)
 q_last = np.vstack((np.array(q_roots_last[:n_root]), np.array(q_joints_last[:n_joints])))[:, :, np.newaxis]
 qdot_last = np.vstack((np.array(qdot_roots_last[:n_root]), np.array(qdot_joints_last[:n_joints])))[:, :, np.newaxis]
+for i_dof in range(n_q):
+    axs[i_dof].plot(time_vector, q_last[i_dof, :, 0], color="k", label="Noised states (optim variables)")
 for i_random in range(1, nb_random):
     q_last = np.concatenate((q_last,
                              np.vstack((np.array(q_roots_last[i_random*n_root:(i_random+1)*n_root]),
@@ -198,11 +270,7 @@ for i_random in range(1, nb_random):
                                             np.array(qdot_joints_last[i_random*n_joints:(i_random+1)*n_joints])))[:, :, np.newaxis]),
                                 axis=2)
     for i_dof in range(n_q):
-        if not is_label_dof_set:
-            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
-            is_label_dof_set = True
-        else:
-            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
+        axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
 q_mean_last = np.mean(q_last, axis=2)
 qdot_mean_last = np.mean(qdot_last, axis=2)
 for i_dof in range(n_q):
@@ -212,38 +280,85 @@ for i_dof in range(n_q):
     else:
         axs[i_dof].plot(time_vector, q_mean_last[i_dof, :], "--", color="tab:red")
     axs[i_dof].set_title(f"DOF {i_dof}")
-ref_mean_last = np.array(DMS_sensory_reference(n_root, q_mean_last, qdot_mean_last))
+ref_mean_last = np.zeros((n_ref, n_shooting))
+for i_node in range(n_shooting):
+    ref_mean_last[:, i_node] = np.array(DMS_sensory_reference_func(q_mean_last[:, i_node], qdot_mean_last[:, i_node])).reshape(-1)
 if not is_label_ref_mean_set:
-    axs[3].plot(time_vector, ref_mean_last[0, :], color="tab:blue", label="Mean reference")
+    axs[3].plot(time_vector[:-1], ref_mean_last[0, :], color="tab:blue", label="Mean reference")
     axs[3].plot(time_vector[:-1], ref_last[0, :], "--", color="tab:orange", label="Reference (optim variables)")
     is_label_ref_mean_set = True
 else:
-    axs[3].plot(time_vector, ref_mean_last[0, :], color="tab:blue")
+    axs[3].plot(time_vector[:-1], ref_mean_last[0, :], color="tab:blue")
     axs[3].plot(time_vector[:-1], ref_last[0, :], "--", color="tab:orange")
-axs[4].plot(time_vector, ref_mean_last[1, :], color="tab:blue")
+axs[4].plot(time_vector[:-1], ref_mean_last[1, :], color="tab:blue")
 axs[4].plot(time_vector[:-1], ref_last[1, :], "--", color="tab:orange")
-axs[5].plot(time_vector, ref_mean_last[2, :], color="tab:blue")
+axs[5].plot(time_vector[:-1], ref_mean_last[2, :], color="tab:blue")
 axs[5].plot(time_vector[:-1], ref_last[2, :], "--", color="tab:orange")
-axs[6].plot(time_vector, ref_mean_last[3, :], color="tab:blue")
+axs[6].plot(time_vector[:-1], ref_mean_last[3, :], color="tab:blue")
 axs[6].plot(time_vector[:-1], ref_last[3, :], "--", color="tab:orange")
-axs[2].plot(time_vector, ref_mean_last[8, :], color="tab:blue")
-axs[2].plot(time_vector[:-1], ref_last[8, :], "--", color="tab:orange")
 axs[0].legend()
 axs[3].legend()
 plt.show()
 
-import bioviz
-b = bioviz.Viz(biorbd_model_path_vision_with_mesh,
-               background_color=(1, 1, 1),
-               show_local_ref_frame=False,
-               show_markers=False,
-               show_segments_center_of_mass=False,
-               show_global_center_of_mass=False,
-               show_global_ref_frame=False,
-               show_gravity_vector=False,
-               )
-b.load_movement(q_mean_last)
-b.exec()
+# import bioviz
+# b = bioviz.Viz(biorbd_model_path_with_mesh,
+#                background_color=(1, 1, 1),
+#                show_local_ref_frame=False,
+#                show_markers=False,
+#                show_segments_center_of_mass=False,
+#                show_global_center_of_mass=False,
+#                show_global_ref_frame=False,
+#                show_gravity_vector=False,
+#                )
+# b.load_movement(q_mean_last)
+# b.exec()
+
+
+# Reintegrate
+dt_last = time_vector[1] - time_vector[0]
+q_integrated = np.zeros((n_q, n_shooting + 1, nb_random))
+qdot_integrated = np.zeros((n_q, n_shooting + 1, nb_random))
+q_integrated[:, 0, :] = q_last[:, 0, :]
+qdot_integrated[:, 0, :] = qdot_last[:, 0, :]
+for i_shooting in range(n_shooting):
+    k_matrix = StochasticBioModel.reshape_to_matrix(k_last[:, i_shooting], socp.nlp[0].model.matrix_shape_k)
+    states_integrated = RK4(q_integrated[:, i_shooting, :],
+                            qdot_integrated[:, i_shooting, :],
+                            tau_joints_last[:, i_shooting],
+                            dt_last,
+                            k_matrix,
+                            ref_last[:, i_shooting],
+                            motor_noise_numerical[:, i_shooting, :],
+                            sensory_noise_numerical[:, i_shooting, :],
+                            nb_random,
+                            dyn_fun)
+    q_integrated[:, i_shooting + 1, :] = states_integrated[:n_q, :]
+    qdot_integrated[:, i_shooting + 1, :] = states_integrated[n_q:, :]
+
+
+# Verify reintegration
+is_label_dof_set = False
+fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+axs = np.ravel(axs)
+for i_random in range(nb_random):
+    for i_dof in range(n_q):
+        if not is_label_dof_set:
+            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
+            axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r", label="Reintegrated states")
+            is_label_dof_set = True
+        else:
+            axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
+            axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r")
+axs[0].legend()
+plt.show()
+
+
+
+
+
+
+
+
 
 
 dt = 0.05
