@@ -201,7 +201,7 @@ with open(path_to_results, "rb") as file:
     tau_joints_last = data["tau_joints_sol"]
     time_last = data["time_sol"]
 
-motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp(
+_, _, socp = prepare_socp(
     biorbd_model_path=biorbd_model_path,
     time_last=time_last,
     n_shooting=n_shooting,
@@ -218,7 +218,7 @@ motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp(
     )
 
 
-path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_CVG_1p0e-03.pkl"
+path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_CVG_1.0e-03.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -229,6 +229,8 @@ with open(path_to_results, "rb") as file:
     time_last = data["time_sol"]
     k_last = data["k_sol"]
     ref_last = data["ref_sol"]
+    motor_noise_numerical = data["motor_noise_numerical"]
+    sensory_noise_numerical = data["sensory_noise_numerical"]
 
 is_label_dof_set = False
 is_label_mean_set = False
@@ -300,18 +302,18 @@ axs[0].legend()
 axs[3].legend()
 plt.show()
 
-# import bioviz
-# b = bioviz.Viz(biorbd_model_path_with_mesh,
-#                background_color=(1, 1, 1),
-#                show_local_ref_frame=False,
-#                show_markers=False,
-#                show_segments_center_of_mass=False,
-#                show_global_center_of_mass=False,
-#                show_global_ref_frame=False,
-#                show_gravity_vector=False,
-#                )
-# b.load_movement(q_mean_last)
-# b.exec()
+import bioviz
+b = bioviz.Viz(biorbd_model_path_with_mesh,
+               background_color=(1, 1, 1),
+               show_local_ref_frame=False,
+               show_markers=False,
+               show_segments_center_of_mass=False,
+               show_global_center_of_mass=False,
+               show_global_ref_frame=False,
+               show_gravity_vector=False,
+               )
+b.load_movement(q_mean_last)
+b.exec()
 
 
 # Reintegrate
