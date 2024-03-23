@@ -17,8 +17,8 @@ from DMS_SOCP_VARIABLE import prepare_socp_SOCP_VARIABLE
 # from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
-RUN_SOCP = True
-RUN_SOCP_VARIABLE = False
+RUN_SOCP = False
+RUN_SOCP_VARIABLE = True
 RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 
@@ -49,7 +49,7 @@ n_shooting = int(final_time / dt)
 tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -274,6 +274,7 @@ if RUN_SOCP_VARIABLE:
 
     socp.add_plot_penalty()
     # socp.add_plot_check_conditioning()
+    socp.add_plot_ipopt_outputs()
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
 
