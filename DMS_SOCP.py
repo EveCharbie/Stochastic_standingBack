@@ -445,7 +445,7 @@ def prepare_socp(
     else:
         u_init.add("k", initial_guess=[0.01] * n_k, interpolation=InterpolationType.CONSTANT)
 
-    u_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+    u_bounds.add("k", min_bound=[-50] * n_k, max_bound=[50] * n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = [-1000] * n_ref
     ref_max = [1000] * n_ref

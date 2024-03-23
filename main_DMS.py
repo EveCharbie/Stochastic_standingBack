@@ -12,9 +12,9 @@ from bioptim import Solver, OdeSolver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
 from DMS_SOCP import prepare_socp
-from DMS_SOCP_VARIABLE import prepare_socp_SOCP_VARIABLE
-# from DMS_SOCP_FEEDFORWARD import prepare_socp_SOCP_FEEDFORWARD
-# from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_SOCP_VARIABLE_FEEDFORWARD
+from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
+from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
+# from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
 RUN_SOCP = True
@@ -202,9 +202,9 @@ if RUN_SOCP:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -309,9 +309,9 @@ if RUN_SOCP_VARIABLE:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
@@ -429,9 +429,9 @@ if RUN_SOCP_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
@@ -549,9 +549,9 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace(".pkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:

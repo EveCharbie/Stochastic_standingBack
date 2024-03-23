@@ -224,7 +224,7 @@ def custom_configure(ocp, nlp, motor_noise_numerical, sensory_noise_numerical):
     ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics, motor_noise_numerical=motor_noise_numerical, sensory_noise_numerical=sensory_noise_numerical)
 
 
-def prepare_socp_SOCP_VARIABLE(
+def prepare_socp_VARIABLE(
     biorbd_model_path: str,
     time_last: float,
     n_shooting: int,
@@ -452,7 +452,7 @@ def prepare_socp_SOCP_VARIABLE(
     else:
         u_init.add("k", initial_guess=[0.01] * n_k, interpolation=InterpolationType.CONSTANT)
 
-    u_bounds.add("k", min_bound=[-500] * n_k, max_bound=[500] * n_k, interpolation=InterpolationType.CONSTANT)
+    u_bounds.add("k", min_bound=[-50] * n_k, max_bound=[50] * n_k, interpolation=InterpolationType.CONSTANT)
 
     ref_min = [-1000] * n_ref
     ref_max = [1000] * n_ref
