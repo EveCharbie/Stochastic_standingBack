@@ -328,7 +328,7 @@ def prepare_socp_FEEDFORWARD(
 
     # Regularization
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
-    # objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_ALGEBRAIC_STATES, key="k", weight=0.0001, quadratic=True)
+    objective_functions.add(ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="k", weight=0.001, quadratic=True)
 
     # Constraints
     constraints = ConstraintList()

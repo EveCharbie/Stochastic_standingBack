@@ -14,7 +14,7 @@ from DMS_deterministic import prepare_ocp
 from DMS_SOCP import prepare_socp
 from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
-# from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
+from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
 RUN_SOCP = True
