@@ -230,14 +230,13 @@ def prepare_socp(
     tau_joints_last: np.ndarray = None,
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
-) -> OptimalControlProgram:
+    nb_random: int = 30,
+):
     """
     Sensory inputs:
     - proprioceptive: joint angles and velocities (4+4)
     - vestibular: head orientation and angular velocity (1+1)
     """
-
-    nb_random = 30
 
     biorbd_model = biorbd.Model(biorbd_model_path)
     n_q = biorbd_model.nbQ()
@@ -480,7 +479,7 @@ def prepare_socp(
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
 
-    return OptimalControlProgram(
+    ocp = OptimalControlProgram(
         bio_model,
         dynamics,
         n_shooting,
@@ -493,3 +492,4 @@ def prepare_socp(
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
     )
+    return motor_noise_numerical, sensory_noise_numerical, ocp

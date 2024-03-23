@@ -444,6 +444,9 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
     CoM_pos = cas.MX()
     CoM_vel = cas.MX()
     CoM_ang_vel = cas.MX()
+    mean_CoM_pos = 0
+    mean_CoM_vel = 0
+    mean_CoM_ang_vel = 0
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
             q_roots[i * nb_root: (i + 1) * nb_root],
@@ -456,9 +459,10 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
         CoM_vel = cas.vertcat(CoM_vel, controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1])
         CoM_ang_vel = cas.vertcat(CoM_ang_vel, controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0])
 
-    mean_CoM_pos = cas.sum1(CoM_pos) / controller.model.nb_random
-    mean_CoM_vel = cas.sum1(CoM_vel) / controller.model.nb_random
-    mean_CoM_ang_vel = cas.sum1(CoM_ang_vel) / controller.model.nb_random
+        mean_CoM_pos += 1/controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1]
+        mean_CoM_vel += 1/controller.model.nb_random * controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1]
+        mean_CoM_ang_vel += 1/controller.model.nb_random * controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0]
+
     out = cas.sum1((CoM_pos - mean_CoM_pos) ** 2) + cas.sum1((CoM_vel - mean_CoM_vel) ** 2) + cas.sum1((CoM_ang_vel - mean_CoM_ang_vel) ** 2)
 
     val = controller.mx_to_cx("reach_target_consistantly",
@@ -474,12 +478,14 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
 def DMS_sensory_reference(model, nb_roots, q_this_time, qdot_this_time):
 
     proprioceptive_feedback = cas.vertcat(q_this_time[nb_roots:], qdot_this_time[nb_roots:])
-    head_idx = model.segment_index("Head")
-    head_orientation = model.segment_orientation(q_this_time, head_idx)
-    head_velocity = model.segment_angular_velocity(q_this_time, qdot_this_time, head_idx)
-    vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
+    pelvis_orientation = q_this_time[2]
+    pelvis_velocity = qdot_this_time[2]
+    # head_idx = model.segment_index("Head")
+    # head_orientation = model.segment_orientation(q_this_time, head_idx)
+    # head_velocity = model.segment_angular_velocity(q_this_time, qdot_this_time, head_idx)
+    # vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
 
-    return cas.vertcat(proprioceptive_feedback, vestibular_feedback)
+    return cas.vertcat(proprioceptive_feedback, pelvis_orientation, pelvis_velocity)
 
 
 def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
@@ -497,9 +503,9 @@ def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
             q_roots[i * nb_root: (i + 1) * nb_root],
             q_joints[i * nb_joints: (i + 1) * nb_joints])
 
-        toe_marker_height = cas.vertcat(toe_marker_height, controller.model.marker(q_this_time, toe_idx)[2])
+        toe_marker_height = cas.vertcat(toe_marker_height, 1/controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[2])
 
-    mean_height = cas.sum1(toe_marker_height) / controller.model.nb_random
+    mean_height = cas.sum1(toe_marker_height)
 
     mean_height_cx = controller.mx_to_cx("mean_height", mean_height, controller.states["q_roots"], controller.states["q_joints"])
 
@@ -526,9 +532,7 @@ def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
             qdot_joints[i * nb_joints: (i + 1) * nb_joints])
 
         ref_this_time = controller.model.sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time)
-        ref_measured += ref_this_time
-
-    ref_measured /= controller.model.nb_random
+        ref_measured += 1/controller.model.nb_random * ref_this_time
 
     mean_ref_cx = controller.mx_to_cx("mean_ref",
                                       ref - ref_measured,  # Difference between the reference and the mean sensory input
@@ -552,14 +556,11 @@ def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
             q_roots[i * nb_root: (i + 1) * nb_root],
             q_joints[i * nb_joints: (i + 1) * nb_joints])
 
-        CoM_pos = cas.vertcat(CoM_pos, controller.model.center_of_mass(q_this_time)[1])
-        marker_pos = cas.vertcat(marker_pos, controller.model.marker(q_this_time, toe_idx)[1])
-
-    mean_CoM_pos = cas.sum1(CoM_pos) / controller.model.nb_random
-    mean_marker_pos = cas.sum1(marker_pos) / controller.model.nb_random
+        CoM_pos = cas.vertcat(CoM_pos, 1/controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1])
+        marker_pos = cas.vertcat(marker_pos, 1/controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[1])
 
     mean_distance_cx = controller.mx_to_cx("mean_distance",
-                                         mean_marker_pos - mean_CoM_pos,  # Difference between the CoM and the toe marker
+                                         marker_pos - CoM_pos,  # Difference between the CoM and the toe marker
                                          controller.states["q_roots"], controller.states["q_joints"])
 
     return mean_distance_cx
@@ -631,9 +632,10 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
     proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
 
-    head_idx = model.segment_index("Head")
+    # head_idx = model.segment_index("Head")
     vestibular_noise = cas.MX.zeros(2, 1)
-    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    # head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    head_velocity = qdot_roots[2] + qdot_joints[0]  # pelvis + head rotations
     for i in range(2):
         vestibular_noise[i] = gaussian_function(
             x=head_velocity,

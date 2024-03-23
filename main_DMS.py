@@ -113,6 +113,7 @@ if RUN_OCP:
 
 # --- Run the SOCP --- #
 noise_factor = 1.0  # 0.05, 0.1, 0.5,
+nb_random = 3
 
 # TODO: How do we choose the values?
 motor_noise_std = 0.05 * noise_factor
@@ -151,7 +152,7 @@ if RUN_SOCP:
         k_last = None
         ref_last = None
 
-    socp = prepare_socp(
+    motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp(
         biorbd_model_path=biorbd_model_path,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -164,6 +165,7 @@ if RUN_SOCP:
         tau_joints_last=tau_joints_last,
         k_last=k_last,
         ref_last=ref_last,
+        nb_random=nb_random,
     )
     socp.add_plot_penalty()
     # socp.add_plot_ipopt_outputs()
@@ -194,6 +196,8 @@ if RUN_SOCP:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
+        "motor_noise_numerical": motor_noise_numerical,
+        "sensory_noise_numerical": sensory_noise_numerical,
     }
 
     save_path = save_path.replace(".", "p")
@@ -257,7 +261,7 @@ if RUN_SOCP_VARIABLE:
         k_last = None
         ref_last = None
 
-    socp = prepare_socp_SOCP_VARIABLE(
+    motor_noise_numerical, sensory_noise_numerical, ocp = prepare_socp_SOCP_VARIABLE(
         biorbd_model_path=biorbd_model_path,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -270,6 +274,7 @@ if RUN_SOCP_VARIABLE:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
+        nb_random=nb_random,
     )
 
     socp.add_plot_penalty()
@@ -298,6 +303,8 @@ if RUN_SOCP_VARIABLE:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
+        "motor_noise_numerical": motor_noise_numerical,
+        "sensory_noise_numerical": sensory_noise_numerical,
     }
 
     save_path = save_path.replace(".", "p")
@@ -374,7 +381,7 @@ if RUN_SOCP_FEEDFORWARD:
         (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
     )
 
-    socp = prepare_socp_SOCP_FEEDFORWARD(
+    motor_noise_numerical, sensory_noise_numerical, ocp = prepare_socp_SOCP_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -387,6 +394,7 @@ if RUN_SOCP_FEEDFORWARD:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
+        nb_random=nb_random,
     )
 
     socp.add_plot_penalty()
@@ -415,6 +423,8 @@ if RUN_SOCP_FEEDFORWARD:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
+        "motor_noise_numerical": motor_noise_numerical,
+        "sensory_noise_numerical": sensory_noise_numerical,
     }
 
     save_path = save_path.replace(".", "p")
@@ -491,7 +501,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
     )
 
-    socp = prepare_socp_SOCP_VARIABLE_FEEDFORWARD(
+    motor_noise_numerical, sensory_noise_numerical, ocp = prepare_socp_SOCP_VARIABLE_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -504,6 +514,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         tau_joints_last=tau_joints_last,
         k_last=None,
         ref_last=None,
+        nb_random=nb_random,
     )
 
     socp.add_plot_penalty()
@@ -532,6 +543,8 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
+        "motor_noise_numerical": motor_noise_numerical,
+        "sensory_noise_numerical": sensory_noise_numerical,
     }
 
     save_path = save_path.replace(".", "p")
