@@ -656,3 +656,70 @@ def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
     visual_feedforward = curent_somersault_angle + somersault_velocity * time_to_contact
 
     return visual_feedforward
+
+
+def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController, motor_noise_numerical,
+                                                       sensory_noise_numerical) -> cas.MX:
+        nb_root = controller.model.nb_root
+        nb_q = controller.model.nb_q
+        nb_joints = nb_q - nb_root
+
+        q_roots = controller.states["q_roots"].mx
+        q_joints = controller.states["q_joints"].mx
+        qdot_roots = controller.states["qdot_roots"].mx
+        qdot_joints = controller.states["qdot_joints"].mx
+        tau_joints = controller.controls["tau_joints"].mx
+        k = controller.controls["k"].mx
+        k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
+        k_matrix_fb = k_matrix[:, :controller.model.n_feedbacks]
+        k_matrix_ff = k_matrix[:, controller.model.n_feedbacks:]
+        fb_ref = controller.controls["ref"].mx
+        ff_ref = controller.parameters["final_somersault"].mx
+
+        all_tau = 0
+        for i in range(controller.model.nb_random):
+            q_this_time = cas.vertcat(
+                q_roots[i * nb_root: (i + 1) * nb_root],
+                q_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_this_time = cas.vertcat(
+                qdot_roots[i * nb_root: (i + 1) * nb_root],
+                qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            tau_this_time = tau_joints[:]
+
+            # Joint friction
+            tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
+
+            # Motor noise
+            tau_this_time += motor_noise_numerical[:, controller.node_index, i]
+
+            # Feedback
+            tau_this_time += k_matrix_fb @ (fb_ref - DMS_sensory_reference(controller.model,
+                                                                        nb_root,
+                                                                        q_this_time,
+                                                                        qdot_this_time) +
+                                         sensory_noise_numerical[:controller.model.n_feedbacks, controller.node_index, i])
+
+            # Feedforward
+            tau_this_time += k_matrix_ff @ (ff_ref - DMS_ff_sensory_input(controller.model,
+                                                                       controller.tf.mx,
+                                                                       controller.time.mx,
+                                                                       q_this_time,
+                                                                       qdot_this_time) +
+                                         sensory_noise_numerical[controller.model.n_feedbacks:, controller.node_index, i])
+
+            all_tau += cas.sum1(tau_this_time ** 2)
+
+        all_tau_cx = controller.mx_to_cx("all_tau",
+                                         all_tau,
+                                         controller.states["q_roots"],
+                                         controller.states["q_joints"],
+                                         controller.states["qdot_roots"],
+                                         controller.states["qdot_joints"],
+                                         controller.controls["tau_joints"],
+                                         controller.controls["k"],
+                                         controller.controls["ref"],
+                                         controller.parameters["final_somersault"],
+                                         controller.time,
+                                         controller.dt)
+
+        return all_tau_cx
