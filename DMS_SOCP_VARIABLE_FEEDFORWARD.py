@@ -252,7 +252,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
     nb_random: int = 30,
-) -> OptimalControlProgram:
+):
     """
     Sensory inputs:
     - proprioceptive: joint angles and velocities (4+4)
@@ -519,7 +519,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
 
-    return OptimalControlProgram(
+    ocp = OptimalControlProgram(
         bio_model,
         dynamics,
         n_shooting,
@@ -535,6 +535,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
     )
+    return motor_noise_numerical, sensory_noise_numerical, ocp
 
 
 if __name__ == "__main__":

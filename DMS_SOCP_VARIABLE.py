@@ -238,7 +238,7 @@ def prepare_socp_VARIABLE(
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
     nb_random: int = 30,
-) -> OptimalControlProgram:
+):
     """
     Sensory inputs:
     - proprioceptive: joint angles and velocities (4+4)
