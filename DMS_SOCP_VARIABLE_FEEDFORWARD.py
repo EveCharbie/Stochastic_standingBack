@@ -499,15 +499,15 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     else:
         ref_init = np.zeros((n_ref, n_shooting+1))
         for i in range(n_shooting):
-            q_roots_this_time = q_roots_init[:n_root, 0].T
-            q_joints_this_time = q_joints_init[:n_joints, 0].T
-            qdot_roots_this_time = qdot_roots_init[:n_root].T
-            qdot_joints_this_time = qdot_joints_init[:n_joints].T
+            q_roots_this_time = q_roots_init[:n_root, i].T
+            q_joints_this_time = q_joints_init[:n_joints, i].T
+            qdot_roots_this_time = qdot_roots_init[:n_root, i].T
+            qdot_joints_this_time = qdot_joints_init[:n_joints, i].T
             for j in range(1, nb_random):
-                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root].T))
-                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
-                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root].T))
-                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
+                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root, i].T))
+                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
+                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root, i].T))
+                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
             ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
