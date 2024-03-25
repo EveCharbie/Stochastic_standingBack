@@ -1,14 +1,11 @@
 
-import biorbd
 import pickle
 import casadi as cas
 import numpy as np
-import os
-
 import sys
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
-from bioptim import Solver, OdeSolver, SolutionMerge
+from bioptim import Solver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
 from DMS_SOCP import prepare_socp
@@ -56,7 +53,7 @@ solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)  # 32
-solver.set_hessian_approximation("limited-memory")
+# solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
@@ -166,7 +163,7 @@ if RUN_SOCP:
         nb_random=nb_random,
     )
     socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    socp.add_plot_ipopt_outputs()
     # socp.check_conditioning()
 
     solver.set_tol(tol)
@@ -278,6 +275,7 @@ if RUN_SOCP_VARIABLE:
     socp.add_plot_penalty()
     # socp.add_plot_check_conditioning()
     socp.add_plot_ipopt_outputs()
+
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
 
@@ -397,6 +395,7 @@ if RUN_SOCP_FEEDFORWARD:
     )
 
     socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
@@ -517,6 +516,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     )
 
     socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
