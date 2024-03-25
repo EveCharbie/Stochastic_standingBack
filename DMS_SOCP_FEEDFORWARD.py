@@ -289,7 +289,7 @@ def prepare_socp_FEEDFORWARD(
     parameter_bounds = BoundsList()
     parameter_bounds.add("final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2*np.pi], interpolation=InterpolationType.CONSTANT)
     parameter_init = InitialGuessList()
-    parameter_init["final_somersault"] = 2 * np.pi
+    parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
 
 
     # Prepare the noises
