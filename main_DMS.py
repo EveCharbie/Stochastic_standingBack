@@ -13,11 +13,13 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = False
-RUN_SOCP = True
-RUN_SOCP_VARIABLE = False
-RUN_SOCP_FEEDFORWARD = False
+RUN_OCP = False  # OK
+RUN_SOCP = False  # OK 1e-3
+RUN_SOCP_VARIABLE = False  # OK 1e-3
+RUN_SOCP_FEEDFORWARD = True
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
+
+nb_random = 15
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -101,7 +103,7 @@ if RUN_OCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    # print(save_path)
+    print(save_path)
     # import bioviz
     # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -109,13 +111,9 @@ if RUN_OCP:
 
 
 # --- Run the SOCP --- #
-noise_factor = 1.0  # 0.05, 0.1, 0.5,
-nb_random = 15
-
-# TODO: How do we choose the values?
-motor_noise_std = 0.05 * noise_factor
-wPq_std = 0.001 * noise_factor
-wPqdot_std = 0.003 * noise_factor
+motor_noise_std = 0.05
+wPq_std = 0.001
+wPqdot_std = 0.003
 
 print_motor_noise_std = "{:.1e}".format(motor_noise_std)
 print_wPq_std = "{:.1e}".format(wPq_std)
@@ -199,15 +197,15 @@ if RUN_SOCP:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
-    # print(save_path)
+    print(save_path)
     # import bioviz
     # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -308,19 +306,19 @@ if RUN_SOCP_VARIABLE:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
     print(save_path)
-    import bioviz
-    b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
-    b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
-    b.exec()
+    # import bioviz
+    # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
+    # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
+    # b.exec()
 
 
 # --- Run the SOCP+ (feedforward) --- #
@@ -429,15 +427,15 @@ if RUN_SOCP_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
-    # print(save_path)
+    print(save_path)
     # import bioviz
     # b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
@@ -550,15 +548,15 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_DVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_CVG_{print_tol}.pkl")
+        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path_vision, "wb") as file:
         pickle.dump(data, file)
 
-    # print(save_path)
+    print(save_path)
     # import bioviz
     # b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
