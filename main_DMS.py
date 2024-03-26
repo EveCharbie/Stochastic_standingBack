@@ -331,7 +331,7 @@ if RUN_SOCP_FEEDFORWARD:
         np.array(
             [
                 motor_noise_std**2 / dt,
-                motor_noise_std**2 / dt,
+                0.0,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
@@ -345,9 +345,7 @@ if RUN_SOCP_FEEDFORWARD:
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
-                wPq_std**2 / dt,
                 wPqdot_std**2 / dt,  # Proprioceptive velocity
-                wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,

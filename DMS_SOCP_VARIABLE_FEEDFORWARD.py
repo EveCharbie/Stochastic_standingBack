@@ -71,8 +71,8 @@ def custom_dynamics(
     ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
     tf = nlp.tf_mx
 
-    k_fb = k_matrix[:, : 2 * nb_joints + 2]
-    k_ff = k_matrix[:, 2 * nb_joints + 2:]
+    k_fb = k_matrix[:, : nlp.model.n_feedbacks]
+    k_ff = k_matrix[:, nlp.model.n_feedbacks:]
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
     dxdt = cas.MX(nlp.states.shape, nlp.ns)
@@ -105,7 +105,7 @@ def custom_dynamics(
 
             # Feedforward
             tau_this_time += k_ff @ (ff_ref - DMS_ff_noised_sensory_input(nlp.model, tf, time, q_this_time,
-                                                           qdot_this_time, sensory_noise_numerical[2 * nb_joints + 2:,
+                                                           qdot_this_time, sensory_noise_numerical[nlp.model.n_feedbacks:,
                                                                              j, i]))
 
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)

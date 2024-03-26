@@ -52,7 +52,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     Encourage the model to land consistently in approximately the same position and orientation.
     """
 
-    n_q = controller.model.nb_q
+    nb_q = controller.model.nb_q
 
     Q_root = controller.states["q_roots"].mx
     Q_joints = controller.states["q_joints"].mx
@@ -74,7 +74,7 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
     jac_CoM_qdot = cas.jacobian(CoM_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
     jac_CoM_ang_vel = cas.jacobian(CoM_ang_vel, cas.vertcat(Q_root, Q_joints, Qdot_root, Qdot_joints))
 
-    P_matrix_q = cov_matrix[:n_q, :n_q]
+    P_matrix_q = cov_matrix[:nb_q, :nb_q]
     P_matrix_qdot = cov_matrix[:, :]
 
     pos_constraint = jac_CoM_q @ P_matrix_q @ jac_CoM_q.T
@@ -155,16 +155,16 @@ def motor_acuity(motor_noise, tau_nominal):
 
 def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
     nb_roots = model.nb_root
-    n_joints = model.nb_q - nb_roots
+    nb_joints = model.nb_q - nb_roots
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
 
     sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
 
-    proprioceptive_feedback = sensory_input[: 2 * n_joints]
-    vestibular_feedback = sensory_input[2 * n_joints : -1]
+    proprioceptive_feedback = sensory_input[: 2 * nb_joints]
+    vestibular_feedback = sensory_input[2 * nb_joints : -1]
 
-    proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
+    proprioceptive_noise = cas.MX.ones(2 * nb_joints, 1) * sensory_noise[: 2 * nb_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
 
     head_idx = model.segment_index("Head")
@@ -248,9 +248,9 @@ def ff_noised_sensory_input(model, tf, time, q_roots, q_joints, qdot_roots, qdot
 def SOCP_VARIABLE_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     nlp, time, states, controls, parameters, algebraic_states, motor_noise, sensory_noise
 ):
-    n_q = nlp.model.nb_q
+    nb_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
-    n_joints = n_q - n_root
+    nb_joints = nb_q - n_root
 
     tf = nlp.tf_mx
     q_roots = DynamicsFunctions.get(nlp.states["q_roots"], states)
@@ -259,14 +259,14 @@ def SOCP_VARIABLE_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     qdot_joints = DynamicsFunctions.get(nlp.states["qdot_joints"], states)
     tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
 
-    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * n_joints + 2]
-    ff_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[2 * n_joints + 2]
+    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * nb_joints + 2]
+    ff_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[2 * nb_joints + 2]
 
     k = DynamicsFunctions.get(nlp.algebraic_states["k"], algebraic_states)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
 
-    k_fb = k_matrix[:, : 2 * n_joints + 2]
-    k_ff = k_matrix[:, 2 * n_joints + 2 :]
+    k_fb = k_matrix[:, : 2 * nb_joints + 2]
+    k_ff = k_matrix[:, 2 * nb_joints + 2 :]
 
     tau_fb = k_fb @ (
         fb_ref - fb_noised_sensory_input(nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise)
@@ -285,9 +285,9 @@ def SOCP_VARIABLE_compute_torques_from_noise_and_feedback(
     nlp, time, states, controls, parameters, algebraic_states, motor_noise, sensory_noise
 ):
     # TODO: friction is missing?
-    n_q = nlp.model.nb_q
+    nb_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
-    n_joints = n_q - n_root
+    nb_joints = nb_q - n_root
 
     q_roots = DynamicsFunctions.get(nlp.states["q_roots"], states)
     q_joints = DynamicsFunctions.get(nlp.states["q_joints"], states)
@@ -295,7 +295,7 @@ def SOCP_VARIABLE_compute_torques_from_noise_and_feedback(
     qdot_joints = DynamicsFunctions.get(nlp.states["qdot_joints"], states)
     tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
 
-    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * n_joints + 2]
+    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * nb_joints + 2]
 
     k = DynamicsFunctions.get(nlp.algebraic_states["k"], algebraic_states)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
@@ -313,27 +313,27 @@ def SOCP_VARIABLE_compute_torques_from_noise_and_feedback(
 def SOCP_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     nlp, time, states, controls, parameters, algebraic_states, motor_noise, sensory_noise
 ):
-    n_q = nlp.model.nb_q
+    nb_q = nlp.model.nb_q
     n_root = nlp.model.nb_root
-    n_joints = n_q - n_root
+    nb_joints = nb_q - n_root
 
     tau_nominal = DynamicsFunctions.get(nlp.controls["tau_joints"], controls)
 
-    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * n_joints + 2]
-    ff_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[2 * n_joints + 2]
+    fb_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[: 2 * nb_joints + 2]
+    ff_ref = DynamicsFunctions.get(nlp.algebraic_states["ref"], algebraic_states)[2 * nb_joints + 2]
 
     k = DynamicsFunctions.get(nlp.algebraic_states["k"], algebraic_states)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
 
-    k_fb = k_matrix[:, : 2 * n_joints + 2]
-    k_ff = k_matrix[:, 2 * n_joints + 2 :]
+    k_fb = k_matrix[:, : 2 * nb_joints + 2]
+    k_ff = k_matrix[:, 2 * nb_joints + 2 :]
 
     sensory_input = nlp.model.sensory_reference(time, states, controls, parameters, algebraic_states, nlp)
-    fb_sensory_input = sensory_input[: 2 * n_joints + 2]
-    ff_sensory_input = sensory_input[2 * n_joints + 2]
+    fb_sensory_input = sensory_input[: 2 * nb_joints + 2]
+    ff_sensory_input = sensory_input[2 * nb_joints + 2]
 
-    tau_fb = k_fb @ ((fb_ref - fb_sensory_input) + sensory_noise[: 2 * n_joints + 2])
-    tau_ff = k_ff @ ((ff_ref - ff_sensory_input) + sensory_noise[2 * n_joints + 2])
+    tau_fb = k_fb @ ((fb_ref - fb_sensory_input) + sensory_noise[: 2 * nb_joints + 2])
+    tau_ff = k_ff @ ((ff_ref - ff_sensory_input) + sensory_noise[2 * nb_joints + 2])
 
     tau = tau_nominal + tau_fb + tau_ff + motor_noise
 
@@ -487,6 +487,20 @@ def DMS_sensory_reference(model, nb_roots, q_this_time, qdot_this_time):
 
     return cas.vertcat(proprioceptive_feedback, pelvis_orientation, somersault_velocity)
 
+def DMS_sensory_reference_no_eyes(model, nb_roots, q_this_time, qdot_this_time):
+
+    proprioceptive_feedback = cas.vertcat(q_this_time[nb_roots],
+                                            q_this_time[nb_roots+2:],
+                                            qdot_this_time[nb_roots],
+                                            qdot_this_time[nb_roots+2:])
+    pelvis_orientation = q_this_time[2]
+    somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]
+    # head_idx = model.segment_index("Head")
+    # head_orientation = model.segment_orientation(q_this_time, head_idx)
+    # head_velocity = model.segment_angular_velocity(q_this_time, qdot_this_time, head_idx)
+    # vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
+
+    return cas.vertcat(proprioceptive_feedback, pelvis_orientation, somersault_velocity)
 
 def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
 
@@ -620,16 +634,16 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
 
 def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
     nb_roots = model.nb_root
-    n_joints = model.nb_q - nb_roots
+    nb_joints = model.nb_q - nb_roots
     q = cas.vertcat(q_roots, q_joints)
     qdot = cas.vertcat(qdot_roots, qdot_joints)
 
     sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
 
-    proprioceptive_feedback = sensory_input[: 2 * n_joints]
-    vestibular_feedback = sensory_input[2 * n_joints :]
+    proprioceptive_feedback = sensory_input[: 2 * nb_joints]
+    vestibular_feedback = sensory_input[2 * nb_joints:]
 
-    proprioceptive_noise = cas.MX.ones(2 * n_joints, 1) * sensory_noise[: 2 * n_joints]
+    proprioceptive_noise = cas.MX.ones(2 * nb_joints, 1) * sensory_noise[: 2 * nb_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
 
     vestibular_noise = cas.MX.zeros(2, 1)
@@ -694,7 +708,7 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
             tau_this_time += motor_noise_numerical[:, controller.node_index, i]
 
             # Feedback
-            tau_this_time += k_matrix_fb @ (fb_ref - DMS_sensory_reference(controller.model,
+            tau_this_time += k_matrix_fb @ (fb_ref - DMS_sensory_reference_no_eyes(controller.model,
                                                                         nb_root,
                                                                         q_this_time,
                                                                         qdot_this_time) +
