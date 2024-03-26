@@ -45,7 +45,7 @@ n_root = 3
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-8  # 1e-3 OK
+tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
