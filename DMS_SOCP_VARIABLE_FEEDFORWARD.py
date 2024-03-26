@@ -71,8 +71,8 @@ def custom_dynamics(
     ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
     tf = nlp.tf_mx
 
-    k_fb = k_matrix[:, : 2 * nb_joints + 2]
-    k_ff = k_matrix[:, 2 * nb_joints + 2:]
+    k_fb = k_matrix[:, : nlp.model.n_feedbacks]
+    k_ff = k_matrix[:, nlp.model.n_feedbacks:]
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
     dxdt = cas.MX(nlp.states.shape, nlp.ns)
@@ -105,7 +105,7 @@ def custom_dynamics(
 
             # Feedforward
             tau_this_time += k_ff @ (ff_ref - DMS_ff_noised_sensory_input(nlp.model, tf, time, q_this_time,
-                                                           qdot_this_time, sensory_noise_numerical[2 * nb_joints + 2:,
+                                                           qdot_this_time, sensory_noise_numerical[nlp.model.n_feedbacks:,
                                                                              j, i]))
 
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
@@ -499,15 +499,15 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     else:
         ref_init = np.zeros((n_ref, n_shooting+1))
         for i in range(n_shooting):
-            q_roots_this_time = q_roots_init[:n_root, 0].T
-            q_joints_this_time = q_joints_init[:n_joints, 0].T
-            qdot_roots_this_time = qdot_roots_init[:n_root].T
-            qdot_joints_this_time = qdot_joints_init[:n_joints].T
+            q_roots_this_time = q_roots_init[:n_root, i].T
+            q_joints_this_time = q_joints_init[:n_joints, i].T
+            qdot_roots_this_time = qdot_roots_init[:n_root, i].T
+            qdot_joints_this_time = qdot_joints_init[:n_joints, i].T
             for j in range(1, nb_random):
-                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root].T))
-                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
-                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root].T))
-                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
+                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root, i].T))
+                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
+                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root, i].T))
+                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
             ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))

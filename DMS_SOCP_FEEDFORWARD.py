@@ -12,7 +12,7 @@ from utils import (
     minimize_nominal_and_feedback_efforts_FEEDFORWARD,
     toe_marker_on_floor,
     ref_equals_mean_sensory,
-    DMS_sensory_reference,
+    DMS_sensory_reference_no_eyes,
     DMS_ff_sensory_input,
 )
 
@@ -69,8 +69,8 @@ def custom_dynamics(
     ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
     tf = nlp.tf_mx
 
-    k_fb = k_matrix[:, : 2 * nb_joints + 2]
-    k_ff = k_matrix[:, 2 * nb_joints + 2:]
+    k_fb = k_matrix[:, :nlp.model.n_feedbacks]
+    k_ff = k_matrix[:, nlp.model.n_feedbacks:]
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
     dxdt = cas.MX(nlp.states.shape, nlp.ns)
@@ -94,13 +94,13 @@ def custom_dynamics(
             tau_this_time += motor_noise_numerical[:, j, i]
 
             # Feedback
-            tau_this_time += k_fb @ (fb_ref - DMS_sensory_reference(nlp.model, nb_root, q_this_time,
+            tau_this_time += k_fb @ (fb_ref - DMS_sensory_reference_no_eyes(nlp.model, nb_root, q_this_time,
                                                             qdot_this_time) + sensory_noise_numerical[
-                                                                              :2 * nb_joints + 2, j, i])
+                                                                              :nlp.model.n_feedbacks, j, i])
 
             # Feedforward
             tau_this_time += k_ff @ (ff_ref - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time,
-                                                           qdot_this_time) + sensory_noise_numerical[2 * nb_joints + 2:,
+                                                           qdot_this_time) + sensory_noise_numerical[nlp.model.n_feedbacks:,
                                                                              j, i])
 
             tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
@@ -250,7 +250,7 @@ def prepare_socp_FEEDFORWARD(
 ):
     """
     Sensory inputs:
-    - proprioceptive: joint angles and velocities (4+4)
+    - proprioceptive: joint angles and velocities (4+4), no proprioception on eyes
     - vestibular: head orientation and angular velocity (1+1)
     """
 
@@ -260,16 +260,17 @@ def prepare_socp_FEEDFORWARD(
     n_joints = n_q - n_root
     friction_coefficients = cas.DM.zeros(n_joints, n_joints)
     for i in range(n_joints):
-        friction_coefficients[i, i] = 0.1
+        if i != 1:  # No frictions on the eyes
+            friction_coefficients[i, i] = 0.1
 
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
         sensory_noise_magnitude=sensory_noise_magnitude,
         motor_noise_magnitude=motor_noise_magnitude,
-        sensory_reference=DMS_sensory_reference,
+        sensory_reference=DMS_sensory_reference_no_eyes,
         compute_torques_from_noise_and_feedback=None,
-        n_references=2 * (n_joints + 1) + 1,
-        n_feedbacks=2 * (n_joints + 1),
+        n_references=2 * n_joints + 1,
+        n_feedbacks=2 * n_joints,
         n_noised_states=n_q * 2,
         n_noised_controls=n_joints,
         friction_coefficients=friction_coefficients,
@@ -289,13 +290,13 @@ def prepare_socp_FEEDFORWARD(
     parameter_bounds = BoundsList()
     parameter_bounds.add("final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2*np.pi], interpolation=InterpolationType.CONSTANT)
     parameter_init = InitialGuessList()
-    parameter_init["final_somersault"] = 2 * np.pi
+    parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
 
 
     # Prepare the noises
     np.random.seed(0)
     motor_noise_numerical = np.zeros((n_joints, n_shooting, nb_random))
-    sensory_noise_numerical = np.zeros((2 * (n_joints + 1) + 1, n_shooting, nb_random))
+    sensory_noise_numerical = np.zeros((2 * n_joints + 1, n_shooting, nb_random))
     for i_random in range(nb_random):
         for i_shooting in range(n_shooting):
             motor_noise_numerical[:, i_shooting, i_random] = np.random.normal(
@@ -304,8 +305,8 @@ def prepare_socp_FEEDFORWARD(
                 size=n_joints)
             sensory_noise_numerical[:, i_shooting, i_random] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
-                scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1) + 1,)),
-                size=2 * (n_joints + 1) + 1)
+                scale=np.reshape(np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_shooting, i_random].shape[0],)),
+                size=sensory_noise_numerical[:, i_shooting, i_random].shape[0])
 
     # Objective functions
     objective_functions = ObjectiveList()
@@ -471,7 +472,7 @@ def prepare_socp_FEEDFORWARD(
 
 
     # The stochastic variables will be put in the controls for simplicity
-    n_ref = 2 * (n_joints + 1)  # ref(10)
+    n_ref = 2 * n_joints  # ref(10)
     n_k = n_joints * (n_ref+1)  # K(5x11)
 
     if k_last is not None:
@@ -493,15 +494,15 @@ def prepare_socp_FEEDFORWARD(
     else:
         ref_init = np.zeros((n_ref, n_shooting+1))
         for i in range(n_shooting):
-            q_roots_this_time = q_roots_init[:n_root, 0].T
-            q_joints_this_time = q_joints_init[:n_joints, 0].T
-            qdot_roots_this_time = qdot_roots_init[:n_root].T
-            qdot_joints_this_time = qdot_joints_init[:n_joints].T
+            q_roots_this_time = q_roots_init[:n_root, i].T
+            q_joints_this_time = q_joints_init[:n_joints, i].T
+            qdot_roots_this_time = qdot_roots_init[:n_root, i].T
+            qdot_joints_this_time = qdot_joints_init[:n_joints, i].T
             for j in range(1, nb_random):
-                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root].T))
-                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
-                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root].T))
-                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints].T))
+                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root, i].T))
+                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
+                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root, i].T))
+                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
             ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))

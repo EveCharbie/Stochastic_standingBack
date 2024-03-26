@@ -46,7 +46,7 @@ n_root = 3
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-8  # 1e-3 OK
+tol = 1e-3  # 1e-3 OK
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
@@ -116,10 +116,10 @@ motor_noise_std = 0.05
 wPq_std = 0.001
 wPqdot_std = 0.003
 
-print_motor_noise_std = "{:.1e}".format(motor_noise_std)
-print_wPq_std = "{:.1e}".format(wPq_std)
-print_wPqdot_std = "{:.1e}".format(wPqdot_std)
-print_tol = "{:.1e}".format(tol)
+print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
+print_wPq_std = "{:1.1e}".format(wPq_std)
+print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
+print_tol = "{:1.1e}".format(tol)
 save_path = (
     f"results/{model_name}_socp_DMS_{print_motor_noise_std}_"
     f"{print_wPq_std}_"
@@ -214,7 +214,7 @@ if RUN_SOCP:
 
 
 # --- Run the SOCP+ (variable noise) --- #
-save_path_vision = save_path.replace(".pkl", "_VARIABLE.pkl")
+save_path = save_path.replace(".pkl", "_VARIABLE.pkl")
 
 if RUN_SOCP_VARIABLE:
 
@@ -307,12 +307,12 @@ if RUN_SOCP_VARIABLE:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
-    with open(save_path_vision, "wb") as file:
+    with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
     print(save_path)
@@ -323,7 +323,7 @@ if RUN_SOCP_VARIABLE:
 
 
 # --- Run the SOCP+ (feedforward) --- #
-save_path_vision = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
+save_path = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
 n_q += 1
 
 if RUN_SOCP_FEEDFORWARD:
@@ -332,7 +332,7 @@ if RUN_SOCP_FEEDFORWARD:
         np.array(
             [
                 motor_noise_std**2 / dt,
-                motor_noise_std**2 / dt,
+                0.0,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
@@ -346,9 +346,7 @@ if RUN_SOCP_FEEDFORWARD:
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
-                wPq_std**2 / dt,
                 wPqdot_std**2 / dt,  # Proprioceptive velocity
-                wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
@@ -373,10 +371,10 @@ if RUN_SOCP_FEEDFORWARD:
 
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
-        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+        (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
     )
     tau_joints_last = np.vstack(
-        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+        (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
     )
 
     motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_FEEDFORWARD(
@@ -428,12 +426,12 @@ if RUN_SOCP_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
-    with open(save_path_vision, "wb") as file:
+    with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
     print(save_path)
@@ -444,7 +442,7 @@ if RUN_SOCP_FEEDFORWARD:
 
 
 # --- Run the SOCP+ (variable noise & feedforward) --- #
-save_path_vision = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
+save_path = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
 n_q += 1
 
 if RUN_SOCP_VARIABLE_FEEDFORWARD:
@@ -549,12 +547,12 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
     else:
-        save_path_vision = save_path_vision.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
-    with open(save_path_vision, "wb") as file:
+    with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
     print(save_path)
