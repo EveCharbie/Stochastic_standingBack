@@ -138,10 +138,10 @@ def RK4(q, qdot, tau, dt, k_matrix, ref, motor_noise_numerical, sensory_noise_nu
     states[nb_q:, :, 0] = qdot
     h = dt / 5
     for i in range(1, 6):
-        k1 = dyn_fun(q, qdot, tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k2 = dyn_fun(q + h / 2 * k1[:nb_q, :], qdot + h / 2 * k1[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k3 = dyn_fun(q + h / 2 * k2[:nb_q, :], qdot + h / 2 * k2[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k4 = dyn_fun(q + h * k3[:nb_q, :], qdot + h * k3[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k1 = dyn_fun(states[:nb_q, :, i - 1],                        states[nb_q:, :, i - 1],                        tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k2 = dyn_fun(states[:nb_q, :, i - 1] + h / 2 * k1[:nb_q, :], states[nb_q:, :, i - 1] + h / 2 * k1[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k3 = dyn_fun(states[:nb_q, :, i - 1] + h / 2 * k2[:nb_q, :], states[nb_q:, :, i - 1] + h / 2 * k2[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k4 = dyn_fun(states[:nb_q, :, i - 1] + h * k3[:nb_q, :],     states[nb_q:, :, i - 1] + h * k3[nb_q:, :],     tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
         states[:, :, i] = states[:, :, i - 1] + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return states[:, :, -1]
 
@@ -218,7 +218,7 @@ _, _, socp = prepare_socp(
     )
 
 
-path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_CVG_1.0e-03.pkl"
+path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_3random_CVG_1.0e-06.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -231,6 +231,7 @@ with open(path_to_results, "rb") as file:
     ref_last = data["ref_sol"]
     motor_noise_numerical = data["motor_noise_numerical"]
     sensory_noise_numerical = data["sensory_noise_numerical"]
+
 
 is_label_dof_set = False
 is_label_mean_set = False
@@ -302,26 +303,35 @@ axs[0].legend()
 axs[3].legend()
 plt.show()
 
-import bioviz
-b = bioviz.Viz(biorbd_model_path_with_mesh,
-               background_color=(1, 1, 1),
-               show_local_ref_frame=False,
-               show_markers=False,
-               show_segments_center_of_mass=False,
-               show_global_center_of_mass=False,
-               show_global_ref_frame=False,
-               show_gravity_vector=False,
-               )
-b.load_movement(q_mean_last)
-b.exec()
+# import bioviz
+# b = bioviz.Viz(biorbd_model_path_with_mesh,
+#                background_color=(1, 1, 1),
+#                show_local_ref_frame=False,
+#                show_markers=False,
+#                show_segments_center_of_mass=False,
+#                show_global_center_of_mass=False,
+#                show_global_ref_frame=False,
+#                show_gravity_vector=False,
+#                )
+# b.load_movement(q_mean_last)
+# b.exec()
 
 
 # Reintegrate
 dt_last = time_vector[1] - time_vector[0]
+
+# single shooting
 q_integrated = np.zeros((n_q, n_shooting + 1, nb_random))
 qdot_integrated = np.zeros((n_q, n_shooting + 1, nb_random))
 q_integrated[:, 0, :] = q_last[:, 0, :]
 qdot_integrated[:, 0, :] = qdot_last[:, 0, :]
+
+# multiple shooting
+q_multiple_shooting = np.zeros((n_q, n_shooting + 1, nb_random))
+qdot_multiple_shooting = np.zeros((n_q, n_shooting + 1, nb_random))
+q_multiple_shooting[:, 0, :] = q_last[:, 0, :]
+qdot_multiple_shooting[:, 0, :] = qdot_last[:, 0, :]
+
 for i_shooting in range(n_shooting):
     k_matrix = StochasticBioModel.reshape_to_matrix(k_last[:, i_shooting], socp.nlp[0].model.matrix_shape_k)
     states_integrated = RK4(q_integrated[:, i_shooting, :],
@@ -337,6 +347,18 @@ for i_shooting in range(n_shooting):
     q_integrated[:, i_shooting + 1, :] = states_integrated[:n_q, :]
     qdot_integrated[:, i_shooting + 1, :] = states_integrated[n_q:, :]
 
+    states_integrated_multiple = RK4(q_last[:, i_shooting, :],
+                            qdot_last[:, i_shooting, :],
+                            tau_joints_last[:, i_shooting],
+                            dt_last,
+                            k_matrix,
+                            ref_last[:, i_shooting],
+                            motor_noise_numerical[:, i_shooting, :],
+                            sensory_noise_numerical[:, i_shooting, :],
+                            nb_random,
+                            dyn_fun)
+    q_multiple_shooting[:, i_shooting + 1, :] = states_integrated_multiple[:n_q, :]
+    qdot_multiple_shooting[:, i_shooting + 1, :] = states_integrated_multiple[n_q:, :]
 
 # Verify reintegration
 is_label_dof_set = False
@@ -351,16 +373,13 @@ for i_random in range(nb_random):
         else:
             axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
             axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r")
+        for i_shooting in range(n_shooting):
+            axs[i_dof].plot(np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
+                            np.array([q_last[i_dof, i_shooting, i_random],
+                                      q_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
+                            "--", color="b")
 axs[0].legend()
 plt.show()
-
-
-
-
-
-
-
-
 
 
 dt = 0.05

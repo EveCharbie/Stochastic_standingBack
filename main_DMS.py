@@ -104,6 +104,10 @@ if RUN_OCP:
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
 
+    with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
+        del sol_ocp.ocp
+        pickle.dump(sol_ocp, file)
+
     print(save_path)
     # import bioviz
     # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
@@ -119,7 +123,7 @@ wPqdot_std = 0.003
 print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
-print_tol = "{:1.1e}".format(tol)
+print_tol = "{:1.1e}".format(tol).replace(".", "p")
 save_path = (
     f"results/{model_name}_socp_DMS_{print_motor_noise_std}_"
     f"{print_wPq_std}_"
@@ -205,6 +209,10 @@ if RUN_SOCP:
     # --- Save the results --- #
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
+
+    with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
+        del sol_ocp.ocp
+        pickle.dump(sol_ocp, file)
 
     print(save_path)
     # import bioviz
@@ -314,6 +322,10 @@ if RUN_SOCP_VARIABLE:
     # --- Save the results --- #
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
+
+    with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
+        del sol_ocp.ocp
+        pickle.dump(sol_ocp, file)
 
     print(save_path)
     # import bioviz
@@ -433,6 +445,10 @@ if RUN_SOCP_FEEDFORWARD:
     # --- Save the results --- #
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
+
+    with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
+        del sol_ocp.ocp
+        pickle.dump(sol_ocp, file)
 
     print(save_path)
     # import bioviz
@@ -554,6 +570,10 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     # --- Save the results --- #
     with open(save_path, "wb") as file:
         pickle.dump(data, file)
+
+    with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
+        del sol_ocp.ocp
+        pickle.dump(sol_ocp, file)
 
     print(save_path)
     # import bioviz
