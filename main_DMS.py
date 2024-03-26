@@ -16,11 +16,11 @@ from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 RUN_OCP = False  # OK 1e-8
 RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
-RUN_SOCP_FEEDFORWARD = True
+RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 
-nb_random = 15
+nb_random = 3
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
