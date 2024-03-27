@@ -191,7 +191,7 @@ sensory_noise_magnitude = cas.DM(
 )  # since the head is fixed to the pelvis, the vestibular feedback is in the states ref
 
 
-path_to_results = f"results/{model_name}_aerial_ocp_collocations_CVG_1e-8.pkl"
+path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -217,8 +217,12 @@ _, _, socp = prepare_socp(
     nb_random=nb_random,
     )
 
+plt.figure()
+plt.plot(tau_joints_last.T)
+plt.show()
 
-path_to_results = "results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_3random_CVG_1.0e-06.pkl"
+
+path_to_results = "results/good/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_3random_CVG_1.0e-06.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -368,17 +372,23 @@ for i_random in range(nb_random):
     for i_dof in range(n_q):
         if not is_label_dof_set:
             axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
-            axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r", label="Reintegrated states")
+            # axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r", label="Reintegrated states")
             is_label_dof_set = True
         else:
             axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
-            axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r")
+            # axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r")
         for i_shooting in range(n_shooting):
             axs[i_dof].plot(np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
                             np.array([q_last[i_dof, i_shooting, i_random],
                                       q_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
                             "--", color="b")
 axs[0].legend()
+
+plt.figure()
+plt.plot(k_last.T)
+
+plt.figure()
+plt.plot(tau_joints_last.T)
 plt.show()
 
 

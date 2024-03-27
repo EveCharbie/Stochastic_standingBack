@@ -13,7 +13,7 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = False  # OK 1e-8
+RUN_OCP = True  # OK 1e-8
 RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False
@@ -43,10 +43,10 @@ n_root = 3
 #                )
 # b.exec()
 
-dt = 0.05
+dt = 0.025
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-3  # 1e-3 OK
+tol = 1e-6
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))

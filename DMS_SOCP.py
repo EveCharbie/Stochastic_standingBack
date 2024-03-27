@@ -283,14 +283,24 @@ def prepare_socp(
         sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
-        weight=1e-3,
+        weight=1,
         quadratic=False,  # Already squared in the function
+    )
+    objective_functions.add(
+        minimize_nominal_and_feedback_efforts,
+        motor_noise_numerical=motor_noise_numerical,
+        sensory_noise_numerical=sensory_noise_numerical,
+        custom_type=ObjectiveFcn.Lagrange,
+        node=Node.ALL_SHOOTING,
+        weight=1,
+        quadratic=False,  # Already squared in the function
+        redivative=True,
     )
     objective_functions.add(
         always_reach_landing_position,
         custom_type=ObjectiveFcn.Mayer,
         node=Node.END,
-        weight=1000,
+        weight=10000,
         quadratic=False,  # Already squared in the function
     )
 
