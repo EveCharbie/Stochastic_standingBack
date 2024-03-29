@@ -395,6 +395,15 @@ def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_n
     k = controller.controls["k"].mx
     k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
     ref = controller.controls["ref"].mx
+    motor_noise = None
+    sensory_noise = None
+    for i in range(controller.model.nb_random):
+        if motor_noise is None:
+            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+        else:
+            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -410,10 +419,10 @@ def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_n
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_noise_numerical[:, controller.node_index, i]
+        tau_this_time += motor_noise_numerical[:, i]
 
         # Feedback
-        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, controller.node_index, i])
+        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, i])
         all_tau += cas.sum1(tau_this_time ** 2)
 
     all_tau_cx = controller.mx_to_cx("all_tau",
@@ -580,7 +589,7 @@ def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
     return mean_distance_cx
 
 
-def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController, motor_noise_numerical, sensory_noise_numerical) -> cas.MX:
+def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
     nb_joints = nb_q - nb_root
@@ -593,6 +602,15 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
     k = controller.controls["k"].mx
     k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
     fb_ref = controller.controls["ref"].mx
+    motor_noise = None
+    sensory_noise = None
+    for i in range(controller.model.nb_random):
+        if motor_noise is None:
+            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+        else:
+            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -608,7 +626,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise_numerical[:, controller.node_index, i], tau_joints)
+        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
         tau_this_time += k_matrix @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(controller.model,
@@ -616,7 +634,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
                                                                             q_this_time[nb_root:],
                                                                             qdot_this_time[:nb_root],
                                                                             qdot_this_time[nb_root:],
-                                                                            sensory_noise_numerical[:, controller.node_index, i]))
+                                                                            sensory_noise[:, i]))
         all_tau += cas.sum1(tau_this_time ** 2)
 
     all_tau_cx = controller.mx_to_cx("all_tau",
@@ -627,7 +645,8 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
                                      controller.states["qdot_joints"],
                                      controller.controls["tau_joints"],
                                      controller.controls["k"],
-                                     controller.controls["ref"])
+                                     controller.controls["ref"],
+                                     controller.dynamics_constants)
 
     return all_tau_cx
 
@@ -673,8 +692,7 @@ def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
     return visual_feedforward
 
 
-def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController, motor_noise_numerical,
-                                                       sensory_noise_numerical) -> cas.MX:
+def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
         nb_root = controller.model.nb_root
         nb_q = controller.model.nb_q
         nb_joints = nb_q - nb_root
@@ -690,6 +708,15 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
         k_matrix_ff = k_matrix[:, controller.model.n_feedbacks:]
         fb_ref = controller.controls["ref"].mx
         ff_ref = controller.parameters["final_somersault"].mx
+        motor_noise = None
+        sensory_noise = None
+        for i in range(controller.model.nb_random):
+            if motor_noise is None:
+                motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
+                sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+            else:
+                motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
+                sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
 
         all_tau = 0
         for i in range(controller.model.nb_random):
@@ -705,14 +732,14 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
             tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
             # Motor noise
-            tau_this_time += motor_noise_numerical[:, controller.node_index, i]
+            tau_this_time += motor_noise[:, i]
 
             # Feedback
             tau_this_time += k_matrix_fb @ (fb_ref - DMS_sensory_reference_no_eyes(controller.model,
                                                                         nb_root,
                                                                         q_this_time,
                                                                         qdot_this_time) +
-                                         sensory_noise_numerical[:controller.model.n_feedbacks, controller.node_index, i])
+                                         sensory_noise[:controller.model.n_feedbacks, i])
 
             # Feedforward
             tau_this_time += k_matrix_ff @ (ff_ref - DMS_ff_sensory_input(controller.model,
@@ -720,7 +747,7 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
                                                                        controller.time.mx,
                                                                        q_this_time,
                                                                        qdot_this_time) +
-                                         sensory_noise_numerical[controller.model.n_feedbacks:, controller.node_index, i])
+                                         sensory_noise[controller.model.n_feedbacks:, i])
 
             all_tau += cas.sum1(tau_this_time ** 2)
 
@@ -735,7 +762,8 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
                                          controller.controls["ref"],
                                          controller.parameters["final_somersault"],
                                          controller.time,
-                                         controller.dt)
+                                         controller.dt,
+                                         controller.dynamics_constants)
 
         return all_tau_cx
 
@@ -798,8 +826,7 @@ def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, se
 
     return noised_curent_somersault_angle + noised_somersault_velocity * noised_time_to_contact
 
-def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: PenaltyController, motor_noise_numerical,
-                                                       sensory_noise_numerical) -> cas.MX:
+def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
     nb_joints = nb_q - nb_root
@@ -815,6 +842,15 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
     k_matrix_ff = k_matrix[:, controller.model.n_feedbacks:]
     fb_ref = controller.controls["ref"].mx
     ff_ref = controller.parameters["final_somersault"].mx
+    motor_noise = None
+    sensory_noise = None
+    for i in range(controller.model.nb_random):
+        if motor_noise is None:
+            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+        else:
+            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -830,7 +866,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise_numerical[:, controller.node_index, i], tau_joints)
+        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
         tau_this_time += k_matrix_fb @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(controller.model,
@@ -838,9 +874,9 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
                                                                                     q_this_time[nb_root:],
                                                                                     qdot_this_time[:nb_root],
                                                                                     qdot_this_time[nb_root:],
-                                                                                    sensory_noise_numerical[
+                                                                                    sensory_noise[
                                                                                       :controller.model.n_feedbacks,
-                                                                                      controller.node_index, i]))
+                                                                                      i]))
 
         # Feedforward
         tau_this_time += k_matrix_ff @ (ff_ref - DMS_ff_noised_sensory_input(controller.model,
@@ -848,7 +884,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
                                                                                controller.time.mx,
                                                                                q_this_time,
                                                                                qdot_this_time,
-                                                                               sensory_noise_numerical[controller.model.n_feedbacks:, controller.node_index, i]))
+                                                                               sensory_noise[controller.model.n_feedbacks:, i]))
 
         all_tau += cas.sum1(tau_this_time ** 2)
 
@@ -863,7 +899,8 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
                                      controller.controls["ref"],
                                      controller.parameters["final_somersault"],
                                      controller.time,
-                                     controller.dt)
+                                     controller.dt,
+                                     controller.dynamics_constants)
 
     return all_tau_cx
 

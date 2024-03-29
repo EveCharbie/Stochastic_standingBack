@@ -19,33 +19,19 @@ import sys
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
     OptimalControlProgram,
-    StochasticOptimalControlProgram,
     InitialGuessList,
     ObjectiveFcn,
-    Solver,
     BiorbdModel,
     ObjectiveList,
-    NonLinearProgram,
-    DynamicsEvaluation,
-    DynamicsFunctions,
-    ConfigureProblem,
     DynamicsList,
     BoundsList,
     InterpolationType,
-    PenaltyController,
     Node,
     ConstraintList,
     ConstraintFcn,
-    MultinodeConstraintList,
-    MultinodeObjectiveList,
-    BiMappingList,
     DynamicsFcn,
     Axis,
     OdeSolver,
-    SocpType,
-    CostType,
-    VariableScalingList,
-    ControlType,
 )
 
 

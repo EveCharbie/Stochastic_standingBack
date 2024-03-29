@@ -46,9 +46,8 @@ def custom_dynamics(
     controls,
     parameters,
     algebraic_states,
+    dynamics_constants,
     nlp,
-    motor_noise_numerical,
-    sensory_noise_numerical,
 ) -> DynamicsEvaluation:
 
     nb_root = nlp.model.nb_root
@@ -64,43 +63,51 @@ def custom_dynamics(
     k = DynamicsFunctions.get(nlp.controls["k"], controls)
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
     ref = DynamicsFunctions.get(nlp.controls["ref"], controls)
+    motor_noise = None
+    sensory_noise = None
+    for i in range(nb_random):
+        if motor_noise == None:
+            motor_noise = DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants)
+            sensory_noise = DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants)
+        else:
+            motor_noise = cas.horzcat(motor_noise, DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants))
+            sensory_noise = cas.horzcat(sensory_noise, DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants))
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
-    dxdt = cas.MX(nlp.states.shape, nlp.ns)
-    dxdt[:nb_q * nb_random, :] = cas.horzcat(*[dq for _ in range(nlp.ns)])
-    for j in range(nlp.ns):
-        ddq_roots = cas.MX()
-        ddq_joints = cas.MX()
-        for i in range(nlp.model.nb_random):
-            q_this_time = cas.vertcat(
-                q_roots[i * nb_root: (i + 1) * nb_root],
-                q_joints[i * nb_joints: (i + 1) * nb_joints])
-            qdot_this_time = cas.vertcat(
-                qdot_roots[i * nb_root: (i + 1) * nb_root],
-                qdot_joints[i * nb_joints: (i + 1) * nb_joints])
-            tau_this_time = tau_joints[:]
+    dxdt = cas.MX(nlp.states.shape, 1)
+    dxdt[:nb_q * nb_random] = dq
+    ddq_roots = cas.MX()
+    ddq_joints = cas.MX()
+    for i in range(nlp.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root: (i + 1) * nb_root],
+            q_joints[i * nb_joints: (i + 1) * nb_joints])
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root: (i + 1) * nb_root],
+            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+        tau_this_time = tau_joints[:]
 
-            # Joint friction
-            tau_this_time += nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
+        # Joint friction
+        tau_this_time += nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
 
-            # Motor noise
-            tau_this_time += motor_noise_numerical[:, j, i]
+        # Motor noise
+        tau_this_time += motor_noise[:, i]
 
-            # Feedback
-            tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nlp.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, j, i])
-            tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
+        # Feedback
+        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(nlp.model, nb_root, q_this_time, qdot_this_time) + sensory_noise[:, i])
+        tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
-            ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
-            ddq_roots = cas.vertcat(ddq_roots, ddq[:nb_root])
-            ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
+        ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
+        ddq_roots = cas.vertcat(ddq_roots, ddq[:nb_root])
+        ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
 
-        dxdt[nb_q * nb_random: (nb_q + nb_root) * nb_random, j] = ddq_roots
-        dxdt[(nb_q + nb_root) * nb_random:, j] = ddq_joints
+    dxdt[nb_q * nb_random: (nb_q + nb_root) * nb_random] = ddq_roots
+    dxdt[(nb_q + nb_root) * nb_random:] = ddq_joints
 
     return DynamicsEvaluation(dxdt=dxdt, defects=None)
 
 
-def custom_configure(ocp, nlp, motor_noise_numerical, sensory_noise_numerical):
+def custom_configure(ocp, nlp, dynamics_constants_used_at_each_nodes):
 
     nb_root = nlp.model.nb_root
     nb_q = nlp.model.nb_q
@@ -214,7 +221,7 @@ def custom_configure(ocp, nlp, motor_noise_numerical, sensory_noise_numerical):
         as_algebraic_states=False,
     )
 
-    ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics, motor_noise_numerical=motor_noise_numerical, sensory_noise_numerical=sensory_noise_numerical)
+    ConfigureProblem.configure_dynamics_function(ocp, nlp, custom_dynamics)
 
 
 def prepare_socp(
@@ -262,15 +269,16 @@ def prepare_socp(
 
     # Prepare the noises
     np.random.seed(0)
-    motor_noise_numerical = np.zeros((n_joints, n_shooting, nb_random))
-    sensory_noise_numerical = np.zeros((2 * (n_joints + 1), n_shooting, nb_random))
+    # the last node deos not need motor and sensory noise
+    motor_noise_numerical = np.zeros((n_joints, nb_random, n_shooting+1))
+    sensory_noise_numerical = np.zeros((2 * (n_joints + 1), nb_random, n_shooting+1))
     for i_random in range(nb_random):
         for i_shooting in range(n_shooting):
-            motor_noise_numerical[:, i_shooting, i_random] = np.random.normal(
+            motor_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(motor_noise_magnitude.shape[0]),
                 scale=np.reshape(np.array(motor_noise_magnitude), (n_joints,)),
                 size=n_joints)
-            sensory_noise_numerical[:, i_shooting, i_random] = np.random.normal(
+            sensory_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
                 scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1),)),
                 size=2 * (n_joints + 1))
@@ -294,7 +302,7 @@ def prepare_socp(
         node=Node.ALL_SHOOTING,
         weight=1,
         quadratic=False,  # Already squared in the function
-        redivative=True,
+        derivative=True,
     )
     objective_functions.add(
         always_reach_landing_position,
@@ -319,9 +327,11 @@ def prepare_socp(
     dynamics.add(
         custom_configure,
         dynamic_function=custom_dynamics,
-        phase_dynamics=PhaseDynamics.ONE_PER_NODE,
-        motor_noise_numerical=motor_noise_numerical,
-        sensory_noise_numerical=sensory_noise_numerical,
+        phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
+        dynamics_constants_used_at_each_nodes={
+            "motor_noise_numerical": motor_noise_numerical,
+            "sensory_noise_numerical": sensory_noise_numerical,
+        },
     )
 
     pose_at_first_node = np.array(
@@ -501,5 +511,6 @@ def prepare_socp(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
+        n_threads=32,
     )
     return motor_noise_numerical, sensory_noise_numerical, ocp
