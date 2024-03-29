@@ -1,4 +1,3 @@
-
 import biorbd
 import pickle
 import casadi as cas
@@ -229,6 +228,7 @@ if RUN_SOCP:
 
     print(save_path)
     import bioviz
+
     b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     b.exec()
@@ -345,6 +345,7 @@ if RUN_SOCP_VARIABLE:
 
     print(save_path)
     import bioviz
+
     b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     b.exec()
@@ -473,6 +474,7 @@ if RUN_SOCP_FEEDFORWARD:
 
     print(save_path)
     import bioviz
+
     b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     b.exec()
@@ -601,6 +603,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     print(save_path)
     import bioviz
+
     b = bioviz.Viz(model_path=biorbd_model_path_vision_with_mesh)
     b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     b.exec()

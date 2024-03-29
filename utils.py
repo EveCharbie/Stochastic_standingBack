@@ -24,6 +24,7 @@ def CoM_over_toes(controller: PenaltyController) -> cas.MX:
     marker_pos_y = marker_pos[1]
     return marker_pos_y - CoM_pos_y
 
+
 #
 # def SOCP_sensory_reference(
 #     time: cas.MX | cas.SX,
@@ -151,6 +152,8 @@ def motor_acuity(motor_noise, tau_nominal):
         x=tau_nominal, sigma=100, offset=motor_noise, scaling_factor=1000, flip=True
     )
     return adjusted_motor_noise
+
+
 #
 #
 # def fb_noised_sensory_input(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
@@ -382,7 +385,10 @@ def motor_acuity(motor_noise, tau_nominal):
 
 # ------------------- DMS ------------------- #
 
-def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_noise_numerical, sensory_noise_numerical) -> cas.MX:
+
+def minimize_nominal_and_feedback_efforts(
+    controller: PenaltyController, motor_noise_numerical, sensory_noise_numerical
+) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
     nb_joints = nb_q - nb_root
@@ -408,11 +414,11 @@ def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_n
     all_tau = 0
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         tau_this_time = tau_joints[:]
 
         # Joint friction
@@ -422,20 +428,27 @@ def minimize_nominal_and_feedback_efforts(controller: PenaltyController, motor_n
         tau_this_time += motor_noise_numerical[:, i]
 
         # Feedback
-        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time) + sensory_noise_numerical[:, i])
-        all_tau += cas.sum1(tau_this_time ** 2)
+        tau_this_time += k_matrix @ (
+            ref
+            - DMS_sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time)
+            + sensory_noise_numerical[:, i]
+        )
+        all_tau += cas.sum1(tau_this_time**2)
 
-    all_tau_cx = controller.mx_to_cx("all_tau",
-                                     all_tau,
-                                     controller.states["q_roots"],
-                                     controller.states["q_joints"],
-                                     controller.states["qdot_roots"],
-                                     controller.states["qdot_joints"],
-                                     controller.controls["tau_joints"],
-                                     controller.controls["k"],
-                                     controller.controls["ref"])
+    all_tau_cx = controller.mx_to_cx(
+        "all_tau",
+        all_tau,
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+        controller.controls["tau_joints"],
+        controller.controls["k"],
+        controller.controls["ref"],
+    )
 
     return all_tau_cx
+
 
 def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
     """
@@ -458,28 +471,38 @@ def always_reach_landing_position(controller: PenaltyController) -> cas.MX:
     mean_CoM_ang_vel = 0
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
 
         CoM_pos = cas.vertcat(CoM_pos, controller.model.center_of_mass(q_this_time)[1])
         CoM_vel = cas.vertcat(CoM_vel, controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1])
         CoM_ang_vel = cas.vertcat(CoM_ang_vel, controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0])
 
-        mean_CoM_pos += 1/controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1]
-        mean_CoM_vel += 1/controller.model.nb_random * controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1]
-        mean_CoM_ang_vel += 1/controller.model.nb_random * controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0]
+        mean_CoM_pos += 1 / controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1]
+        mean_CoM_vel += (
+            1 / controller.model.nb_random * controller.model.center_of_mass_velocity(q_this_time, qdot_this_time)[1]
+        )
+        mean_CoM_ang_vel += (
+            1 / controller.model.nb_random * controller.model.body_rotation_rate(q_this_time, qdot_this_time)[0]
+        )
 
-    out = cas.sum1((CoM_pos - mean_CoM_pos) ** 2) + cas.sum1((CoM_vel - mean_CoM_vel) ** 2) + cas.sum1((CoM_ang_vel - mean_CoM_ang_vel) ** 2)
+    out = (
+        cas.sum1((CoM_pos - mean_CoM_pos) ** 2)
+        + cas.sum1((CoM_vel - mean_CoM_vel) ** 2)
+        + cas.sum1((CoM_ang_vel - mean_CoM_ang_vel) ** 2)
+    )
 
-    val = controller.mx_to_cx("reach_target_consistantly",
-                                out,
-                                controller.states["q_roots"],
-                                controller.states["q_joints"],
-                                controller.states["qdot_roots"],
-                                controller.states["qdot_joints"])
+    val = controller.mx_to_cx(
+        "reach_target_consistantly",
+        out,
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+    )
 
     return val
 
@@ -496,12 +519,12 @@ def DMS_sensory_reference(model, nb_roots, q_this_time, qdot_this_time):
 
     return cas.vertcat(proprioceptive_feedback, pelvis_orientation, somersault_velocity)
 
+
 def DMS_sensory_reference_no_eyes(model, nb_roots, q_this_time, qdot_this_time):
 
-    proprioceptive_feedback = cas.vertcat(q_this_time[nb_roots],
-                                            q_this_time[nb_roots+2:],
-                                            qdot_this_time[nb_roots],
-                                            qdot_this_time[nb_roots+2:])
+    proprioceptive_feedback = cas.vertcat(
+        q_this_time[nb_roots], q_this_time[nb_roots + 2 :], qdot_this_time[nb_roots], qdot_this_time[nb_roots + 2 :]
+    )
     pelvis_orientation = q_this_time[2]
     somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]
     # head_idx = model.segment_index("Head")
@@ -510,6 +533,7 @@ def DMS_sensory_reference_no_eyes(model, nb_roots, q_this_time, qdot_this_time):
     # vestibular_feedback = cas.vertcat(head_orientation[0], head_velocity[0])
 
     return cas.vertcat(proprioceptive_feedback, pelvis_orientation, somersault_velocity)
+
 
 def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
 
@@ -523,16 +547,21 @@ def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
     toe_marker_height = controller.cx()
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
 
-        toe_marker_height = cas.vertcat(toe_marker_height, 1/controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[2])
+        toe_marker_height = cas.vertcat(
+            toe_marker_height, 1 / controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[2]
+        )
 
     mean_height = cas.sum1(toe_marker_height)
 
-    mean_height_cx = controller.mx_to_cx("mean_height", mean_height, controller.states["q_roots"], controller.states["q_joints"])
+    mean_height_cx = controller.mx_to_cx(
+        "mean_height", mean_height, controller.states["q_roots"], controller.states["q_joints"]
+    )
 
     return mean_height_cx
+
 
 def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
 
@@ -548,20 +577,26 @@ def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
     ref_measured = cas.MX.zeros(ref.shape[0])
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
 
         ref_this_time = controller.model.sensory_reference(controller.model, nb_root, q_this_time, qdot_this_time)
-        ref_measured += 1/controller.model.nb_random * ref_this_time
+        ref_measured += 1 / controller.model.nb_random * ref_this_time
 
-    mean_ref_cx = controller.mx_to_cx("mean_ref",
-                                      ref - ref_measured,  # Difference between the reference and the mean sensory input
-                                      controller.states["q_roots"], controller.states["q_joints"],
-                                      controller.states["qdot_roots"], controller.states["qdot_joints"], controller.controls["ref"])
+    mean_ref_cx = controller.mx_to_cx(
+        "mean_ref",
+        ref - ref_measured,  # Difference between the reference and the mean sensory input
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+        controller.controls["ref"],
+    )
     return mean_ref_cx
+
 
 def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
 
@@ -576,15 +611,20 @@ def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
     marker_pos = cas.MX()
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
 
-        CoM_pos = cas.vertcat(CoM_pos, 1/controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1])
-        marker_pos = cas.vertcat(marker_pos, 1/controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[1])
+        CoM_pos = cas.vertcat(CoM_pos, 1 / controller.model.nb_random * controller.model.center_of_mass(q_this_time)[1])
+        marker_pos = cas.vertcat(
+            marker_pos, 1 / controller.model.nb_random * controller.model.marker(q_this_time, toe_idx)[1]
+        )
 
-    mean_distance_cx = controller.mx_to_cx("mean_distance",
-                                         marker_pos - CoM_pos,  # Difference between the CoM and the toe marker
-                                         controller.states["q_roots"], controller.states["q_joints"])
+    mean_distance_cx = controller.mx_to_cx(
+        "mean_distance",
+        marker_pos - CoM_pos,  # Difference between the CoM and the toe marker
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+    )
 
     return mean_distance_cx
 
@@ -615,11 +655,11 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
     all_tau = 0
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         tau_this_time = tau_joints[:]
 
         # Joint friction
@@ -629,24 +669,31 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
         tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
-        tau_this_time += k_matrix @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(controller.model,
-                                                                            q_this_time[:nb_root],
-                                                                            q_this_time[nb_root:],
-                                                                            qdot_this_time[:nb_root],
-                                                                            qdot_this_time[nb_root:],
-                                                                            sensory_noise[:, i]))
-        all_tau += cas.sum1(tau_this_time ** 2)
+        tau_this_time += k_matrix @ (
+            fb_ref
+            - DMS_fb_noised_sensory_input_VARIABLE(
+                controller.model,
+                q_this_time[:nb_root],
+                q_this_time[nb_root:],
+                qdot_this_time[:nb_root],
+                qdot_this_time[nb_root:],
+                sensory_noise[:, i],
+            )
+        )
+        all_tau += cas.sum1(tau_this_time**2)
 
-    all_tau_cx = controller.mx_to_cx("all_tau",
-                                     all_tau,
-                                     controller.states["q_roots"],
-                                     controller.states["q_joints"],
-                                     controller.states["qdot_roots"],
-                                     controller.states["qdot_joints"],
-                                     controller.controls["tau_joints"],
-                                     controller.controls["k"],
-                                     controller.controls["ref"],
-                                     controller.dynamics_constants)
+    all_tau_cx = controller.mx_to_cx(
+        "all_tau",
+        all_tau,
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+        controller.controls["tau_joints"],
+        controller.controls["k"],
+        controller.controls["ref"],
+        controller.dynamics_constants,
+    )
 
     return all_tau_cx
 
@@ -660,7 +707,7 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
     sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
 
     proprioceptive_feedback = sensory_input[: 2 * nb_joints]
-    vestibular_feedback = sensory_input[2 * nb_joints:]
+    vestibular_feedback = sensory_input[2 * nb_joints :]
 
     proprioceptive_noise = cas.MX.ones(2 * nb_joints, 1) * sensory_noise[: 2 * nb_joints]
     noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
@@ -681,6 +728,7 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
 
     return cas.vertcat(noised_propriceptive_feedback, noised_vestibular_feedback)
 
+
 def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
 
     time_to_contact = tf - time
@@ -693,79 +741,81 @@ def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
 
 
 def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
-        nb_root = controller.model.nb_root
-        nb_q = controller.model.nb_q
-        nb_joints = nb_q - nb_root
+    nb_root = controller.model.nb_root
+    nb_q = controller.model.nb_q
+    nb_joints = nb_q - nb_root
 
-        q_roots = controller.states["q_roots"].mx
-        q_joints = controller.states["q_joints"].mx
-        qdot_roots = controller.states["qdot_roots"].mx
-        qdot_joints = controller.states["qdot_joints"].mx
-        tau_joints = controller.controls["tau_joints"].mx
-        k = controller.controls["k"].mx
-        k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
-        k_matrix_fb = k_matrix[:, :controller.model.n_feedbacks]
-        k_matrix_ff = k_matrix[:, controller.model.n_feedbacks:]
-        fb_ref = controller.controls["ref"].mx
-        ff_ref = controller.parameters["final_somersault"].mx
-        motor_noise = None
-        sensory_noise = None
-        for i in range(controller.model.nb_random):
-            if motor_noise is None:
-                motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
-                sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
-            else:
-                motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
-                sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
+    q_roots = controller.states["q_roots"].mx
+    q_joints = controller.states["q_joints"].mx
+    qdot_roots = controller.states["qdot_roots"].mx
+    qdot_joints = controller.states["qdot_joints"].mx
+    tau_joints = controller.controls["tau_joints"].mx
+    k = controller.controls["k"].mx
+    k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
+    k_matrix_fb = k_matrix[:, : controller.model.n_feedbacks]
+    k_matrix_ff = k_matrix[:, controller.model.n_feedbacks :]
+    fb_ref = controller.controls["ref"].mx
+    ff_ref = controller.parameters["final_somersault"].mx
+    motor_noise = None
+    sensory_noise = None
+    for i in range(controller.model.nb_random):
+        if motor_noise is None:
+            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+        else:
+            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
 
-        all_tau = 0
-        for i in range(controller.model.nb_random):
-            q_this_time = cas.vertcat(
-                q_roots[i * nb_root: (i + 1) * nb_root],
-                q_joints[i * nb_joints: (i + 1) * nb_joints])
-            qdot_this_time = cas.vertcat(
-                qdot_roots[i * nb_root: (i + 1) * nb_root],
-                qdot_joints[i * nb_joints: (i + 1) * nb_joints])
-            tau_this_time = tau_joints[:]
+    all_tau = 0
+    for i in range(controller.model.nb_random):
+        q_this_time = cas.vertcat(
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
+        qdot_this_time = cas.vertcat(
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
+        tau_this_time = tau_joints[:]
 
-            # Joint friction
-            tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
+        # Joint friction
+        tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
-            # Motor noise
-            tau_this_time += motor_noise[:, i]
+        # Motor noise
+        tau_this_time += motor_noise[:, i]
 
-            # Feedback
-            tau_this_time += k_matrix_fb @ (fb_ref - DMS_sensory_reference_no_eyes(controller.model,
-                                                                        nb_root,
-                                                                        q_this_time,
-                                                                        qdot_this_time) +
-                                         sensory_noise[:controller.model.n_feedbacks, i])
+        # Feedback
+        tau_this_time += k_matrix_fb @ (
+            fb_ref
+            - DMS_sensory_reference_no_eyes(controller.model, nb_root, q_this_time, qdot_this_time)
+            + sensory_noise[: controller.model.n_feedbacks, i]
+        )
 
-            # Feedforward
-            tau_this_time += k_matrix_ff @ (ff_ref - DMS_ff_sensory_input(controller.model,
-                                                                       controller.tf.mx,
-                                                                       controller.time.mx,
-                                                                       q_this_time,
-                                                                       qdot_this_time) +
-                                         sensory_noise[controller.model.n_feedbacks:, i])
+        # Feedforward
+        tau_this_time += k_matrix_ff @ (
+            ff_ref
+            - DMS_ff_sensory_input(controller.model, controller.tf.mx, controller.time.mx, q_this_time, qdot_this_time)
+            + sensory_noise[controller.model.n_feedbacks :, i]
+        )
 
-            all_tau += cas.sum1(tau_this_time ** 2)
+        all_tau += cas.sum1(tau_this_time**2)
 
-        all_tau_cx = controller.mx_to_cx("all_tau",
-                                         all_tau,
-                                         controller.states["q_roots"],
-                                         controller.states["q_joints"],
-                                         controller.states["qdot_roots"],
-                                         controller.states["qdot_joints"],
-                                         controller.controls["tau_joints"],
-                                         controller.controls["k"],
-                                         controller.controls["ref"],
-                                         controller.parameters["final_somersault"],
-                                         controller.time,
-                                         controller.dt,
-                                         controller.dynamics_constants)
+    all_tau_cx = controller.mx_to_cx(
+        "all_tau",
+        all_tau,
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+        controller.controls["tau_joints"],
+        controller.controls["k"],
+        controller.controls["ref"],
+        controller.parameters["final_somersault"],
+        controller.time,
+        controller.dt,
+        controller.dynamics_constants,
+    )
 
-        return all_tau_cx
+    return all_tau_cx
+
 
 def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, sensory_noise):
 
@@ -826,6 +876,7 @@ def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, se
 
     return noised_curent_somersault_angle + noised_somersault_velocity * noised_time_to_contact
 
+
 def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
@@ -838,8 +889,8 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
     tau_joints = controller.controls["tau_joints"].mx
     k = controller.controls["k"].mx
     k_matrix = StochasticBioModel.reshape_to_matrix(k, controller.model.matrix_shape_k)
-    k_matrix_fb = k_matrix[:, :controller.model.n_feedbacks]
-    k_matrix_ff = k_matrix[:, controller.model.n_feedbacks:]
+    k_matrix_fb = k_matrix[:, : controller.model.n_feedbacks]
+    k_matrix_ff = k_matrix[:, controller.model.n_feedbacks :]
     fb_ref = controller.controls["ref"].mx
     ff_ref = controller.parameters["final_somersault"].mx
     motor_noise = None
@@ -855,11 +906,11 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
     all_tau = 0
     for i in range(controller.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         tau_this_time = tau_joints[:]
 
         # Joint friction
@@ -869,38 +920,47 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
-        tau_this_time += k_matrix_fb @ (fb_ref - DMS_fb_noised_sensory_input_VARIABLE(controller.model,
-                                                                                    q_this_time[:nb_root],
-                                                                                    q_this_time[nb_root:],
-                                                                                    qdot_this_time[:nb_root],
-                                                                                    qdot_this_time[nb_root:],
-                                                                                    sensory_noise[
-                                                                                      :controller.model.n_feedbacks,
-                                                                                      i]))
+        tau_this_time += k_matrix_fb @ (
+            fb_ref
+            - DMS_fb_noised_sensory_input_VARIABLE(
+                controller.model,
+                q_this_time[:nb_root],
+                q_this_time[nb_root:],
+                qdot_this_time[:nb_root],
+                qdot_this_time[nb_root:],
+                sensory_noise[: controller.model.n_feedbacks, i],
+            )
+        )
 
         # Feedforward
-        tau_this_time += k_matrix_ff @ (ff_ref - DMS_ff_noised_sensory_input(controller.model,
-                                                                               controller.tf.mx,
-                                                                               controller.time.mx,
-                                                                               q_this_time,
-                                                                               qdot_this_time,
-                                                                               sensory_noise[controller.model.n_feedbacks:, i]))
+        tau_this_time += k_matrix_ff @ (
+            ff_ref
+            - DMS_ff_noised_sensory_input(
+                controller.model,
+                controller.tf.mx,
+                controller.time.mx,
+                q_this_time,
+                qdot_this_time,
+                sensory_noise[controller.model.n_feedbacks :, i],
+            )
+        )
 
-        all_tau += cas.sum1(tau_this_time ** 2)
+        all_tau += cas.sum1(tau_this_time**2)
 
-    all_tau_cx = controller.mx_to_cx("all_tau",
-                                     all_tau,
-                                     controller.states["q_roots"],
-                                     controller.states["q_joints"],
-                                     controller.states["qdot_roots"],
-                                     controller.states["qdot_joints"],
-                                     controller.controls["tau_joints"],
-                                     controller.controls["k"],
-                                     controller.controls["ref"],
-                                     controller.parameters["final_somersault"],
-                                     controller.time,
-                                     controller.dt,
-                                     controller.dynamics_constants)
+    all_tau_cx = controller.mx_to_cx(
+        "all_tau",
+        all_tau,
+        controller.states["q_roots"],
+        controller.states["q_joints"],
+        controller.states["qdot_roots"],
+        controller.states["qdot_joints"],
+        controller.controls["tau_joints"],
+        controller.controls["k"],
+        controller.controls["ref"],
+        controller.parameters["final_somersault"],
+        controller.time,
+        controller.dt,
+        controller.dynamics_constants,
+    )
 
     return all_tau_cx
-

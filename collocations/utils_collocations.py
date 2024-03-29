@@ -42,10 +42,9 @@ def SOCP_sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    vestibular_and_joints_feedback = cas.vertcat(
-        q_joints, qdot_joints, q_roots[2], qdot_roots[2]
-    )
+    vestibular_and_joints_feedback = cas.vertcat(q_joints, qdot_joints, q_roots[2], qdot_roots[2])
     return vestibular_and_joints_feedback
+
 
 def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX:
     """
@@ -378,6 +377,3 @@ def SOCP_VARIABLE_FEEDFORWARD_sensory_reference(
     return SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
         nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time
     )
-
-
-

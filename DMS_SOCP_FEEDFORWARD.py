@@ -71,27 +71,37 @@ def custom_dynamics(
     sensory_noise = None
     for i in range(nb_random):
         if motor_noise == None:
-            motor_noise = DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants)
-            sensory_noise = DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants)
+            motor_noise = DynamicsFunctions.get(
+                nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants
+            )
+            sensory_noise = DynamicsFunctions.get(
+                nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants
+            )
         else:
-            motor_noise = cas.horzcat(motor_noise, DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants))
-            sensory_noise = cas.horzcat(sensory_noise, DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants))
+            motor_noise = cas.horzcat(
+                motor_noise,
+                DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants),
+            )
+            sensory_noise = cas.horzcat(
+                sensory_noise,
+                DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants),
+            )
 
-    k_fb = k_matrix[:, :nlp.model.n_feedbacks]
-    k_ff = k_matrix[:, nlp.model.n_feedbacks:]
+    k_fb = k_matrix[:, : nlp.model.n_feedbacks]
+    k_ff = k_matrix[:, nlp.model.n_feedbacks :]
 
     dq = cas.vertcat(qdot_roots, qdot_joints)
     dxdt = cas.MX(nlp.states.shape, 1)
-    dxdt[:nb_q * nb_random] = dq
+    dxdt[: nb_q * nb_random] = dq
     ddq_roots = cas.MX()
     ddq_joints = cas.MX()
     for i in range(nlp.model.nb_random):
         q_this_time = cas.vertcat(
-            q_roots[i * nb_root: (i + 1) * nb_root],
-            q_joints[i * nb_joints: (i + 1) * nb_joints])
+            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         qdot_this_time = cas.vertcat(
-            qdot_roots[i * nb_root: (i + 1) * nb_root],
-            qdot_joints[i * nb_joints: (i + 1) * nb_joints])
+            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+        )
         tau_this_time = tau_joints[:]
 
         # Joint friction
@@ -101,14 +111,18 @@ def custom_dynamics(
         tau_this_time += motor_noise[:, i]
 
         # Feedback
-        tau_this_time += k_fb @ (fb_ref - DMS_sensory_reference_no_eyes(nlp.model, nb_root, q_this_time,
-                                                        qdot_this_time) + sensory_noise[
-                                                                          :nlp.model.n_feedbacks, i])
+        tau_this_time += k_fb @ (
+            fb_ref
+            - DMS_sensory_reference_no_eyes(nlp.model, nb_root, q_this_time, qdot_this_time)
+            + sensory_noise[: nlp.model.n_feedbacks, i]
+        )
 
         # Feedforward
-        tau_this_time += k_ff @ (ff_ref - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time,
-                                                       qdot_this_time) + sensory_noise[nlp.model.n_feedbacks:,
-                                                                         i])
+        tau_this_time += k_ff @ (
+            ff_ref
+            - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time, qdot_this_time)
+            + sensory_noise[nlp.model.n_feedbacks :, i]
+        )
 
         tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
@@ -116,8 +130,8 @@ def custom_dynamics(
         ddq_roots = cas.vertcat(ddq_roots, ddq[:nb_root])
         ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
 
-    dxdt[nb_q * nb_random: (nb_q + nb_root) * nb_random] = ddq_roots
-    dxdt[(nb_q + nb_root) * nb_random:] = ddq_joints
+    dxdt[nb_q * nb_random : (nb_q + nb_root) * nb_random] = ddq_roots
+    dxdt[(nb_q + nb_root) * nb_random :] = ddq_joints
 
     return DynamicsEvaluation(dxdt=dxdt, defects=None)
 
@@ -284,7 +298,6 @@ def prepare_socp_FEEDFORWARD(
     )
     bio_model.nb_random = nb_random
 
-
     # Define the parameter to optimize: final somersault target
     parameters = ParameterList(use_sx=False)
     parameters.add(
@@ -295,10 +308,11 @@ def prepare_socp_FEEDFORWARD(
         mapping=BiMapping([0], [0]),
     )
     parameter_bounds = BoundsList()
-    parameter_bounds.add("final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2*np.pi], interpolation=InterpolationType.CONSTANT)
+    parameter_bounds.add(
+        "final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2 * np.pi], interpolation=InterpolationType.CONSTANT
+    )
     parameter_init = InitialGuessList()
     parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
-
 
     # Prepare the noises
     np.random.seed(0)
@@ -309,11 +323,15 @@ def prepare_socp_FEEDFORWARD(
             motor_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(motor_noise_magnitude.shape[0]),
                 scale=np.reshape(np.array(motor_noise_magnitude), (n_joints,)),
-                size=n_joints)
+                size=n_joints,
+            )
             sensory_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
-                scale=np.reshape(np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_shooting, i_random].shape[0],)),
-                size=sensory_noise_numerical[:, i_shooting, i_random].shape[0])
+                scale=np.reshape(
+                    np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_shooting, i_random].shape[0],)
+                ),
+                size=sensory_noise_numerical[:, i_shooting, i_random].shape[0],
+            )
 
     # Objective functions
     objective_functions = ObjectiveList()
@@ -395,21 +413,20 @@ def prepare_socp_FEEDFORWARD(
     # initial variability
     initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     noised_states = np.random.multivariate_normal(
-        np.hstack((pose_at_first_node, np.array([0, 2, 2.5*np.pi, 0, 0, 0, 0, 0]))),
-        initial_cov,
-        nb_random).T
+        np.hstack((pose_at_first_node, np.array([0, 2, 2.5 * np.pi, 0, 0, 0, 0, 0]))), initial_cov, nb_random
+    ).T
 
     for i in range(nb_random):
-        q_roots_min[i*n_root:(i+1)*n_root, 0] = noised_states[:n_root, i]
-        q_roots_max[i*n_root:(i+1)*n_root, 0] = noised_states[:n_root, i]
-        q_joints_min[i*n_joints:(i+1)*n_joints, 0] = noised_states[n_root:n_q, i]
-        q_joints_max[i*n_joints:(i+1)*n_joints, 0] = noised_states[n_root:n_q, i]
-        qdot_roots_min[i*n_root:(i+1)*n_root, 0] = noised_states[n_q:n_q+n_root, i]
-        qdot_roots_max[i*n_root:(i+1)*n_root, 0] = noised_states[n_q:n_q+n_root, i]
-        qdot_joints_min[i*n_joints:(i+1)*n_joints, 0] = noised_states[n_q+n_root:, i]
-        qdot_joints_max[i*n_joints:(i+1)*n_joints, 0] = noised_states[n_q+n_root:, i]
-        q_roots_min[i*n_root+2, 2] = pose_at_last_node[2] - 0.5
-        q_roots_max[i*n_root+2, 2] = pose_at_last_node[2] + 0.5
+        q_roots_min[i * n_root : (i + 1) * n_root, 0] = noised_states[:n_root, i]
+        q_roots_max[i * n_root : (i + 1) * n_root, 0] = noised_states[:n_root, i]
+        q_joints_min[i * n_joints : (i + 1) * n_joints, 0] = noised_states[n_root:n_q, i]
+        q_joints_max[i * n_joints : (i + 1) * n_joints, 0] = noised_states[n_root:n_q, i]
+        qdot_roots_min[i * n_root : (i + 1) * n_root, 0] = noised_states[n_q : n_q + n_root, i]
+        qdot_roots_max[i * n_root : (i + 1) * n_root, 0] = noised_states[n_q : n_q + n_root, i]
+        qdot_joints_min[i * n_joints : (i + 1) * n_joints, 0] = noised_states[n_q + n_root :, i]
+        qdot_joints_max[i * n_joints : (i + 1) * n_joints, 0] = noised_states[n_q + n_root :, i]
+        q_roots_min[i * n_root + 2, 2] = pose_at_last_node[2] - 0.5
+        q_roots_max[i * n_root + 2, 2] = pose_at_last_node[2] + 0.5
 
     x_bounds.add(
         "q_roots",
@@ -452,8 +469,12 @@ def prepare_socp_FEEDFORWARD(
         q_roots_init = np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T
         q_joints_init = np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T
         for i in range(1, nb_random):
-            q_roots_init = np.vstack((q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T))
-            q_joints_init = np.vstack((q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T))
+            q_roots_init = np.vstack(
+                (q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T)
+            )
+            q_joints_init = np.vstack(
+                (q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T)
+            )
         x_init.add(
             "q_roots",
             initial_guess=q_roots_init,
@@ -464,8 +485,8 @@ def prepare_socp_FEEDFORWARD(
             initial_guess=q_joints_init,
             interpolation=InterpolationType.LINEAR,
         )
-        qdot_roots_init = np.ones((n_root * nb_random, )) * 0.01
-        qdot_joints_init = np.ones((n_joints * nb_random, )) * 0.01
+        qdot_roots_init = np.ones((n_root * nb_random,)) * 0.01
+        qdot_joints_init = np.ones((n_joints * nb_random,)) * 0.01
         x_init.add("qdot_roots", initial_guess=qdot_roots_init, interpolation=InterpolationType.CONSTANT)
         x_init.add("qdot_joints", initial_guess=qdot_joints_init, interpolation=InterpolationType.CONSTANT)
     else:
@@ -489,10 +510,9 @@ def prepare_socp_FEEDFORWARD(
     else:
         u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.EACH_FRAME)
 
-
     # The stochastic variables will be put in the controls for simplicity
     n_ref = 2 * n_joints  # ref(10)
-    n_k = n_joints * (n_ref+1)  # K(5x11)
+    n_k = n_joints * (n_ref + 1)  # K(5x11)
 
     if k_last is not None:
         u_init.add("k", initial_guess=k_last, interpolation=InterpolationType.EACH_FRAME)
@@ -506,22 +526,30 @@ def prepare_socp_FEEDFORWARD(
 
     q_sym = cas.MX.sym("q", n_q, 1)
     qdot_sym = cas.MX.sym("qdot", n_q, 1)
-    ref_fun = cas.Function("ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym)])
+    ref_fun = cas.Function(
+        "ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym)]
+    )
 
     if ref_last is not None:
         u_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     else:
-        ref_init = np.zeros((n_ref, n_shooting+1))
+        ref_init = np.zeros((n_ref, n_shooting + 1))
         for i in range(n_shooting):
             q_roots_this_time = q_roots_init[:n_root, i].T
             q_joints_this_time = q_joints_init[:n_joints, i].T
             qdot_roots_this_time = qdot_roots_init[:n_root, i].T
             qdot_joints_this_time = qdot_joints_init[:n_joints, i].T
             for j in range(1, nb_random):
-                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j*n_root:(j+1)*n_root, i].T))
-                q_joints_this_time = np.vstack((q_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
-                qdot_roots_this_time = np.vstack((qdot_roots_this_time, qdot_roots_init[j*n_root:(j+1)*n_root, i].T))
-                qdot_joints_this_time = np.vstack((qdot_joints_this_time, q_joints_init[j*n_joints:(j+1)*n_joints, i].T))
+                q_roots_this_time = np.vstack((q_roots_this_time, q_roots_init[j * n_root : (j + 1) * n_root, i].T))
+                q_joints_this_time = np.vstack(
+                    (q_joints_this_time, q_joints_init[j * n_joints : (j + 1) * n_joints, i].T)
+                )
+                qdot_roots_this_time = np.vstack(
+                    (qdot_roots_this_time, qdot_roots_init[j * n_root : (j + 1) * n_root, i].T)
+                )
+                qdot_joints_this_time = np.vstack(
+                    (qdot_joints_this_time, q_joints_init[j * n_joints : (j + 1) * n_joints, i].T)
+                )
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
             ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))

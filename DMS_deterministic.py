@@ -195,4 +195,3 @@ def prepare_ocp(
         ode_solver=OdeSolver.RK4(),
         n_threads=32,
     )
-

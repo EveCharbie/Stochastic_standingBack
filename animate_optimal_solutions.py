@@ -121,8 +121,11 @@ def SOCP_dynamics(nb_random, q, qdot, tau, k_matrix, ref, motor_noise_numerical,
         tau_this_time += motor_noise_numerical[:, i_random]
 
         # Feedback
-        tau_this_time += k_matrix @ (ref - DMS_sensory_reference(ocp.nlp[0].model, nb_root, q_this_time,
-                                                                 qdot_this_time) + sensory_noise_numerical[:, i_random])
+        tau_this_time += k_matrix @ (
+            ref
+            - DMS_sensory_reference(ocp.nlp[0].model, nb_root, q_this_time, qdot_this_time)
+            + sensory_noise_numerical[:, i_random]
+        )
         tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
         dxdt[nb_q:, i_random] = ocp.nlp[0].model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
@@ -138,12 +141,45 @@ def RK4(q, qdot, tau, dt, k_matrix, ref, motor_noise_numerical, sensory_noise_nu
     states[nb_q:, :, 0] = qdot
     h = dt / 5
     for i in range(1, 6):
-        k1 = dyn_fun(states[:nb_q, :, i - 1],                        states[nb_q:, :, i - 1],                        tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k2 = dyn_fun(states[:nb_q, :, i - 1] + h / 2 * k1[:nb_q, :], states[nb_q:, :, i - 1] + h / 2 * k1[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k3 = dyn_fun(states[:nb_q, :, i - 1] + h / 2 * k2[:nb_q, :], states[nb_q:, :, i - 1] + h / 2 * k2[nb_q:, :], tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
-        k4 = dyn_fun(states[:nb_q, :, i - 1] + h * k3[:nb_q, :],     states[nb_q:, :, i - 1] + h * k3[nb_q:, :],     tau, k_matrix, ref, motor_noise_numerical, sensory_noise_numerical)
+        k1 = dyn_fun(
+            states[:nb_q, :, i - 1],
+            states[nb_q:, :, i - 1],
+            tau,
+            k_matrix,
+            ref,
+            motor_noise_numerical,
+            sensory_noise_numerical,
+        )
+        k2 = dyn_fun(
+            states[:nb_q, :, i - 1] + h / 2 * k1[:nb_q, :],
+            states[nb_q:, :, i - 1] + h / 2 * k1[nb_q:, :],
+            tau,
+            k_matrix,
+            ref,
+            motor_noise_numerical,
+            sensory_noise_numerical,
+        )
+        k3 = dyn_fun(
+            states[:nb_q, :, i - 1] + h / 2 * k2[:nb_q, :],
+            states[nb_q:, :, i - 1] + h / 2 * k2[nb_q:, :],
+            tau,
+            k_matrix,
+            ref,
+            motor_noise_numerical,
+            sensory_noise_numerical,
+        )
+        k4 = dyn_fun(
+            states[:nb_q, :, i - 1] + h * k3[:nb_q, :],
+            states[nb_q:, :, i - 1] + h * k3[nb_q:, :],
+            tau,
+            k_matrix,
+            ref,
+            motor_noise_numerical,
+            sensory_noise_numerical,
+        )
         states[:, :, i] = states[:, :, i - 1] + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return states[:, :, -1]
+
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -156,7 +192,7 @@ polynomial_degree = 3
 n_q = 7
 n_root = 3
 n_joints = n_q - n_root
-n_ref = 2*n_joints + 2
+n_ref = 2 * n_joints + 2
 
 dt = 0.05
 final_time = 0.8
@@ -215,7 +251,7 @@ _, _, socp = prepare_socp(
     k_last=None,
     ref_last=None,
     nb_random=nb_random,
-    )
+)
 
 plt.figure()
 plt.plot(tau_joints_last.T)
@@ -255,8 +291,12 @@ ref_sym = cas.MX.sym("Ref", n_ref)
 motor_noise_sym = cas.MX.sym("Motor_noise", n_joints, nb_random)
 sensory_noise_sym = cas.MX.sym("sensory_noise", n_ref, nb_random)
 
-dyn_fun_out = SOCP_dynamics(nb_random, q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym, socp)
-dyn_fun = cas.Function("dynamics", [q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym], [dyn_fun_out])
+dyn_fun_out = SOCP_dynamics(
+    nb_random, q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym, socp
+)
+dyn_fun = cas.Function(
+    "dynamics", [q_sym, qdot_sym, tau_sym, k_matrix_sym, ref_sym, motor_noise_sym, sensory_noise_sym], [dyn_fun_out]
+)
 
 
 time_vector = np.linspace(0, float(time_last), n_shooting + 1)
@@ -268,14 +308,30 @@ qdot_last = np.vstack((np.array(qdot_roots_last[:n_root]), np.array(qdot_joints_
 for i_dof in range(n_q):
     axs[i_dof].plot(time_vector, q_last[i_dof, :, 0], color="k", label="Noised states (optim variables)")
 for i_random in range(1, nb_random):
-    q_last = np.concatenate((q_last,
-                             np.vstack((np.array(q_roots_last[i_random*n_root:(i_random+1)*n_root]),
-                                        np.array(q_joints_last[i_random*n_joints:(i_random+1)*n_joints])))[:, :, np.newaxis]),
-                            axis=2)
-    qdot_last = np.concatenate((qdot_last,
-                                 np.vstack((np.array(qdot_roots_last[i_random*n_root:(i_random+1)*n_root]),
-                                            np.array(qdot_joints_last[i_random*n_joints:(i_random+1)*n_joints])))[:, :, np.newaxis]),
-                                axis=2)
+    q_last = np.concatenate(
+        (
+            q_last,
+            np.vstack(
+                (
+                    np.array(q_roots_last[i_random * n_root : (i_random + 1) * n_root]),
+                    np.array(q_joints_last[i_random * n_joints : (i_random + 1) * n_joints]),
+                )
+            )[:, :, np.newaxis],
+        ),
+        axis=2,
+    )
+    qdot_last = np.concatenate(
+        (
+            qdot_last,
+            np.vstack(
+                (
+                    np.array(qdot_roots_last[i_random * n_root : (i_random + 1) * n_root]),
+                    np.array(qdot_joints_last[i_random * n_joints : (i_random + 1) * n_joints]),
+                )
+            )[:, :, np.newaxis],
+        ),
+        axis=2,
+    )
     for i_dof in range(n_q):
         axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
 q_mean_last = np.mean(q_last, axis=2)
@@ -289,7 +345,9 @@ for i_dof in range(n_q):
     axs[i_dof].set_title(f"DOF {i_dof}")
 ref_mean_last = np.zeros((n_ref, n_shooting))
 for i_node in range(n_shooting):
-    ref_mean_last[:, i_node] = np.array(DMS_sensory_reference_func(q_mean_last[:, i_node], qdot_mean_last[:, i_node])).reshape(-1)
+    ref_mean_last[:, i_node] = np.array(
+        DMS_sensory_reference_func(q_mean_last[:, i_node], qdot_mean_last[:, i_node])
+    ).reshape(-1)
 if not is_label_ref_mean_set:
     axs[3].plot(time_vector[:-1], ref_mean_last[0, :], color="tab:blue", label="Mean reference")
     axs[3].plot(time_vector[:-1], ref_last[0, :], "--", color="tab:orange", label="Reference (optim variables)")
@@ -338,29 +396,33 @@ qdot_multiple_shooting[:, 0, :] = qdot_last[:, 0, :]
 
 for i_shooting in range(n_shooting):
     k_matrix = StochasticBioModel.reshape_to_matrix(k_last[:, i_shooting], socp.nlp[0].model.matrix_shape_k)
-    states_integrated = RK4(q_integrated[:, i_shooting, :],
-                            qdot_integrated[:, i_shooting, :],
-                            tau_joints_last[:, i_shooting],
-                            dt_last,
-                            k_matrix,
-                            ref_last[:, i_shooting],
-                            motor_noise_numerical[:, i_shooting, :],
-                            sensory_noise_numerical[:, i_shooting, :],
-                            nb_random,
-                            dyn_fun)
+    states_integrated = RK4(
+        q_integrated[:, i_shooting, :],
+        qdot_integrated[:, i_shooting, :],
+        tau_joints_last[:, i_shooting],
+        dt_last,
+        k_matrix,
+        ref_last[:, i_shooting],
+        motor_noise_numerical[:, i_shooting, :],
+        sensory_noise_numerical[:, i_shooting, :],
+        nb_random,
+        dyn_fun,
+    )
     q_integrated[:, i_shooting + 1, :] = states_integrated[:n_q, :]
     qdot_integrated[:, i_shooting + 1, :] = states_integrated[n_q:, :]
 
-    states_integrated_multiple = RK4(q_last[:, i_shooting, :],
-                            qdot_last[:, i_shooting, :],
-                            tau_joints_last[:, i_shooting],
-                            dt_last,
-                            k_matrix,
-                            ref_last[:, i_shooting],
-                            motor_noise_numerical[:, i_shooting, :],
-                            sensory_noise_numerical[:, i_shooting, :],
-                            nb_random,
-                            dyn_fun)
+    states_integrated_multiple = RK4(
+        q_last[:, i_shooting, :],
+        qdot_last[:, i_shooting, :],
+        tau_joints_last[:, i_shooting],
+        dt_last,
+        k_matrix,
+        ref_last[:, i_shooting],
+        motor_noise_numerical[:, i_shooting, :],
+        sensory_noise_numerical[:, i_shooting, :],
+        nb_random,
+        dyn_fun,
+    )
     q_multiple_shooting[:, i_shooting + 1, :] = states_integrated_multiple[:n_q, :]
     qdot_multiple_shooting[:, i_shooting + 1, :] = states_integrated_multiple[n_q:, :]
 
@@ -378,10 +440,12 @@ for i_random in range(nb_random):
             axs[i_dof].plot(time_vector, q_last[i_dof, :, i_random], color="k")
             # axs[i_dof].plot(time_vector, q_integrated[i_dof, :, i_random], "--", color="r")
         for i_shooting in range(n_shooting):
-            axs[i_dof].plot(np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
-                            np.array([q_last[i_dof, i_shooting, i_random],
-                                      q_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
-                            "--", color="b")
+            axs[i_dof].plot(
+                np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
+                np.array([q_last[i_dof, i_shooting, i_random], q_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
+                "--",
+                color="b",
+            )
 axs[0].legend()
 
 plt.figure()

@@ -1,4 +1,3 @@
-
 import pickle
 import casadi as cas
 import numpy as np
@@ -63,9 +62,7 @@ solver.set_maximum_iterations(10000)  # 32
 save_path = f"results/{model_name}_ocp_DMS.pkl"
 
 if RUN_OCP:
-    ocp = prepare_ocp(
-        biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting
-    )
+    ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting)
     ocp.add_plot_penalty()
     # ocp.add_plot_check_conditioning()
     ocp.add_plot_ipopt_outputs()
@@ -124,11 +121,7 @@ print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
 print_tol = "{:1.1e}".format(tol).replace(".", "p")
-save_path = (
-    f"results/{model_name}_socp_DMS_{print_motor_noise_std}_"
-    f"{print_wPq_std}_"
-    f"{print_wPqdot_std}.pkl"
-)
+save_path = f"results/{model_name}_socp_DMS_{print_motor_noise_std}_" f"{print_wPq_std}_" f"{print_wPqdot_std}.pkl"
 
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 sensory_noise_magnitude = cas.DM(

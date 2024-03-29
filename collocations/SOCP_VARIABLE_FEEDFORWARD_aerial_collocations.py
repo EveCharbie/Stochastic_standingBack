@@ -291,7 +291,6 @@ def prepare_socp_SOCP_VARIABLE_FEEDFORWARD(
     a_scaling.add("m", scaling=[1] * n_m)
     a_scaling.add("cov", scaling=[1e-5] * n_cov)
 
-
     return StochasticOptimalControlProgram(
         bio_model,
         dynamics,
