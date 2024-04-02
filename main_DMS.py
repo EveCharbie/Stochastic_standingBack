@@ -19,7 +19,7 @@ RUN_SOCP_FEEDFORWARD = False
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 
-nb_random = 3
+nb_random = 15
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -42,7 +42,7 @@ n_root = 3
 #                )
 # b.exec()
 
-dt = 0.025
+dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
 tol = 1e-6

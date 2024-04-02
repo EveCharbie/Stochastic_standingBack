@@ -129,7 +129,7 @@ def custom_dynamics(
     return DynamicsEvaluation(dxdt=dxdt, defects=None)
 
 
-def custom_configure(ocp, nlp, dynamics_constants_used_at_each_nodes):
+def custom_configure(ocp, nlp):
 
     nb_root = nlp.model.nb_root
     nb_q = nlp.model.nb_q
