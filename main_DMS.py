@@ -12,14 +12,14 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = False  # OK 1e-8
-RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
+RUN_OCP = True  # OK 1e-8
+RUN_SOCP = False  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False
-RUN_SOCP_VARIABLE_FEEDFORWARD = False
+RUN_SOCP_VARIABLE_FEEDFORWARD = True
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 
-nb_random = 3
+nb_random = 15
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -42,10 +42,10 @@ n_root = 3
 #                )
 # b.exec()
 
-dt = 0.025
+dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-6
+tol = 1e-3
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
@@ -204,8 +204,8 @@ if RUN_SOCP:
         pickle.dump(data, file)
 
     with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
-        del sol_ocp.ocp
-        pickle.dump(sol_ocp, file)
+        del sol_socp.ocp
+        pickle.dump(sol_socp, file)
 
     print(save_path)
     # import bioviz
@@ -317,8 +317,8 @@ if RUN_SOCP_VARIABLE:
         pickle.dump(data, file)
 
     with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
-        del sol_ocp.ocp
-        pickle.dump(sol_ocp, file)
+        del sol_socp.ocp
+        pickle.dump(sol_socp, file)
 
     print(save_path)
     # import bioviz
@@ -440,8 +440,8 @@ if RUN_SOCP_FEEDFORWARD:
         pickle.dump(data, file)
 
     with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
-        del sol_ocp.ocp
-        pickle.dump(sol_ocp, file)
+        del sol_socp.ocp
+        pickle.dump(sol_socp, file)
 
     print(save_path)
     # import bioviz
@@ -460,7 +460,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         np.array(
             [
                 motor_noise_std**2 / dt,
-                motor_noise_std**2 / dt,
+                0.0,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
                 motor_noise_std**2 / dt,
@@ -474,9 +474,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
                 wPq_std**2 / dt,
-                wPq_std**2 / dt,
                 wPqdot_std**2 / dt,  # Proprioceptive velocity
-                wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
                 wPqdot_std**2 / dt,
@@ -501,10 +499,10 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     qdot_joints_last = np.vstack(
-        (qdot_joints_last[0, :], np.zeros((1, qdot_joints_last.shape[1])), qdot_joints_last[1:, :])
+        (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
     )
     tau_joints_last = np.vstack(
-        (tau_joints_last[0, :], np.zeros((1, tau_joints_last.shape[1])), tau_joints_last[1:, :])
+        (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
     )
 
     motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE_FEEDFORWARD(
@@ -565,8 +563,8 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         pickle.dump(data, file)
 
     with open(save_path.replace(".pkl", f"_sol.pkl"), "wb") as file:
-        del sol_ocp.ocp
-        pickle.dump(sol_ocp, file)
+        del sol_socp.ocp
+        pickle.dump(sol_socp, file)
 
     print(save_path)
     # import bioviz
