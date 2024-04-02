@@ -535,6 +535,37 @@ def DMS_sensory_reference_no_eyes(model, nb_roots, q_this_time, qdot_this_time):
     return cas.vertcat(proprioceptive_feedback, pelvis_orientation, somersault_velocity)
 
 
+def DMS_fb_noised_sensory_input_VARIABLE_no_eyes(model, q_roots, q_joints, qdot_roots, qdot_joints, sensory_noise):
+    nb_roots = model.nb_root
+    nb_joints = model.nb_q - nb_roots
+    q = cas.vertcat(q_roots, q_joints)
+    qdot = cas.vertcat(qdot_roots, qdot_joints)
+
+    sensory_input = model.sensory_reference(model, nb_roots, q, qdot)
+
+    proprioceptive_feedback = sensory_input[: 2 * (nb_joints - 1)]
+    vestibular_feedback = sensory_input[2 * (nb_joints - 1) :]
+
+    proprioceptive_noise = cas.MX.ones(2 * (nb_joints - 1), 1) * sensory_noise[: 2 * (nb_joints - 1)]
+    noised_propriceptive_feedback = proprioceptive_feedback + proprioceptive_noise
+
+    vestibular_noise = cas.MX.zeros(2, 1)
+    head_idx = model.segment_index("Head")
+    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    # head_velocity = qdot_roots[2] + qdot_joints[0]  # pelvis + head rotations
+    for i in range(2):
+        vestibular_noise[i] = gaussian_function(
+            x=head_velocity,
+            sigma=10,
+            offset=sensory_noise[2 * (nb_joints - 1) + i],
+            scaling_factor=10,
+            flip=True,
+        )
+    noised_vestibular_feedback = vestibular_feedback + vestibular_noise
+
+    return cas.vertcat(noised_propriceptive_feedback, noised_vestibular_feedback)
+
+
 def toe_marker_on_floor(controller: PenaltyController) -> cas.MX:
 
     nb_root = controller.model.nb_root
@@ -922,7 +953,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         # Feedback
         tau_this_time += k_matrix_fb @ (
             fb_ref
-            - DMS_fb_noised_sensory_input_VARIABLE(
+            - DMS_fb_noised_sensory_input_VARIABLE_no_eyes(
                 controller.model,
                 q_this_time[:nb_root],
                 q_this_time[nb_root:],
