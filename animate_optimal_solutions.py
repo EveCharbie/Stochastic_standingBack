@@ -197,16 +197,12 @@ n_ref = 2 * n_joints + 2
 dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-3
-nb_random = 3
+tol = 1e-6
+nb_random = 15
 
-# --- Run the SOCP collocation --- #
-noise_factor = 1.0  # 0.05, 0.1, 0.5,
-
-# TODO: How do we choose the values?
-motor_noise_std = 0.05 * noise_factor
-wPq_std = 0.001 * noise_factor
-wPqdot_std = 0.003 * noise_factor
+motor_noise_std = 0.05
+wPq_std = 0.001
+wPqdot_std = 0.003
 
 print_motor_noise_std = "{:.1e}".format(motor_noise_std)
 print_wPq_std = "{:.1e}".format(wPq_std)
@@ -258,7 +254,7 @@ plt.plot(tau_joints_last.T)
 plt.show()
 
 
-path_to_results = "results/good/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_3random_CVG_1.0e-06.pkl"
+path_to_results = "results/good/Model2D_7Dof_0C_3M_socp_DMS_5p0e-02_1p0e-03_3p0e-03_DMS_15random_CVG_1p0e-06.pkl"
 with open(path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_last = data["q_roots_sol"]
@@ -365,18 +361,18 @@ axs[0].legend()
 axs[3].legend()
 plt.show()
 
-# import bioviz
-# b = bioviz.Viz(biorbd_model_path_with_mesh,
-#                background_color=(1, 1, 1),
-#                show_local_ref_frame=False,
-#                show_markers=False,
-#                show_segments_center_of_mass=False,
-#                show_global_center_of_mass=False,
-#                show_global_ref_frame=False,
-#                show_gravity_vector=False,
-#                )
-# b.load_movement(q_mean_last)
-# b.exec()
+import bioviz
+b = bioviz.Viz(biorbd_model_path_with_mesh,
+               background_color=(1, 1, 1),
+               show_local_ref_frame=False,
+               show_markers=False,
+               show_segments_center_of_mass=False,
+               show_global_center_of_mass=False,
+               show_global_ref_frame=False,
+               show_gravity_vector=False,
+               )
+b.load_movement(q_mean_last)
+b.exec()
 
 
 # Reintegrate
@@ -403,8 +399,8 @@ for i_shooting in range(n_shooting):
         dt_last,
         k_matrix,
         ref_last[:, i_shooting],
-        motor_noise_numerical[:, i_shooting, :],
-        sensory_noise_numerical[:, i_shooting, :],
+        motor_noise_numerical[:, :, i_shooting],
+        sensory_noise_numerical[:, :, i_shooting],
         nb_random,
         dyn_fun,
     )
@@ -418,8 +414,8 @@ for i_shooting in range(n_shooting):
         dt_last,
         k_matrix,
         ref_last[:, i_shooting],
-        motor_noise_numerical[:, i_shooting, :],
-        sensory_noise_numerical[:, i_shooting, :],
+        motor_noise_numerical[:, :, i_shooting],
+        sensory_noise_numerical[:, :, i_shooting],
         nb_random,
         dyn_fun,
     )
