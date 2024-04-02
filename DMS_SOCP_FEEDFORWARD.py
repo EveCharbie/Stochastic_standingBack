@@ -337,8 +337,6 @@ def prepare_socp_FEEDFORWARD(
     objective_functions = ObjectiveList()
     objective_functions.add(
         minimize_nominal_and_feedback_efforts_FEEDFORWARD,
-        motor_noise_numerical=motor_noise_numerical,
-        sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
@@ -346,8 +344,6 @@ def prepare_socp_FEEDFORWARD(
     )
     objective_functions.add(
         minimize_nominal_and_feedback_efforts_FEEDFORWARD,
-        motor_noise_numerical=motor_noise_numerical,
-        sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
