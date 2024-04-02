@@ -12,8 +12,8 @@ from utils import (
     minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD,
     toe_marker_on_floor,
     ref_equals_mean_sensory,
-    DMS_sensory_reference,
-    DMS_fb_noised_sensory_input_VARIABLE,
+    DMS_sensory_reference_no_eyes,
+    DMS_fb_noised_sensory_input_VARIABLE_no_eyes,
     motor_acuity,
     DMS_ff_noised_sensory_input,
 )
@@ -115,7 +115,7 @@ def custom_dynamics(
         # Feedback
         tau_this_time += k_fb @ (
             fb_ref
-            - DMS_fb_noised_sensory_input_VARIABLE(
+            - DMS_fb_noised_sensory_input_VARIABLE_no_eyes(
                 nlp.model,
                 q_this_time[:nb_root],
                 q_this_time[nb_root:],
@@ -290,16 +290,17 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     n_joints = n_q - n_root
     friction_coefficients = cas.DM.zeros(n_joints, n_joints)
     for i in range(n_joints):
-        friction_coefficients[i, i] = 0.1
+        if i != 1:  # No friction on the eyes
+            friction_coefficients[i, i] = 0.1
 
     bio_model = StochasticBiorbdModel(
         biorbd_model_path,
         sensory_noise_magnitude=sensory_noise_magnitude,
         motor_noise_magnitude=motor_noise_magnitude,
-        sensory_reference=DMS_sensory_reference,
+        sensory_reference=DMS_sensory_reference_no_eyes,
         compute_torques_from_noise_and_feedback=None,
-        n_references=2 * (n_joints + 1) + 1,
-        n_feedbacks=2 * (n_joints + 1),
+        n_references=2 * n_joints + 1,
+        n_feedbacks=2 * n_joints,
         n_noised_states=n_q * 2,
         n_noised_controls=n_joints,
         friction_coefficients=friction_coefficients,
@@ -320,13 +321,13 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         "final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2 * np.pi], interpolation=InterpolationType.CONSTANT
     )
     parameter_init = InitialGuessList()
-    parameter_init["final_somersault"] = 2 * np.pi
+    parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
 
     # Prepare the noises
     # TODO: the sensory noise on the ff is used both for visual and vestibular, should be separated
     np.random.seed(0)
     motor_noise_numerical = np.zeros((n_joints, nb_random, n_shooting + 1))
-    sensory_noise_numerical = np.zeros((2 * (n_joints + 1) + 1, nb_random, n_shooting + 1))
+    sensory_noise_numerical = np.zeros((2 * n_joints + 1, nb_random, n_shooting + 1))
     for i_random in range(nb_random):
         for i_shooting in range(n_shooting):
             motor_noise_numerical[:, i_random, i_shooting] = np.random.normal(
@@ -336,16 +337,14 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
             )
             sensory_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
-                scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1) + 1,)),
-                size=2 * (n_joints + 1) + 1,
+                scale=np.reshape(np.array(sensory_noise_magnitude), (2 * n_joints + 1,)),
+                size=2 * n_joints + 1,
             )
 
     # Objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
         minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD,
-        motor_noise_numerical=motor_noise_numerical,
-        sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
@@ -353,8 +352,6 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     )
     objective_functions.add(
         minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD,
-        motor_noise_numerical=motor_noise_numerical,
-        sensory_noise_numerical=sensory_noise_numerical,
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
@@ -518,7 +515,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         u_init.add("tau_joints", initial_guess=tau_joints_last, interpolation=InterpolationType.EACH_FRAME)
 
     # The stochastic variables will be put in the controls for simplicity
-    n_ref = 2 * (n_joints + 1)  # ref(10)
+    n_ref = 2 * n_joints  # ref(10)
     n_k = n_joints * (n_ref + 1)  # K(5x11)
 
     if k_last is not None:
