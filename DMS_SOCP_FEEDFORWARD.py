@@ -328,9 +328,9 @@ def prepare_socp_FEEDFORWARD(
             sensory_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
                 scale=np.reshape(
-                    np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_shooting, i_random].shape[0],)
+                    np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_random, i_shooting].shape[0],)
                 ),
-                size=sensory_noise_numerical[:, i_shooting, i_random].shape[0],
+                size=sensory_noise_numerical[:, i_random, i_shooting].shape[0],
             )
 
     # Objective functions
