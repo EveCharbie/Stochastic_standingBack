@@ -12,11 +12,11 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = False  # OK 1e-8
+RUN_OCP = True  # OK 1e-8
 RUN_SOCP = False  # OK 1e-6: 3 models, 1e-3: 15 models
-RUN_SOCP_VARIABLE = True  # OK 1e-3
-RUN_SOCP_FEEDFORWARD = False
-RUN_SOCP_VARIABLE_FEEDFORWARD = False
+RUN_SOCP_VARIABLE = False  # OK 1e-3
+RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
+RUN_SOCP_VARIABLE_FEEDFORWARD = False  # OK 1e-3
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 
 nb_random = 15
@@ -40,12 +40,18 @@ n_root = 3
 #                show_global_ref_frame=False,
 #                show_gravity_vector=False,
 #                )
+# Q = np.zeros((8, 10))
+# for i in range(5):
+#     Q[:, i] = np.array([-0.0346, 0.1207, 0.2255, 0.0, 0.0045, 3.1, -0.1787, 0.0])
+# for i in range(5, 10):
+#     Q[:, i] = np.array([-0.0346, 0.1207, 5.8292, -0.1801, -0.2954, 0.5377, 0.8506, -0.6856])
+# b.load_movement(Q)
 # b.exec()
 
-dt = 0.05
+dt = 0.025
 final_time = 0.8
 n_shooting = int(final_time / dt)
-tol = 1e-3
+tol = 1e-6
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
@@ -65,7 +71,7 @@ if RUN_OCP:
     ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting)
     ocp.add_plot_penalty()
     # ocp.add_plot_check_conditioning()
-    ocp.add_plot_ipopt_outputs()
+    # ocp.add_plot_ipopt_outputs()
 
     solver.set_tol(1e-8)
     sol_ocp = ocp.solve(solver=solver)
@@ -121,7 +127,7 @@ print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
 print_tol = "{:1.1e}".format(tol).replace(".", "p")
-save_path = f"results/{model_name}_socp_DMS_{print_motor_noise_std}_" f"{print_wPq_std}_" f"{print_wPqdot_std}.pkl"
+save_path = f"results/{model_name}_socp_DMS_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 sensory_noise_magnitude = cas.DM(
@@ -215,9 +221,8 @@ if RUN_SOCP:
 
 
 # --- Run the SOCP+ (variable noise) --- #
-save_path = save_path.replace(".pkl", "_VARIABLE.pkl")
-
 if RUN_SOCP_VARIABLE:
+    save_path = save_path.replace(".pkl", "_VARIABLE.pkl")
 
     motor_noise_magnitude = cas.DM(
         np.array(
@@ -328,10 +333,10 @@ if RUN_SOCP_VARIABLE:
 
 
 # --- Run the SOCP+ (feedforward) --- #
-save_path = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
 n_q += 1
 
 if RUN_SOCP_FEEDFORWARD:
+    save_path = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
 
     motor_noise_magnitude = cas.DM(
         np.array(

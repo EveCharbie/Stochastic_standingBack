@@ -174,3 +174,5 @@ videos/
 .DS_Store
 
 to_be_removed/
+
+models/cachette/

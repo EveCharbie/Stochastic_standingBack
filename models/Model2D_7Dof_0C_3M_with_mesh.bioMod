@@ -52,7 +52,6 @@ segment	Head
 	meshfile mesh/head.stl
 endsegment
 
-
 segment	Arm
 	parent	Thorax
 	RTinMatrix	1
@@ -148,7 +147,7 @@ segment	Leg
 		0 0 0 1
 	rotations	 x
 	rangesQ	
-		-2.3 0.02
+		-2.3 -0.02
 	rangesQdot	
 		-100 100
 	mass	8.36
