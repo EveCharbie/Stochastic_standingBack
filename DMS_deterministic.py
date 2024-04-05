@@ -107,8 +107,8 @@ def prepare_ocp(
     qdot_joints_max[:, 0] = 0
     qdot_roots_min[1, 0] = 2
     qdot_roots_max[1, 0] = 2
-    qdot_roots_min[2, 0] = 2.0 * np.pi
-    qdot_roots_max[2, 0] = 2.0 * np.pi
+    qdot_roots_min[2, 0] = 2.1 * np.pi
+    qdot_roots_max[2, 0] = 2.1 * np.pi
 
     x_bounds.add(
         "q_roots",
