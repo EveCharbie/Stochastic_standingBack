@@ -320,7 +320,7 @@ def prepare_socp_VARIABLE(
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
-        quadratic=False,  # Already squared in the function
+        quadratic=True,
         derivative=True,
     )
     objective_functions.add(
