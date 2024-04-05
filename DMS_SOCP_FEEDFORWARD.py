@@ -328,9 +328,9 @@ def prepare_socp_FEEDFORWARD(
             sensory_noise_numerical[:, i_random, i_shooting] = np.random.normal(
                 loc=np.zeros(sensory_noise_magnitude.shape[0]),
                 scale=np.reshape(
-                    np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_shooting, i_random].shape[0],)
+                    np.array(sensory_noise_magnitude), (sensory_noise_numerical[:, i_random, i_shooting].shape[0],)
                 ),
-                size=sensory_noise_numerical[:, i_shooting, i_random].shape[0],
+                size=sensory_noise_numerical[:, i_random, i_shooting].shape[0],
             )
 
     # Objective functions
@@ -347,7 +347,7 @@ def prepare_socp_FEEDFORWARD(
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
-        quadratic=False,  # Already squared in the function
+        quadratic=True,
         derivative=True,
     )
     objective_functions.add(
@@ -409,7 +409,7 @@ def prepare_socp_FEEDFORWARD(
     # initial variability
     initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     noised_states = np.random.multivariate_normal(
-        np.hstack((pose_at_first_node, np.array([0, 2, 2.0 * np.pi, 0, 0, 0, 0, 0]))), initial_cov, nb_random
+        np.hstack((pose_at_first_node, np.array([0, 2, 2.1 * np.pi, 0, 0, 0, 0, 0]))), initial_cov, nb_random
     ).T
 
     for i in range(nb_random):

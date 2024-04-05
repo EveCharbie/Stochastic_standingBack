@@ -12,7 +12,7 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = False  # OK 1e-8
+RUN_OCP = True  # OK 1e-8
 RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
@@ -49,7 +49,7 @@ n_root = 3
 # b.exec()
 
 dt = 0.025
-final_time = 0.8
+final_time = 0.5
 n_shooting = int(final_time / dt)
 tol = 1e-6
 
@@ -166,8 +166,8 @@ if RUN_SOCP:
         ref_last=ref_last,
         nb_random=nb_random,
     )
-    # socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
     # socp.check_conditioning()
 
     solver.set_tol(tol)

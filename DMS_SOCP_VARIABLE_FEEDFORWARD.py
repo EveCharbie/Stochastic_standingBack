@@ -355,7 +355,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=1,
-        quadratic=False,  # Already squared in the function
+        quadratic=True,
         derivative=True,
     )
     objective_functions.add(
@@ -417,7 +417,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     # initial variability
     initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
     noised_states = np.random.multivariate_normal(
-        np.hstack((pose_at_first_node, np.array([0, 2, 2.0 * np.pi, 0, 0, 0, 0, 0]))), initial_cov, nb_random
+        np.hstack((pose_at_first_node, np.array([0, 2, 2.1 * np.pi, 0, 0, 0, 0, 0]))), initial_cov, nb_random
     ).T
 
     for i in range(nb_random):
