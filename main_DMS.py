@@ -12,8 +12,8 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = True  # OK 1e-8
-RUN_SOCP = False  # OK 1e-6: 3 models, 1e-3: 15 models
+RUN_OCP = False  # OK 1e-8
+RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
 RUN_SOCP_VARIABLE_FEEDFORWARD = False  # OK 1e-3
