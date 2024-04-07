@@ -21,7 +21,7 @@ segment	Pelvis
 		0.0	0.0	0.1123
 	com	0.0	0.0	0.1044
 	meshfile	mesh/pelvis.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Thorax
@@ -34,7 +34,7 @@ segment	Thorax
 		0.0	0.0	0.2343
 	com	0.0	0.0	0.1767
 	meshfile	mesh/thorax.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Head
@@ -52,26 +52,7 @@ segment	Head
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
-	meshcolor 0.02 0.69 .94
-endsegment
-
-segment Eyes
-	parent Head
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Arm
@@ -94,7 +75,7 @@ segment	Arm
 		0.0	0.0	0.005996554197399041
 	com	0.0	0.0	-0.1427
 	meshfile mesh/arm.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Forearm
@@ -112,7 +93,7 @@ segment	Forearm
 		0.0	0.0	0.0019576149660600886
 	com	0.0	0.0	-0.1264
 	meshfile mesh/fore_arm.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Hand
@@ -131,7 +112,7 @@ segment	Hand
 	com	0.01927061	-0.007717575	-0.051481325
 	meshfile mesh/hand.stl
 	meshrt -0.5 0 0 xyz 0 0 0
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 marker	 CENTER_HAND
@@ -160,7 +141,7 @@ segment	Thigh
 		0.0	0.0	0.0674
 	com	0.0	0.0	-0.2017
 	meshfile mesh/thigh.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Leg
@@ -183,7 +164,7 @@ segment	Leg
 		0.0	0.0	0.0122
 	com	0.0	0.0	-0.2026
 	meshfile mesh/leg_left.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 segment	Foot
@@ -201,7 +182,7 @@ segment	Foot
 		0.0	0.0	0.0176
 	com	0.0	0.0	-0.0757
 	meshfile mesh/foot.stl
-	meshcolor 0.02 0.69 .94
+	meshcolor 0.67 0.15 0.58
 endsegment
 
 marker	 BELOW_KNEE
@@ -223,15 +204,5 @@ endmarker
 marker	Foot_Toe
 	parent	Foot
 	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-marker eyes_vect_start
-	parent Eyes
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end
-	parent Eyes
-	position 0 -1 0
 endmarker
 
