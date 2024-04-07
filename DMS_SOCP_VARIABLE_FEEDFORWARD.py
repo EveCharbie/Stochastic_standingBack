@@ -2,6 +2,8 @@
 ...
 """
 
+import sys
+
 import biorbd_casadi as biorbd
 import casadi as cas
 import numpy as np
@@ -17,8 +19,6 @@ from utils import (
     motor_acuity,
     DMS_ff_noised_sensory_input,
 )
-
-import sys
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
@@ -50,7 +50,7 @@ def custom_dynamics(
     controls,
     parameters,
     algebraic_states,
-    dynamics_constants,
+    numerical_timeseries,
     nlp,
 ) -> DynamicsEvaluation:
 
@@ -74,19 +74,19 @@ def custom_dynamics(
     for i in range(nb_random):
         if motor_noise == None:
             motor_noise = DynamicsFunctions.get(
-                nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants
+                nlp.numerical_timeseries[f"motor_noise_numerical_{i}"], numerical_timeseries
             )
             sensory_noise = DynamicsFunctions.get(
-                nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants
+                nlp.numerical_timeseries[f"sensory_noise_numerical_{i}"], numerical_timeseries
             )
         else:
             motor_noise = cas.horzcat(
                 motor_noise,
-                DynamicsFunctions.get(nlp.dynamics_constants[f"motor_noise_numerical_{i}"], dynamics_constants),
+                DynamicsFunctions.get(nlp.numerical_timeseries[f"motor_noise_numerical_{i}"], numerical_timeseries),
             )
             sensory_noise = cas.horzcat(
                 sensory_noise,
-                DynamicsFunctions.get(nlp.dynamics_constants[f"sensory_noise_numerical_{i}"], dynamics_constants),
+                DynamicsFunctions.get(nlp.numerical_timeseries[f"sensory_noise_numerical_{i}"], numerical_timeseries),
             )
 
     k_fb = k_matrix[:, : nlp.model.n_feedbacks]
@@ -145,7 +145,7 @@ def custom_dynamics(
     return DynamicsEvaluation(dxdt=dxdt, defects=None)
 
 
-def custom_configure(ocp, nlp, dynamics_constants_used_at_each_nodes):
+def custom_configure(ocp, nlp, numerical_data_timeseries):
 
     nb_root = nlp.model.nb_root
     nb_q = nlp.model.nb_q
@@ -382,7 +382,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         custom_configure,
         dynamic_function=custom_dynamics,
         phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
-        dynamics_constants_used_at_each_nodes={
+        numerical_data_timeseries={
             "motor_noise_numerical": motor_noise_numerical,
             "sensory_noise_numerical": sensory_noise_numerical,
         },

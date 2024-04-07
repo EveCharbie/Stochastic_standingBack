@@ -77,11 +77,11 @@ def minimize_nominal_and_feedback_efforts(
     sensory_noise = None
     for i in range(controller.model.nb_random):
         if motor_noise is None:
-            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
-            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+            motor_noise = controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
-            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
+            motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -349,11 +349,11 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
     sensory_noise = None
     for i in range(controller.model.nb_random):
         if motor_noise is None:
-            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
-            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+            motor_noise = controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
-            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
+            motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -395,7 +395,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
         controller.controls["tau_joints"],
         controller.controls["k"],
         controller.controls["ref"],
-        controller.dynamics_constants,
+        controller.numerical_timeseries,
     )
 
     return all_tau_cx
@@ -463,11 +463,11 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
     sensory_noise = None
     for i in range(controller.model.nb_random):
         if motor_noise is None:
-            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
-            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+            motor_noise = controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
-            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
+            motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -514,7 +514,7 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
         controller.parameters["final_somersault"],
         controller.time,
         controller.dt,
-        controller.dynamics_constants,
+        controller.numerical_timeseries,
     )
 
     return all_tau_cx
@@ -600,11 +600,11 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
     sensory_noise = None
     for i in range(controller.model.nb_random):
         if motor_noise is None:
-            motor_noise = controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx
-            sensory_noise = controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx
+            motor_noise = controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx
+            sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
-            motor_noise = cas.horzcat(motor_noise, controller.dynamics_constants[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.dynamics_constants[f"sensory_noise_numerical_{i}"].mx)
+            motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -663,7 +663,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         controller.parameters["final_somersault"],
         controller.time,
         controller.dt,
-        controller.dynamics_constants,
+        controller.numerical_timeseries,
     )
 
     return all_tau_cx
