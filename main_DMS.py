@@ -418,8 +418,9 @@ if RUN_SOCP_FEEDFORWARD:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
+    tau_joints_sol, k_sol, ref_fb_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
+    ref_ff_sol = sol_socp.parameters["final_somersault"]
 
     data = {
         "q_roots_sol": q_roots_sol,
@@ -429,7 +430,8 @@ if RUN_SOCP_FEEDFORWARD:
         "tau_joints_sol": tau_joints_sol,
         "time_sol": time_sol,
         "k_sol": k_sol,
-        "ref_sol": ref_sol,
+        "ref_fb_sol": ref_fb_sol,
+        "ref_ff_sol": ref_ff_sol,  # final somersault
         "motor_noise_numerical": motor_noise_numerical,
         "sensory_noise_numerical": sensory_noise_numerical,
     }
