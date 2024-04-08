@@ -17,7 +17,7 @@ RUN_OCP = True  # OK 1e-8
 RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
-RUN_SOCP_VARIABLE_FEEDFORWARD = False  # OK 1e-3
+RUN_SOCP_VARIABLE_FEEDFORWARD = True  # OK 1e-3
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 
 nb_random = 15
@@ -49,10 +49,15 @@ n_root = 3
 # b.load_movement(Q)
 # b.exec()
 
-dt = 0.025
-final_time = 0.5
+dt = 0.05
+final_time = 0.8
 n_shooting = int(final_time / dt)
 tol = 1e-6
+
+motor_noise_std = 0.05 * 10
+wPq_std = 0.001 * 5
+wPqdot_std = 0.003 * 5
+
 
 # Solver parameters
 solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
@@ -120,10 +125,6 @@ if RUN_OCP:
 
 
 # --- Run the SOCP --- #
-motor_noise_std = 0.05 * 10
-wPq_std = 0.001 * 10
-wPqdot_std = 0.003 * 10
-
 print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
@@ -546,6 +547,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     )
     tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
+    ref_ff_sol = sol_socp.parameters["final_somersault"]
 
     data = {
         "q_roots_sol": q_roots_sol,
@@ -556,6 +558,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         "time_sol": time_sol,
         "k_sol": k_sol,
         "ref_sol": ref_sol,
+        "ref_ff_sol": ref_ff_sol,
         "motor_noise_numerical": motor_noise_numerical,
         "sensory_noise_numerical": sensory_noise_numerical,
     }

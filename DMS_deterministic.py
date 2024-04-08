@@ -2,19 +2,13 @@
 ...
 """
 
-import platform
+import sys
 
-import pickle
 import biorbd_casadi as biorbd
-import matplotlib.pyplot as plt
 import casadi as cas
 import numpy as np
-import scipy
-from IPython import embed
 
 from utils import CoM_over_toes
-
-import sys
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
@@ -62,10 +56,10 @@ def prepare_ocp(
     # Add objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=1, quadratic=True
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
     )
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=1, quadratic=True, derivative=True,
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True, derivative=True,
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 
@@ -107,8 +101,8 @@ def prepare_ocp(
     qdot_joints_max[:, 0] = 0
     qdot_roots_min[1, 0] = 2
     qdot_roots_max[1, 0] = 2
-    qdot_roots_min[2, 0] = 2.1 * np.pi
-    qdot_roots_max[2, 0] = 2.1 * np.pi
+    qdot_roots_min[2, 0] = 2.5 * np.pi
+    qdot_roots_max[2, 0] = 2.5 * np.pi
 
     x_bounds.add(
         "q_roots",
