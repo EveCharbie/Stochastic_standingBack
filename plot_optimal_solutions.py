@@ -144,6 +144,7 @@ def SOCP_PLUS_dynamics(nb_random, q, qdot, tau, k_fb, k_ff, fb_ref, ff_ref, tf, 
 
         # Motor noise
         motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau)
+        motor_noise[1, i_random] = 0
         tau_this_time += motor_noise[:, i_random]
 
         # Feedback
@@ -637,9 +638,9 @@ with open(ocp_path_to_results, "rb") as file:
 
 ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting)
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating OCP_one : ", ocp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating OCP_one : ", ocp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
 
 time_vector_ocp = np.linspace(0, float(time_ocp), n_shooting + 1)
 dyn_fun_ocp = cas.Function("dynamics", [Q, Qdot, Tau, MotorNoise], [OCP_dynamics(Q, Qdot, Tau, MotorNoise, ocp)])
@@ -664,9 +665,9 @@ for i_shooting in range(n_shooting+1):
         q_all_ocp[i_random * n_q: (i_random + 1) * n_q, i_shooting] = q_ocp_integrated[:, i_shooting, i_random]
     q_all_ocp[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.hstack((np.array(q_roots_ocp[:, i_shooting]), np.array(q_joints_ocp[:, i_shooting])))
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating OCP_all : ", ocp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating OCP_all : ", ocp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
 
 joint_friction_ocp = np.zeros((n_q - 3, n_shooting))
 for i_shooting in range(n_shooting):
@@ -765,11 +766,11 @@ for i_random in range(nb_random):
                 socp)
 
 q_mean_socp = np.mean(q_socp_integrated, axis=2)
-if FLAG_GENERATE_VIDEOS:
-    # TODO: fix this integration issue ?
-    print("Generating SOCP_one : ", socp_path_to_results)
-    # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
-    bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
+# if FLAG_GENERATE_VIDEOS:
+#     # TODO: fix this integration issue ?
+#     print("Generating SOCP_one : ", socp_path_to_results)
+#     # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
+#     bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
 
 socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl")
 with open(socp_out_path_to_results, "wb") as file:
@@ -791,9 +792,9 @@ for i_shooting in range(n_shooting+1):
         q_all_socp[i_random * n_q: (i_random + 1) * n_q, i_shooting] = np.reshape(q_socp_integrated[:, i_shooting, i_random], (-1, ))
     q_all_socp[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.reshape(q_mean_socp[:, i_shooting], (-1, ))
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_all : ", socp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all_socp, q_all_socp, "SOCP_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_all : ", socp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all_socp, q_all_socp, "SOCP_all")
 
 
 # SOCP+
@@ -984,7 +985,6 @@ axs[0, 0].step(normalized_time_vector, tau_joints_socp_plus[0, :], color=SOCP_pl
 axs[0, 0].set_title("Head")
 # axs[0, 0].legend(ncol=3)
 # Eyes
-# TODO: fix motor noises offset (-3....)?
 axs[0, 1].step(normalized_time_vector, tau_joints_socp_plus[1, :], color=SOCP_plus_color, label="SOCP+")
 axs[0, 1].set_title("Eyes")
 # Other joints

@@ -620,7 +620,9 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
+        motor_noise = motor_acuity(motor_noise[:, i], tau_joints)
+        motor_noise[1] = 0
+        tau_this_time += motor_noise
 
         # Feedback
         tau_this_time += k_matrix_fb @ (
