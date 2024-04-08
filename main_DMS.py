@@ -1,7 +1,8 @@
 import pickle
+import sys
+
 import casadi as cas
 import numpy as np
-import sys
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import Solver, SolutionMerge
@@ -119,9 +120,9 @@ if RUN_OCP:
 
 
 # --- Run the SOCP --- #
-motor_noise_std = 0.05
-wPq_std = 0.001
-wPqdot_std = 0.003
+motor_noise_std = 0.05 * 10
+wPq_std = 0.001 * 10
+wPqdot_std = 0.003 * 10
 
 print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)

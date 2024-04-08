@@ -32,7 +32,7 @@ def gaussian_function(x, sigma=1, mhu=0, offset=0, scaling_factor=1, flip=False)
     sign = 1 if not flip else -1
     flip_offset = 0
     if flip:
-        flip_offset = sigma / scaling_factor * cas.sqrt(2 * np.pi)
+        flip_offset = scaling_factor / (sigma * cas.sqrt(2 * np.pi))
     return (
         scaling_factor * sign * 1 / (sigma * cas.sqrt(2 * np.pi)) * cas.exp(-0.5 * ((x - mhu) / sigma) ** 2)
         + flip_offset
@@ -369,7 +369,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints) - tau_joints[:]
+        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
         tau_this_time += k_matrix @ (
@@ -620,7 +620,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
         tau_this_time += controller.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints) - tau_joints[:]
+        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
 
         # Feedback
         tau_this_time += k_matrix_fb @ (

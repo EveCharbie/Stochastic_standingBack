@@ -340,6 +340,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
                 scale=np.reshape(np.array(sensory_noise_magnitude), (2 * n_joints + 1,)),
                 size=2 * n_joints + 1,
             )
+    motor_noise_numerical[1, :, :] = 0  # No noise on the eyes
 
     # Objective functions
     objective_functions = ObjectiveList()

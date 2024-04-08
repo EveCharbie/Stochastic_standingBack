@@ -143,7 +143,7 @@ def SOCP_PLUS_dynamics(nb_random, q, qdot, tau, k_fb, k_ff, fb_ref, ff_ref, tf, 
         tau_this_time += joint_friction[:, i_random]
 
         # Motor noise
-        motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau) - tau[:]
+        motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau)
         tau_this_time += motor_noise[:, i_random]
 
         # Feedback
@@ -305,7 +305,7 @@ def RK4_SOCP_PLUS(q, qdot, tau, dt, k_fb_matrix, k_ff_matrix, ref_fb, ref_ff, mo
             k_ff_matrix,
             ref_fb,
             ref_ff,
-            node_idx * dt + h * (i - 1),
+            node_idx * dt + h * (i - 1) + h / 2,
             motor_noise_numerical,
             sensory_noise_numerical,
         )
@@ -317,7 +317,7 @@ def RK4_SOCP_PLUS(q, qdot, tau, dt, k_fb_matrix, k_ff_matrix, ref_fb, ref_ff, mo
             k_ff_matrix,
             ref_fb,
             ref_ff,
-            node_idx * dt + h * (i - 1),
+            node_idx * dt + h * (i - 1) + h / 2,
             motor_noise_numerical,
             sensory_noise_numerical,
         )
@@ -329,7 +329,7 @@ def RK4_SOCP_PLUS(q, qdot, tau, dt, k_fb_matrix, k_ff_matrix, ref_fb, ref_ff, mo
             k_ff_matrix,
             ref_fb,
             ref_ff,
-            node_idx * dt + h * (i - 1),
+            node_idx * dt + h * (i - 1) + h,
             motor_noise_numerical,
             sensory_noise_numerical,
         )
@@ -348,7 +348,7 @@ def bioviz_animate(biorbd_model_path_with_mesh, q, name):
                    show_global_ref_frame=False,
                    show_gravity_vector=False,
                    )
-    b.set_camera_zoom(0.5)
+    b.set_camera_zoom(0.4)
     b.maximize()
     b.update()
     b.load_movement(q)
@@ -585,9 +585,9 @@ n_shooting = int(final_time / dt)
 tol = 1e-6
 nb_random = 15
 
-motor_noise_std = 0.05 * 10
-wPq_std = 0.001 * 10
-wPqdot_std = 0.003 * 10
+motor_noise_std = 0.05 * 5
+wPq_std = 0.001
+wPqdot_std = 0.003
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 
 # ------------- symbolics ------------- #
@@ -637,9 +637,9 @@ with open(ocp_path_to_results, "rb") as file:
 
 ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting)
 
-# if FLAG_GENERATE_VIDEOS:
-#     print("Generating OCP_one : ", ocp_path_to_results)
-#     bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
+if FLAG_GENERATE_VIDEOS:
+    print("Generating OCP_one : ", ocp_path_to_results)
+    bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
 
 time_vector_ocp = np.linspace(0, float(time_ocp), n_shooting + 1)
 dyn_fun_ocp = cas.Function("dynamics", [Q, Qdot, Tau, MotorNoise], [OCP_dynamics(Q, Qdot, Tau, MotorNoise, ocp)])
@@ -664,9 +664,9 @@ for i_shooting in range(n_shooting+1):
         q_all_ocp[i_random * n_q: (i_random + 1) * n_q, i_shooting] = q_ocp_integrated[:, i_shooting, i_random]
     q_all_ocp[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.hstack((np.array(q_roots_ocp[:, i_shooting]), np.array(q_joints_ocp[:, i_shooting])))
 
-# if FLAG_GENERATE_VIDEOS:
-#     print("Generating OCP_all : ", ocp_path_to_results)
-#     bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
+if FLAG_GENERATE_VIDEOS:
+    print("Generating OCP_all : ", ocp_path_to_results)
+    bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
 
 joint_friction_ocp = np.zeros((n_q - 3, n_shooting))
 for i_shooting in range(n_shooting):
@@ -765,11 +765,11 @@ for i_random in range(nb_random):
                 socp)
 
 q_mean_socp = np.mean(q_socp_integrated, axis=2)
-# if FLAG_GENERATE_VIDEOS:
-#     # TODO: fix this integration issue ?
-#     print("Generating SOCP_one : ", socp_path_to_results)
-#     # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
-#     bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
+if FLAG_GENERATE_VIDEOS:
+    # TODO: fix this integration issue ?
+    print("Generating SOCP_one : ", socp_path_to_results)
+    # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
+    bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
 
 socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl")
 with open(socp_out_path_to_results, "wb") as file:
@@ -829,8 +829,8 @@ sensory_noise_magnitude = cas.DM(
     )
 )
 
-motor_noise_magnitude *= 10
-sensory_noise_magnitude *= 10
+motor_noise_magnitude *= 5
+sensory_noise_magnitude *= 5
 
 with open(socp_plus_path_to_results, "rb") as file:
     data = pickle.load(file)
@@ -937,7 +937,7 @@ if FLAG_GENERATE_VIDEOS:
     # TODO: fix this integration issue ?
     print("Generating SOCP_plus_one : ", socp_plus_path_to_results)
     # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_plus_nominal, "SOCP_plus_one")
-    bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp_plus, "SOCP_plus_one")
+    bioviz_animate(biorbd_model_path_vision_with_mesh, q_mean_socp_plus, "SOCP_plus_one")
 
 
 socp_plus_out_path_to_results = socp_plus_path_to_results.replace(".pkl", "_integrated.pkl")
@@ -963,7 +963,7 @@ for i_shooting in range(n_shooting+1):
 
 if FLAG_GENERATE_VIDEOS:
     print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all_socp, q_all_socp_plus, "SOCP_plus_all")
+    bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
 
 
 
@@ -984,8 +984,7 @@ axs[0, 0].step(normalized_time_vector, tau_joints_socp_plus[0, :], color=SOCP_pl
 axs[0, 0].set_title("Head")
 # axs[0, 0].legend(ncol=3)
 # Eyes
-for i_random in range(nb_random):
-    axs[0, 1].step(normalized_time_vector, tau_joints_socp_plus[1, :] + motor_noises_socp_plus[1, i_random, :], color=SOCP_plus_color, label="SOCP+", linewidth=0.5, alpha=0.5)
+# TODO: fix motor noises offset (-3....)?
 axs[0, 1].step(normalized_time_vector, tau_joints_socp_plus[1, :], color=SOCP_plus_color, label="SOCP+")
 axs[0, 1].set_title("Eyes")
 # Other joints
@@ -1056,181 +1055,111 @@ plt.show()
 
 
 # Plot the gains
-fig, axs = plt.subplots(5, 1, figsize=(15, 10))
-for i_dof in range(4):
-    if i_dof == 0:
-        axs[i_dof].step(normalized_time_vector, k_socp[i_dof, :], color=SOCP_color, label="SOCP")
-        axs[i_dof].step(normalized_time_vector, k_socp_plus[i_dof, :], color=SOCP_plus_color, label="SOCP+")
-    elif i_dof > 1:
-        axs[i_dof].step(normalized_time_vector, k_socp[i_dof-1, :], color=SOCP_color, label="SOCP")
-        axs[i_dof].step(normalized_time_vector, k_socp_plus[i_dof, :], color=SOCP_plus_color, label="SOCP+")
-axs[4].step(normalized_time_vector, k_socp_plus[4, :], color=SOCP_plus_color, label="SOCP+")
-
-
-
-
-is_label_dof_set = False
-is_label_mean_set = False
-is_label_ref_mean_set = False
-
-axs[i_dof].plot(time_vector, q_socp[i_dof, :, 0], color="k", label="Noised states (optim variables)")
-for i_random in range(1, nb_random):
-    q_socp = np.concatenate(
-        (
-            q_socp,
-            np.vstack(
-                (
-                    np.array(q_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
-                    np.array(q_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
-                )
-            )[:, :, np.newaxis],
-        ),
-        axis=2,
-    )
-    qdot_socp = np.concatenate(
-        (
-            qdot_socp,
-            np.vstack(
-                (
-                    np.array(qdot_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
-                    np.array(qdot_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
-                )
-            )[:, :, np.newaxis],
-        ),
-        axis=2,
-    )
-    for i_dof in range(n_q):
-        axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k")
-q_mean_socp = np.mean(q_socp, axis=2)
-qdot_mean_socp = np.mean(qdot_socp, axis=2)
-for i_dof in range(n_q):
-    if not is_label_mean_set:
-        axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red", label="Mean noised states")
-        is_label_mean_set = True
-    else:
-        axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red")
-    axs[i_dof].set_title(f"DOF {i_dof}")
-ref_mean_socp = np.zeros((n_ref, n_shooting))
-for i_node in range(n_shooting):
-    ref_mean_socp[:, i_node] = np.array(
-        DMS_sensory_reference_func(q_mean_socp[:, i_node], qdot_mean_socp[:, i_node])
-    ).reshape(-1)
-if not is_label_ref_mean_set:
-    axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue", label="Mean reference")
-    axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange", label="Reference (optim variables)")
-    is_label_ref_mean_set = True
-else:
-    axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue")
-    axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange")
-axs[4].plot(time_vector[:-1], ref_mean_socp[1, :], color="tab:blue")
-axs[4].plot(time_vector[:-1], ref_socp[1, :], "--", color="tab:orange")
-axs[5].plot(time_vector[:-1], ref_mean_socp[2, :], color="tab:blue")
-axs[5].plot(time_vector[:-1], ref_socp[2, :], "--", color="tab:orange")
-axs[6].plot(time_vector[:-1], ref_mean_socp[3, :], color="tab:blue")
-axs[6].plot(time_vector[:-1], ref_socp[3, :], "--", color="tab:orange")
-axs[0].legend()
-axs[3].legend()
+fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+for i_dof in range(40):
+    axs[0, 0].step(normalized_time_vector, k_socp[i_dof, :], color=SOCP_color, label="SOCP")
+for i_dof in range(54):
+    axs[0, 1].step(normalized_time_vector, k_socp_plus[i_dof, :], color=SOCP_plus_color, label="SOCP+")
+axs[1, 1].step(normalized_time_vector, k_socp_plus[-1, :], color=SOCP_plus_color, label="SOCP+")
+plt.savefig("gains.png")
 plt.show()
 
 
 
 
-
-
-
-
-is_label_dof_set = False
-is_label_mean_set = False
-is_label_ref_mean_set = False
-
-fig, axs = plt.subplots(2, 4, figsize=(15, 10))
-axs = np.ravel(axs)
-q_socp = np.vstack((np.array(q_roots_socp[:n_root]), np.array(q_joints_socp[:n_joints])))[:, :, np.newaxis]
-qdot_socp = np.vstack((np.array(qdot_roots_socp[:n_root]), np.array(qdot_joints_socp[:n_joints])))[:, :, np.newaxis]
-for i_dof in range(n_q):
-    axs[i_dof].plot(time_vector, q_socp[i_dof, :, 0], color="k", label="Noised states (optim variables)")
-for i_random in range(1, nb_random):
-    q_socp = np.concatenate(
-        (
-            q_socp,
-            np.vstack(
-                (
-                    np.array(q_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
-                    np.array(q_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
-                )
-            )[:, :, np.newaxis],
-        ),
-        axis=2,
-    )
-    qdot_socp = np.concatenate(
-        (
-            qdot_socp,
-            np.vstack(
-                (
-                    np.array(qdot_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
-                    np.array(qdot_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
-                )
-            )[:, :, np.newaxis],
-        ),
-        axis=2,
-    )
-    for i_dof in range(n_q):
-        axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k")
-q_mean_socp = np.mean(q_socp, axis=2)
-qdot_mean_socp = np.mean(qdot_socp, axis=2)
-for i_dof in range(n_q):
-    if not is_label_mean_set:
-        axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red", label="Mean noised states")
-        is_label_mean_set = True
-    else:
-        axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red")
-    axs[i_dof].set_title(f"DOF {i_dof}")
-ref_mean_socp = np.zeros((n_ref, n_shooting))
-for i_node in range(n_shooting):
-    ref_mean_socp[:, i_node] = np.array(
-        DMS_sensory_reference_func(q_mean_socp[:, i_node], qdot_mean_socp[:, i_node])
-    ).reshape(-1)
-if not is_label_ref_mean_set:
-    axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue", label="Mean reference")
-    axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange", label="Reference (optim variables)")
-    is_label_ref_mean_set = True
-else:
-    axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue")
-    axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange")
-axs[4].plot(time_vector[:-1], ref_mean_socp[1, :], color="tab:blue")
-axs[4].plot(time_vector[:-1], ref_socp[1, :], "--", color="tab:orange")
-axs[5].plot(time_vector[:-1], ref_mean_socp[2, :], color="tab:blue")
-axs[5].plot(time_vector[:-1], ref_socp[2, :], "--", color="tab:orange")
-axs[6].plot(time_vector[:-1], ref_mean_socp[3, :], color="tab:blue")
-axs[6].plot(time_vector[:-1], ref_socp[3, :], "--", color="tab:orange")
-axs[0].legend()
-axs[3].legend()
-plt.show()
-
-
-
-# Verify reintegration
-is_label_dof_set = False
-fig, axs = plt.subplots(2, 4, figsize=(15, 10))
-axs = np.ravel(axs)
-for i_random in range(nb_random):
-    for i_dof in range(n_q):
-        if not is_label_dof_set:
-            axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
-            axs[i_dof].plot(time_vector, q_socp_integrated[i_dof, :, i_random], "--", color="r", label="Reintegrated states")
-            is_label_dof_set = True
-        else:
-            axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k")
-            axs[i_dof].plot(time_vector, q_socp_integrated[i_dof, :, i_random], "--", color="r")
-        for i_shooting in range(n_shooting):
-            axs[i_dof].plot(
-                np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
-                np.array([q_socp[i_dof, i_shooting, i_random], q_socp_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
-                "--",
-                color="b",
-            )
-axs[0].legend()
-plt.show()
+#
+# is_label_dof_set = False
+# is_label_mean_set = False
+# is_label_ref_mean_set = False
+#
+# fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+# axs = np.ravel(axs)
+# q_socp = np.vstack((np.array(q_roots_socp[:n_root]), np.array(q_joints_socp[:n_joints])))[:, :, np.newaxis]
+# qdot_socp = np.vstack((np.array(qdot_roots_socp[:n_root]), np.array(qdot_joints_socp[:n_joints])))[:, :, np.newaxis]
+# for i_dof in range(n_q):
+#     axs[i_dof].plot(time_vector, q_socp[i_dof, :, 0], color="k", label="Noised states (optim variables)")
+# for i_random in range(1, nb_random):
+#     q_socp = np.concatenate(
+#         (
+#             q_socp,
+#             np.vstack(
+#                 (
+#                     np.array(q_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
+#                     np.array(q_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
+#                 )
+#             )[:, :, np.newaxis],
+#         ),
+#         axis=2,
+#     )
+#     qdot_socp = np.concatenate(
+#         (
+#             qdot_socp,
+#             np.vstack(
+#                 (
+#                     np.array(qdot_roots_socp[i_random * n_root : (i_random + 1) * n_root]),
+#                     np.array(qdot_joints_socp[i_random * n_joints : (i_random + 1) * n_joints]),
+#                 )
+#             )[:, :, np.newaxis],
+#         ),
+#         axis=2,
+#     )
+#     for i_dof in range(n_q):
+#         axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k")
+# q_mean_socp = np.mean(q_socp, axis=2)
+# qdot_mean_socp = np.mean(qdot_socp, axis=2)
+# for i_dof in range(n_q):
+#     if not is_label_mean_set:
+#         axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red", label="Mean noised states")
+#         is_label_mean_set = True
+#     else:
+#         axs[i_dof].plot(time_vector, q_mean_socp[i_dof, :], "--", color="tab:red")
+#     axs[i_dof].set_title(f"DOF {i_dof}")
+# ref_mean_socp = np.zeros((n_ref, n_shooting))
+# for i_node in range(n_shooting):
+#     ref_mean_socp[:, i_node] = np.array(
+#         DMS_sensory_reference_func(q_mean_socp[:, i_node], qdot_mean_socp[:, i_node])
+#     ).reshape(-1)
+# if not is_label_ref_mean_set:
+#     axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue", label="Mean reference")
+#     axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange", label="Reference (optim variables)")
+#     is_label_ref_mean_set = True
+# else:
+#     axs[3].plot(time_vector[:-1], ref_mean_socp[0, :], color="tab:blue")
+#     axs[3].plot(time_vector[:-1], ref_socp[0, :], "--", color="tab:orange")
+# axs[4].plot(time_vector[:-1], ref_mean_socp[1, :], color="tab:blue")
+# axs[4].plot(time_vector[:-1], ref_socp[1, :], "--", color="tab:orange")
+# axs[5].plot(time_vector[:-1], ref_mean_socp[2, :], color="tab:blue")
+# axs[5].plot(time_vector[:-1], ref_socp[2, :], "--", color="tab:orange")
+# axs[6].plot(time_vector[:-1], ref_mean_socp[3, :], color="tab:blue")
+# axs[6].plot(time_vector[:-1], ref_socp[3, :], "--", color="tab:orange")
+# axs[0].legend()
+# axs[3].legend()
+# plt.show()
+#
+#
+#
+# # Verify reintegration
+# is_label_dof_set = False
+# fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+# axs = np.ravel(axs)
+# for i_random in range(nb_random):
+#     for i_dof in range(n_q):
+#         if not is_label_dof_set:
+#             axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k", label="Noised states (optim variables)")
+#             axs[i_dof].plot(time_vector, q_socp_integrated[i_dof, :, i_random], "--", color="r", label="Reintegrated states")
+#             is_label_dof_set = True
+#         else:
+#             axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color="k")
+#             axs[i_dof].plot(time_vector, q_socp_integrated[i_dof, :, i_random], "--", color="r")
+#         for i_shooting in range(n_shooting):
+#             axs[i_dof].plot(
+#                 np.array([time_vector[i_shooting], time_vector[i_shooting + 1]]),
+#                 np.array([q_socp[i_dof, i_shooting, i_random], q_socp_multiple_shooting[i_dof, i_shooting + 1, i_random]]),
+#                 "--",
+#                 color="b",
+#             )
+# axs[0].legend()
+# plt.show()
 
 
 
