@@ -13,8 +13,8 @@ from DMS_SOCP_VARIABLE import prepare_socp_VARIABLE
 from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
-RUN_OCP = True  # OK 1e-8
-RUN_SOCP = True  # OK 1e-6: 3 models, 1e-3: 15 models
+RUN_OCP = False  # OK 1e-8
+RUN_SOCP = False  # OK 1e-6: 3 models, 1e-3: 15 models
 RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
 RUN_SOCP_VARIABLE_FEEDFORWARD = True  # OK 1e-3
@@ -65,7 +65,7 @@ solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)  # 32
-# solver.set_hessian_approximation("limited-memory")
+solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
