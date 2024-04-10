@@ -21,6 +21,7 @@ RUN_SOCP_VARIABLE = False  # OK 1e-3
 RUN_SOCP_FEEDFORWARD = False  # OK 1e-3
 RUN_SOCP_VARIABLE_FEEDFORWARD = True  # OK 1e-3
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
+print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
 nb_random = 15
 
@@ -575,9 +576,9 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     path_to_temporary_results = f"temporary_results_{date_time}"
     if path_to_temporary_results not in os.listdir("results/"):
         os.mkdir("results/" + path_to_temporary_results)
-    nb_iter_save = 50
+    nb_iter_save = 10
     sol_last.ocp.save_intermediary_ipopt_iterations(
-        path_to_temporary_results, save_path[:-4], nb_iter_save
+        "results/" + path_to_temporary_results, save_path[:-4], nb_iter_save
     )
 
     solver.set_tol(tol)
