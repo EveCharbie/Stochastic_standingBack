@@ -276,6 +276,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     tau_joints_last: np.ndarray = None,
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
+    ref_ff_last: np.ndarray = None,
     nb_random: int = 30,
 ):
     """
@@ -321,7 +322,10 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         "final_somersault", min_bound=[3 * np.pi / 2], max_bound=[2 * np.pi], interpolation=InterpolationType.CONSTANT
     )
     parameter_init = InitialGuessList()
-    parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
+    if ref_ff_last is not None:
+        parameter_init["final_somersault"] = ref_ff_last
+    else:
+        parameter_init["final_somersault"] = (3 * np.pi / 2 + 2 * np.pi) / 2
 
     # Prepare the noises
     # TODO: the sensory noise on the ff is used both for visual and vestibular, should be separated
