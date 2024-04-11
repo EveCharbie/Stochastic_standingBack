@@ -520,40 +520,30 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
     return all_tau_cx
 
 
+def visual_noise(model, q, sensory_noise):
+    floor_normal_vector = cas.MX.zeros(3, 1)
+    floor_normal_vector[2] = 1
+    eyes_vect_start = model.marker(q, model.marker_index("eyes_vect_start"))
+    eyes_vect_end = model.marker(q, model.marker_index("eyes_vect_end"))
+    gaze_vector = eyes_vect_end - eyes_vect_start
+    angle = cas.acos(
+        cas.dot(gaze_vector, floor_normal_vector) / (cas.norm_fro(gaze_vector) * cas.norm_fro(floor_normal_vector))
+    )
+    # if the athlete is looking upward, consider he does not see the floor
+    angle_to_consider = cas.if_else(gaze_vector[2] > 0, np.pi / 2, angle)
+    noise_on_where_you_look = smooth_square_function(
+        x=angle_to_consider,
+        a=0.1,
+        width=np.pi / 2,
+        offset=sensory_noise,
+        scaling_factor=5*sensory_noise,
+    )
+    return noise_on_where_you_look
+
 def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, sensory_noise):
 
-    def visual_noise(model, q, qdot, sensory_noise):
-        floor_normal_vector = cas.MX.zeros(3, 1)
-        floor_normal_vector[2] = 1
-        eyes_vect_start = model.marker(q, model.marker_index("eyes_vect_start"))
-        eyes_vect_end = model.marker(q, model.marker_index("eyes_vect_end"))
-        gaze_vector = eyes_vect_end - eyes_vect_start
-        angle = cas.acos(
-            cas.dot(gaze_vector, floor_normal_vector) / (cas.norm_fro(gaze_vector) * cas.norm_fro(floor_normal_vector))
-        )
-        # if the athlete is looking upward, consider he does not see the floor
-        angle_to_consider = cas.if_else(gaze_vector[2] > 0, np.pi / 2, angle)
-        noise_on_where_you_look = smooth_square_function(
-            x=angle_to_consider,
-            a=0.1,
-            width=np.pi / 2,
-            offset=sensory_noise,
-            scaling_factor=sensory_noise,
-        )
-
-        head_velocity = model.segment_angular_velocity(q, qdot, model.segment_index("Head"))[0]
-        vestibular_noise = gaussian_function(
-            x=head_velocity,
-            sigma=10,
-            offset=sensory_noise,
-            scaling_factor=10,
-            flip=True,
-        )
-
-        return noise_on_where_you_look + vestibular_noise
-
     time_to_contact = tf - time
-    time_to_contact_noise = visual_noise(model, q_this_time, qdot_this_time, sensory_noise)
+    time_to_contact_noise = visual_noise(model, q_this_time, sensory_noise)
     noised_time_to_contact = time_to_contact + time_to_contact_noise
 
     somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]

@@ -535,7 +535,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     # socp.add_plot_penalty()
     # socp.add_plot_ipopt_outputs()
 
-    path_to_results = f"{save_path.replace(".", "p")[:-4]}_DMS_{nb_random}random_DVG_1p0e-06_exact.pkl"
+    path_to_results = "results/2p5pi/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_DVG_1p0e-06_exact.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
@@ -547,7 +547,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         k_last = data["k_sol"]
         ref_last = data["ref_sol"]
         ref_ff_last = data["ref_ff_sol"]
-    path_to_sol_results = f"{save_path.replace(".", "p")[:-4]}_DMS_{nb_random}random_DVG_1p0e-06_sol_exact.pkl"
+    path_to_sol_results = "results/2p5pi/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_DVG_1p0e-06_sol_exact.pkl"
     with open(path_to_sol_results, "rb") as file:
         sol_last = pickle.load(file)
     motor_noise_numerical, sensory_noise_numerical, sol_last.ocp = prepare_socp_VARIABLE_FEEDFORWARD(
@@ -578,7 +578,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         os.mkdir("results/" + path_to_temporary_results)
     nb_iter_save = 10
     sol_last.ocp.save_intermediary_ipopt_iterations(
-        "results/" + path_to_temporary_results, save_path[:-4], nb_iter_save
+        "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
     )
 
     solver.set_tol(tol)

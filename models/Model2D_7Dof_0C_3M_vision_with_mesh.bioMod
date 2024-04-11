@@ -72,6 +72,7 @@ segment Eyes
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
 	meshcolor 0.02 0.69 .94
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm
