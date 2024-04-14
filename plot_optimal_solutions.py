@@ -573,7 +573,7 @@ biorbd_model_path_comparison = f"models/{model_name}_comparison.bioMod"
 result_folder = "2p5pi"
 ocp_path_to_results = f"results/{result_folder}/{model_name}_ocp_DMS_CVG_1e-8.pkl"
 socp_path_to_results = f"results/temporary_results_11-04-16-59-53/SOCP_820.pkl"
-socp_plus_path_to_results = f"results/temporary_results_11-04-17-25-47/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_520.pkl"
+socp_plus_path_to_results = f"results/temporary_results_11-04-17-25-47/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_2850.pkl"
 
 n_q = 7
 n_root = 3
@@ -641,9 +641,9 @@ ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_s
 
 q_ocp = np.vstack((q_roots_ocp, q_joints_ocp))
 qdot_ocp = np.vstack((qdot_roots_ocp, qdot_joints_ocp))
-if FLAG_GENERATE_VIDEOS:
-    print("Generating OCP_one : ", ocp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating OCP_one : ", ocp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
 
 time_vector_ocp = np.linspace(0, float(time_ocp), n_shooting + 1)
 dyn_fun_ocp = cas.Function("dynamics", [Q, Qdot, Tau, MotorNoise], [OCP_dynamics(Q, Qdot, Tau, MotorNoise, ocp)])
@@ -668,9 +668,9 @@ for i_shooting in range(n_shooting+1):
         q_all_ocp[i_random * n_q: (i_random + 1) * n_q, i_shooting] = q_ocp_integrated[:, i_shooting, i_random]
     q_all_ocp[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.hstack((np.array(q_roots_ocp[:, i_shooting]), np.array(q_joints_ocp[:, i_shooting])))
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating OCP_all : ", ocp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating OCP_all : ", ocp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
 
 joint_friction_ocp = np.zeros((n_q - 3, n_shooting))
 for i_shooting in range(n_shooting):
@@ -1169,15 +1169,20 @@ print("Movement durations: ", time_ocp, time_socp, time_socp_plus)
 
 
 # Plot the gains
+n_k_fb = socp_plus.nlp[0].model.n_noised_controls + socp_plus.nlp[0].model.n_references
 fig, axs = plt.subplots(2, 2, figsize=(15, 10))
 for i in range(2):
     for j in range(2):
         axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
 for i_dof in range(40):
     axs[0, 0].step(normalized_time_vector, k_socp[i_dof, :], color=SOCP_color, label="SOCP")
-for i_dof in range(54):
+for i_dof in range(n_k_fb):
     axs[0, 1].step(normalized_time_vector, k_socp_plus[i_dof, :], color=SOCP_plus_color, label="SOCP+")
-axs[1, 1].step(normalized_time_vector, k_socp_plus[-1, :], color=SOCP_plus_color, label="SOCP+")
+for i_dof in range(5):
+    axs[1, 1].step(normalized_time_vector, k_socp_plus[n_k_fb+i_dof, :], color=SOCP_plus_color, label="SOCP+")
+axs[0, 0].set_ylim(-35, 35)
+axs[0, 1].set_ylim(-35, 35)
+axs[1, 1].set_ylim(-35, 35)
 plt.savefig("gains.png")
 plt.show()
 
@@ -1188,9 +1193,13 @@ for i in range(2):
         axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
 for i_dof in range(40):
     axs[0, 0].step(delta_time_vector, k_socp[i_dof, 1:] - k_socp[i_dof, :-1], color=SOCP_color, label="SOCP")
-for i_dof in range(54):
+for i_dof in range(n_k_fb):
     axs[0, 1].step(delta_time_vector, k_socp_plus[i_dof, 1:] - k_socp_plus[i_dof, :-1], color=SOCP_plus_color, label="SOCP+")
-axs[1, 1].step(delta_time_vector, k_socp_plus[-1, 1:] - k_socp_plus[-1, :-1], color=SOCP_plus_color, label="SOCP+")
+for i_dof in range(5):
+    axs[1, 1].step(delta_time_vector, k_socp_plus[n_k_fb+i_dof, 1:] - k_socp_plus[n_k_fb+i_dof, :-1], color=SOCP_plus_color, label="SOCP+")
+axs[0, 0].set_ylim(-40, 35)
+axs[0, 1].set_ylim(-40, 35)
+axs[1, 1].set_ylim(-40, 35)
 plt.savefig("delta_gains.png")
 
 
@@ -1199,10 +1208,11 @@ fig, axs = plt.subplots(4, 1, figsize=(15, 10))
 for i in range(4):
     axs[i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
 
-for i_dof in range(54):
+for i_dof in range(n_k_fb):
     axs[0].step(normalized_time_vector, k_socp_plus[i_dof, :], color=SOCP_plus_color, label="SOCP+")
 axs[0].set_ylabel("Feedback gains")
-axs[1].step(normalized_time_vector, k_socp_plus[-1, :], color=SOCP_plus_color, label="SOCP+")
+for i_dofs in range(5):
+    axs[1].step(normalized_time_vector, k_socp_plus[n_k_fb+i_dofs, :], color=SOCP_plus_color, label="SOCP+")
 axs[1].set_ylabel("Feedforward gains")
 
 visual_acuity = np.zeros((n_shooting, 1))
