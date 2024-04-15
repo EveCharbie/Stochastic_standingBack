@@ -81,7 +81,9 @@ def minimize_nominal_and_feedback_efforts(
             sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
             motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(
+                sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
+            )
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -353,7 +355,9 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
             sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
             motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(
+                sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
+            )
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -467,7 +471,9 @@ def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyControl
             sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
             motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(
+                sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
+            )
 
     all_tau = 0
     for i in range(controller.model.nb_random):
@@ -536,9 +542,10 @@ def visual_noise(model, q, sensory_noise):
         a=0.1,
         width=np.pi / 2,
         offset=sensory_noise,
-        scaling_factor=5*sensory_noise,
+        scaling_factor=5 * sensory_noise,
     )
     return noise_on_where_you_look
+
 
 def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, sensory_noise):
 
@@ -594,7 +601,9 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
             sensory_noise = controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
         else:
             motor_noise = cas.horzcat(motor_noise, controller.numerical_timeseries[f"motor_noise_numerical_{i}"].mx)
-            sensory_noise = cas.horzcat(sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx)
+            sensory_noise = cas.horzcat(
+                sensory_noise, controller.numerical_timeseries[f"sensory_noise_numerical_{i}"].mx
+            )
 
     all_tau = 0
     for i in range(controller.model.nb_random):

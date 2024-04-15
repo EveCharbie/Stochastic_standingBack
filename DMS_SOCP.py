@@ -440,11 +440,10 @@ def prepare_socp(
             q_joints_init = np.hstack(
                 (q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])))
             )
-            qdot_roots_init = np.hstack((qdot_roots_init, np.vstack((np.ones((n_root, 1)), np.ones((n_root, 1)))))
-            )
+            qdot_roots_init = np.hstack((qdot_roots_init, np.vstack((np.ones((n_root, 1)), np.ones((n_root, 1))))))
             qdot_joints_init = np.hstack(
-                (qdot_joints_init, np.vstack((np.ones((n_joints, 1)), np.ones((n_joints, 1))))
-            ))
+                (qdot_joints_init, np.vstack((np.ones((n_joints, 1)), np.ones((n_joints, 1)))))
+            )
 
         x_init.add(
             "q_roots",

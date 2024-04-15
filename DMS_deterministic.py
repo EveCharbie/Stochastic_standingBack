@@ -59,7 +59,12 @@ def prepare_ocp(
         ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
     )
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True, derivative=True,
+        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
+        key="tau_joints",
+        node=Node.ALL_SHOOTING,
+        weight=0.01,
+        quadratic=True,
+        derivative=True,
     )
     objective_functions.add(ObjectiveFcn.Mayer.MINIMIZE_TIME, weight=0.01, min_bound=0.1, max_bound=1)
 

@@ -511,14 +511,14 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         ref_ff_last = None
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
     q_joints_last[1, :5] = -0.5
-    q_joints_last[1, 5:-5] = np.linspace(-0.5, 0.3, n_shooting+1-10)
+    q_joints_last[1, 5:-5] = np.linspace(-0.5, 0.3, n_shooting + 1 - 10)
     q_joints_last[1, -5:] = 0.3
 
     qdot_joints_last = np.vstack(
         (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
     )
     tau_joints_last = np.vstack(
-       (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
+        (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
     )
     motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
@@ -531,7 +531,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         qdot_roots_last=qdot_roots_last,
         qdot_joints_last=qdot_joints_last,
         tau_joints_last=tau_joints_last,
-       k_last=k_last,
+        k_last=k_last,
         ref_last=ref_last,
         ref_ff_last=ref_ff_last,
         nb_random=nb_random,
@@ -587,7 +587,9 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     #     "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
     # )
     socp.save_intermediary_ipopt_iterations(
-        "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
+        "results/" + path_to_temporary_results,
+        "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD",
+        nb_iter_save,
     )
 
     solver.set_tol(tol)

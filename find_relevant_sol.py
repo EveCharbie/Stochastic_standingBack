@@ -26,10 +26,3 @@ for i_file in os.listdir(folder):
 print("The file with the lowest cost function value is: ", lowest_cost_function_file)
 print("The lowest cost function value is: ", lowest_cost_function_value)
 print("The g value of the best solution is: ", best_solution_g)
-
-
-
-
-
-
-
