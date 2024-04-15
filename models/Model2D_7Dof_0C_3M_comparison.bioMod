@@ -1,0 +1,656 @@
+version 4
+
+gravity 0 0 -9.81
+
+
+segment	Pelvis_ocp
+	RT -0.1 0 0	xyz 0 0 0.8
+	translations yz
+	rotations	 x
+	rangesQ
+		-2.5 2.5
+		 -1.0 3.0
+		-3.0 9.0
+	rangesQdot	
+		-100 100
+		-100 100
+		-100 100
+	mass	11.58
+	inertia
+		0.0692	0.0	0.0
+		0.0	0.1254	0.0
+		0.0	0.0	0.1123
+	com	0.0	0.0	0.1044
+	meshfile	mesh/pelvis.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Thorax_ocp
+	parent	Pelvis_ocp
+	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
+	mass	20.46
+	inertia
+		0.5204	0.0	0.0
+		0.0	0.6185	0.0
+		0.0	0.0	0.2343
+	com	0.0	0.0	0.1767
+	meshfile	mesh/thorax.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Head_ocp
+	parent	Thorax_ocp
+	rotations	 x
+	rangesQ
+		-70*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
+	mass	5.12
+	inertia
+		0.0881	0.0	0.0
+		0.0	0.0881	0.0
+		0.0	0.0	0.0156
+	com	0.0	0.0	0.0853
+	meshfile mesh/head.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Arm_ocp
+	parent	Thorax_ocp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.023425367
+		0 0  1 0.211508031
+		0 0 0 1
+	mass	4.72
+	rotations	 x
+	rangesQ	
+		-0.7 3.1
+	rangesQdot	
+		-100 100
+	inertia
+		0.03770325476957999	0.0	0.0
+		0.0	0.03770325476957999	0.0
+		0.0	0.0	0.005996554197399041
+	com	0.0	0.0	-0.1427
+	meshfile mesh/arm.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Forearm_ocp
+	parent	Arm_ocp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 -0.000261286
+		0 0  1 -0.338601867
+		0 0 0 1
+	mass	2.52
+	inertia
+		0.013022885689772144	0.0	0.0
+		0.0	0.013154165656146893	0.0
+		0.0	0.0	0.0019576149660600886
+	com	0.0	0.0	-0.1264
+	meshfile mesh/fore_arm.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Hand_ocp
+	parent	Forearm_ocp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.001217047
+		0 0  1 -0.265871926
+		0 0 0 1
+	mass	1.12
+	inertia
+		0.0027648635147748315	0.0	0.0
+		0.0	0.0031487689115472926	0.0
+		0.0	0.0	0.0006717710781510774
+	com	0.01927061	-0.007717575	-0.051481325
+	meshfile mesh/hand.stl
+	meshrt -0.5 0 0 xyz 0 0 0
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+marker	 CENTER_HAND_ocp
+	parent	Hand_ocp
+	position 0.0 0.025 -0.0655
+	technical 1
+endmarker
+
+segment	Thigh_ocp
+	parent	Pelvis_ocp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.0
+		0 0 1 0.0
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-0.4 2.6
+	rangesQdot	
+		-100 100
+	mass	18.98
+	inertia
+		0.3444	0.0	0.0
+		0.0	0.3444	0.0
+		0.0	0.0	0.0674
+	com	0.0	0.0	-0.2017
+	meshfile mesh/thigh.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Leg_ocp
+	parent	Thigh_ocp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 1.7e-08
+		0 0 1 -0.462839073
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-2.3 -0.02
+	rangesQdot	
+		-100 100
+	mass	8.36
+	inertia
+		0.1702	0.0	0.0
+		0.0	0.1702	0.0
+		0.0	0.0	0.0122
+	com	0.0	0.0	-0.2026
+	meshfile mesh/leg_left.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment	Foot_ocp
+	parent	Leg_ocp
+	RTinMatrix	1
+	RT
+		1.0 0.0 0.0 0.0
+		0.0 6.123233995736766e-17 -1.0 3.36e-07
+		0.0 1.0 6.123233995736766e-17 -0.427480971
+		0 0 0 1
+	mass	2.32
+	inertia
+		0.0178	0.0	0.0
+		0.0	0.0022	0.0
+		0.0	0.0	0.0176
+	com	0.0	0.0	-0.0757
+	meshfile mesh/foot.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+marker	 BELOW_KNEE_ocp
+	parent	Leg_ocp
+	position 0.0 0.07 -0.1575
+	technical 1
+endmarker
+marker	 FOOT_ocp
+	parent	Foot_ocp
+	position 0.0 -0.03 -0.12
+	technical 1
+endmarker
+
+marker	Foot_Heel_ocp
+	parent	Foot_ocp
+	position	0.00000000000   -0.0300000000    0.05000000000
+endmarker
+
+marker	Foot_Toe_ocp
+	parent	Foot_ocp
+	position	0.00000000000   -0.0300000000   -0.15000000000
+endmarker
+
+
+///////////////////////////////////////////////////////////////////////////////////
+
+
+segment	Pelvis_socp
+	RT -0.1 0 0	xyz 0 0 0.8
+	translations yz
+	rotations	 x
+	rangesQ
+		-2.5 2.5
+		 -1.0 3.0
+		-3.0 9.0
+	rangesQdot	
+		-100 100
+		-100 100
+		-100 100
+	mass	11.58
+	inertia
+		0.0692	0.0	0.0
+		0.0	0.1254	0.0
+		0.0	0.0	0.1123
+	com	0.0	0.0	0.1044
+	meshfile	mesh/pelvis.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Thorax_socp
+	parent	Pelvis_socp
+	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
+	mass	20.46
+	inertia
+		0.5204	0.0	0.0
+		0.0	0.6185	0.0
+		0.0	0.0	0.2343
+	com	0.0	0.0	0.1767
+	meshfile	mesh/thorax.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Head_socp
+	parent	Thorax_socp
+	rotations	 x
+	rangesQ
+		-70*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
+	mass	5.12
+	inertia
+		0.0881	0.0	0.0
+		0.0	0.0881	0.0
+		0.0	0.0	0.0156
+	com	0.0	0.0	0.0853
+	meshfile mesh/head.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Arm_socp
+	parent	Thorax_socp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.023425367
+		0 0  1 0.211508031
+		0 0 0 1
+	mass	4.72
+	rotations	 x
+	rangesQ	
+		-0.7 3.1
+	rangesQdot	
+		-100 100
+	inertia
+		0.03770325476957999	0.0	0.0
+		0.0	0.03770325476957999	0.0
+		0.0	0.0	0.005996554197399041
+	com	0.0	0.0	-0.1427
+	meshfile mesh/arm.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Forearm_socp
+	parent	Arm_socp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 -0.000261286
+		0 0  1 -0.338601867
+		0 0 0 1
+	mass	2.52
+	inertia
+		0.013022885689772144	0.0	0.0
+		0.0	0.013154165656146893	0.0
+		0.0	0.0	0.0019576149660600886
+	com	0.0	0.0	-0.1264
+	meshfile mesh/fore_arm.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Hand_socp
+	parent	Forearm_socp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.001217047
+		0 0  1 -0.265871926
+		0 0 0 1
+	mass	1.12
+	inertia
+		0.0027648635147748315	0.0	0.0
+		0.0	0.0031487689115472926	0.0
+		0.0	0.0	0.0006717710781510774
+	com	0.01927061	-0.007717575	-0.051481325
+	meshfile mesh/hand.stl
+	meshrt -0.5 0 0 xyz 0 0 0
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+marker	 CENTER_HAND_socp
+	parent	Hand_socp
+	position 0.0 0.025 -0.0655
+	technical 1
+endmarker
+
+segment	Thigh_socp
+	parent	Pelvis_socp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.0
+		0 0 1 0.0
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-0.4 2.6
+	rangesQdot	
+		-100 100
+	mass	18.98
+	inertia
+		0.3444	0.0	0.0
+		0.0	0.3444	0.0
+		0.0	0.0	0.0674
+	com	0.0	0.0	-0.2017
+	meshfile mesh/thigh.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Leg_socp
+	parent	Thigh_socp
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 1.7e-08
+		0 0 1 -0.462839073
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-2.3 -0.02
+	rangesQdot	
+		-100 100
+	mass	8.36
+	inertia
+		0.1702	0.0	0.0
+		0.0	0.1702	0.0
+		0.0	0.0	0.0122
+	com	0.0	0.0	-0.2026
+	meshfile mesh/leg_left.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+segment	Foot_socp
+	parent	Leg_socp
+	RTinMatrix	1
+	RT
+		1.0 0.0 0.0 0.0
+		0.0 6.123233995736766e-17 -1.0 3.36e-07
+		0.0 1.0 6.123233995736766e-17 -0.427480971
+		0 0 0 1
+	mass	2.32
+	inertia
+		0.0178	0.0	0.0
+		0.0	0.0022	0.0
+		0.0	0.0	0.0176
+	com	0.0	0.0	-0.0757
+	meshfile mesh/foot.stl
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+marker	 BELOW_KNEE_socp
+	parent	Leg_socp
+	position 0.0 0.07 -0.1575
+	technical 1
+endmarker
+marker	 FOOT_socp
+	parent	Foot_socp
+	position 0.0 -0.03 -0.12
+	technical 1
+endmarker
+
+marker	Foot_Heel_socp
+	parent	Foot_socp
+	position	0.00000000000   -0.0300000000    0.05000000000
+endmarker
+
+marker	Foot_Toe_socp
+	parent	Foot_socp
+	position	0.00000000000   -0.0300000000   -0.15000000000
+endmarker
+
+
+/////////////////////////////////////////////////////////////////////////////
+
+
+segment	Pelvis_socp_plus
+	RT -0.1 0 0	xyz 1.0 0 0.8
+	translations yz
+	rotations	 x
+	rangesQ
+		-2.5 2.5
+		 -1.0 3.0
+		-3.0 9.0
+	rangesQdot	
+		-100 100
+		-100 100
+		-100 100
+	mass	11.58
+	inertia
+		0.0692	0.0	0.0
+		0.0	0.1254	0.0
+		0.0	0.0	0.1123
+	com	0.0	0.0	0.1044
+	meshfile	mesh/pelvis.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Thorax_socp_plus
+	parent	Pelvis_socp_plus
+	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
+	mass	20.46
+	inertia
+		0.5204	0.0	0.0
+		0.0	0.6185	0.0
+		0.0	0.0	0.2343
+	com	0.0	0.0	0.1767
+	meshfile	mesh/thorax.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Head_socp_plus
+	parent	Thorax_socp_plus
+	rotations	 x
+	rangesQ
+		-70*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
+	mass	5.12
+	inertia
+		0.0881	0.0	0.0
+		0.0	0.0881	0.0
+		0.0	0.0	0.0156
+	com	0.0	0.0	0.0853
+	meshfile mesh/head.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment Eyes_socp_plus
+	parent Head_socp_plus
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+	meshcolor 0.02 0.69 .94
+endsegment
+
+marker eyes_vect_start_socp_plus
+	parent Eyes_socp_plus
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_socp_plus
+	parent Eyes_socp_plus
+	position 0 -1 0
+endmarker
+
+segment	Arm_socp_plus
+	parent	Thorax_socp_plus
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.023425367
+		0 0  1 0.211508031
+		0 0 0 1
+	mass	4.72
+	rotations	 x
+	rangesQ	
+		-0.7 3.1
+	rangesQdot	
+		-100 100
+	inertia
+		0.03770325476957999	0.0	0.0
+		0.0	0.03770325476957999	0.0
+		0.0	0.0	0.005996554197399041
+	com	0.0	0.0	-0.1427
+	meshfile mesh/arm.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Forearm_socp_plus
+	parent	Arm_socp_plus
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 -0.000261286
+		0 0  1 -0.338601867
+		0 0 0 1
+	mass	2.52
+	inertia
+		0.013022885689772144	0.0	0.0
+		0.0	0.013154165656146893	0.0
+		0.0	0.0	0.0019576149660600886
+	com	0.0	0.0	-0.1264
+	meshfile mesh/fore_arm.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Hand_socp_plus
+	parent	Forearm_socp_plus
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.001217047
+		0 0  1 -0.265871926
+		0 0 0 1
+	mass	1.12
+	inertia
+		0.0027648635147748315	0.0	0.0
+		0.0	0.0031487689115472926	0.0
+		0.0	0.0	0.0006717710781510774
+	com	0.01927061	-0.007717575	-0.051481325
+	meshfile mesh/hand.stl
+	meshrt -0.5 0 0 xyz 0 0 0
+	meshcolor 0.02 0.69 .94
+endsegment
+
+marker	 CENTER_HAND_socp_plus
+	parent	Hand_socp_plus
+	position 0.0 0.025 -0.0655
+	technical 1
+endmarker
+
+segment	Thigh_socp_plus
+	parent	Pelvis_socp_plus
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 0.0
+		0 0 1 0.0
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-0.4 2.6
+	rangesQdot	
+		-100 100
+	mass	18.98
+	inertia
+		0.3444	0.0	0.0
+		0.0	0.3444	0.0
+		0.0	0.0	0.0674
+	com	0.0	0.0	-0.2017
+	meshfile mesh/thigh.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Leg_socp_plus
+	parent	Thigh_socp_plus
+	RTinMatrix	1
+	RT
+		1  0  0 0.0
+		0 1 0 1.7e-08
+		0 0 1 -0.462839073
+		0 0 0 1
+	rotations	 x
+	rangesQ	
+		-2.3 -0.02
+	rangesQdot	
+		-100 100
+	mass	8.36
+	inertia
+		0.1702	0.0	0.0
+		0.0	0.1702	0.0
+		0.0	0.0	0.0122
+	com	0.0	0.0	-0.2026
+	meshfile mesh/leg_left.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+segment	Foot_socp_plus
+	parent	Leg_socp_plus
+	RTinMatrix	1
+	RT
+		1.0 0.0 0.0 0.0
+		0.0 6.123233995736766e-17 -1.0 3.36e-07
+		0.0 1.0 6.123233995736766e-17 -0.427480971
+		0 0 0 1
+	mass	2.32
+	inertia
+		0.0178	0.0	0.0
+		0.0	0.0022	0.0
+		0.0	0.0	0.0176
+	com	0.0	0.0	-0.0757
+	meshfile mesh/foot.stl
+	meshcolor 0.02 0.69 .94
+endsegment
+
+marker	 BELOW_KNEE_socp_plus
+	parent	Leg_socp_plus
+	position 0.0 0.07 -0.1575
+	technical 1
+endmarker
+marker	 FOOT_socp_plus
+	parent	Foot_socp_plus
+	position 0.0 -0.03 -0.12
+	technical 1
+endmarker
+
+marker	Foot_Heel_socp_plus
+	parent	Foot_socp_plus
+	position	0.00000000000   -0.0300000000    0.05000000000
+endmarker
+
+marker	Foot_Toe_socp_plus
+	parent	Foot_socp_plus
+	position	0.00000000000   -0.0300000000   -0.15000000000
+endmarker
+
+

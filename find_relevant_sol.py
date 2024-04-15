@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 
 # loop over the files in the directory to find the solution that has a g value 1e-6 with the lowest f value
-folder = "results/temporary_results_10-04-17-18-30"
+folder = "results/temporary_results_11-04-17-25-47"
 lowest_cost_function_file = None
 lowest_cost_function_value = np.inf
 best_solution_g = None

@@ -68,6 +68,7 @@ segment Eyes_1
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_1
@@ -294,6 +295,7 @@ segment Eyes_2
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_2
@@ -523,6 +525,7 @@ segment Eyes_3
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_3
@@ -750,6 +753,7 @@ segment Eyes_4
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_4
@@ -978,6 +982,7 @@ segment Eyes_5
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_5
@@ -1207,6 +1212,7 @@ segment Eyes_6
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_6
@@ -1434,6 +1440,7 @@ segment Eyes_7
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_7
@@ -1664,6 +1671,7 @@ segment Eyes_8
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_8
@@ -1893,6 +1901,7 @@ segment Eyes_9
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_9
@@ -2122,6 +2131,7 @@ segment Eyes_10
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_10
@@ -2350,6 +2360,7 @@ segment Eyes_11
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_11
@@ -2579,6 +2590,7 @@ segment Eyes_12
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_12
@@ -2807,6 +2819,7 @@ segment Eyes_13
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_13
@@ -3035,6 +3048,7 @@ segment Eyes_14
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_14
@@ -3263,6 +3277,7 @@ segment Eyes_15
 		0.0 0.0 0.0001
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_15
@@ -3495,6 +3510,7 @@ segment Eyes_mean
 	meshfile mesh/cone.stl
 	meshrt 3.14 0 0 xyz 0 1.5 0
 	meshcolor 0.02 0.69 .94
+	meshscale 0.01 1 0.01
 endsegment
 
 marker eyes_vect_start_mean
