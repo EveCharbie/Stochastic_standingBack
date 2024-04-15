@@ -68,7 +68,7 @@ solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
 solver.set_maximum_iterations(10000)  # 32
-solver.set_hessian_approximation("limited-memory")
+# solver.set_hessian_approximation("limited-memory")
 # solver._nlp_scaling_method = "none"
 # solver.set_check_derivatives_for_naninf(False)  # does not raise an error, but might slow down the resolution
 
@@ -497,44 +497,49 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         )
     )
 
-    # path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
-    # with open(path_to_results, "rb") as file:
-    #     data = pickle.load(file)
-    #     q_roots_last = data["q_roots_sol"]
-    #     q_joints_last = data["q_joints_sol"]
-    #     qdot_roots_last = data["qdot_roots_sol"]
-    #     qdot_joints_last = data["qdot_joints_sol"]
-    #     tau_joints_last = data["tau_joints_sol"]
-    #     time_last = data["time_sol"]
-    #     k_last = None
-    #     ref_last = None
-    #     ref_ff_last = None
-    # q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
-    # qdot_joints_last = np.vstack(
-    #     (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
-    # )
-    # tau_joints_last = np.vstack(
-    #     (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
-    # )
-    # motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE_FEEDFORWARD(
-    #     biorbd_model_path=biorbd_model_path_vision,
-    #     time_last=time_last,
-    #     n_shooting=n_shooting,
-    #     motor_noise_magnitude=motor_noise_magnitude,
-    #     sensory_noise_magnitude=sensory_noise_magnitude,
-    #     q_roots_last=q_roots_last,
-    #     q_joints_last=q_joints_last,
-    #     qdot_roots_last=qdot_roots_last,
-    #     qdot_joints_last=qdot_joints_last,
-    #     tau_joints_last=tau_joints_last,
-    #     k_last=k_last,
-    #     ref_last=ref_last,
-    #     ref_ff_last=ref_ff_last,
-    #     nb_random=nb_random,
-    # )
-    # socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
+    with open(path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_roots_last = data["q_roots_sol"]
+        q_joints_last = data["q_joints_sol"]
+        qdot_roots_last = data["qdot_roots_sol"]
+        qdot_joints_last = data["qdot_joints_sol"]
+        tau_joints_last = data["tau_joints_sol"]
+        time_last = data["time_sol"]
+        k_last = None
+        ref_last = None
+        ref_ff_last = None
+    q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
+    q_joints_last[1, :5] = -0.5
+    q_joints_last[1, 5:-5] = np.linspace(-0.5, 0.3, n_shooting+1-10)
+    q_joints_last[1, -5:] = 0.3
 
+    qdot_joints_last = np.vstack(
+        (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
+    )
+    tau_joints_last = np.vstack(
+       (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
+    )
+    motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE_FEEDFORWARD(
+        biorbd_model_path=biorbd_model_path_vision,
+        time_last=time_last,
+        n_shooting=n_shooting,
+        motor_noise_magnitude=motor_noise_magnitude,
+        sensory_noise_magnitude=sensory_noise_magnitude,
+        q_roots_last=q_roots_last,
+        q_joints_last=q_joints_last,
+        qdot_roots_last=qdot_roots_last,
+        qdot_joints_last=qdot_joints_last,
+        tau_joints_last=tau_joints_last,
+       k_last=k_last,
+        ref_last=ref_last,
+        ref_ff_last=ref_ff_last,
+        nb_random=nb_random,
+    )
+    socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
+
+    """
     path_to_results = "results/2p5pi/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_DVG_1p0e-06_exact.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
@@ -569,6 +574,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
 
     sol_last.ocp.add_plot_penalty()
     sol_last.ocp.add_plot_ipopt_outputs()
+    """
 
     save_path = save_path.replace(".", "p")
 
@@ -577,12 +583,16 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     if path_to_temporary_results not in os.listdir("results/"):
         os.mkdir("results/" + path_to_temporary_results)
     nb_iter_save = 10
-    sol_last.ocp.save_intermediary_ipopt_iterations(
+    # sol_last.ocp.save_intermediary_ipopt_iterations(
+    #     "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
+    # )
+    socp.save_intermediary_ipopt_iterations(
         "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
     )
 
     solver.set_tol(tol)
-    sol_socp = sol_last.ocp.solve(solver, warm_start=sol_last)
+    # sol_socp = sol_last.ocp.solve(solver, warm_start=sol_last)
+    sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
     controls = sol_socp.decision_controls(to_merge=SolutionMerge.NODES)
