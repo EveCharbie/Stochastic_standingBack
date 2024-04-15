@@ -552,7 +552,7 @@ def integrate_socp_plus(time_vector, q_socp_plus, qdot_socp_plus, tau_joints_soc
     return q_integrated, qdot_integrated, q_multiple_shooting, qdot_multiple_shooting, joint_frictions, motor_noises, feedbacks, feedforwards
 
 
-FLAG_GENERATE_VIDEOS = False
+FLAG_GENERATE_VIDEOS = True
 
 OCP_color = "#5dc962"
 SOCP_color = "#ac2594"
@@ -573,7 +573,8 @@ biorbd_model_path_comparison = f"models/{model_name}_comparison.bioMod"
 result_folder = "2p5pi"
 ocp_path_to_results = f"results/{result_folder}/{model_name}_ocp_DMS_CVG_1e-8.pkl"
 socp_path_to_results = f"results/temporary_results_11-04-16-59-53/SOCP_820.pkl"
-socp_plus_path_to_results = f"results/temporary_results_11-04-17-25-47/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_2850.pkl"
+# socp_path_to_results = f"results/temporary_results_13-04-15-35-15_more_nodes/SOCP_1130.pkl"
+socp_plus_path_to_results = f"results/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_CVG_1p0e-06.pkl"
 
 n_q = 7
 n_root = 3
@@ -787,11 +788,11 @@ for i_random in range(nb_random):
 
 # q_mean_socp = np.mean(q_socp_integrated, axis=2)
 q_mean_socp = np.mean(q_socp, axis=2)
-if FLAG_GENERATE_VIDEOS:
-    # TODO: fix this integration issue ?
-    print("Generating SOCP_one : ", socp_path_to_results)
-    # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
-    bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
+# if FLAG_GENERATE_VIDEOS:
+#    # TODO: fix this integration issue ?
+#     print("Generating SOCP_one : ", socp_path_to_results)
+#     # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_nominal[:, :, 0], "SOCP_one")
+#     bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
 
 socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl")
 with open(socp_out_path_to_results, "wb") as file:
@@ -813,9 +814,9 @@ for i_shooting in range(n_shooting+1):
         q_all_socp[i_random * n_q: (i_random + 1) * n_q, i_shooting] = np.reshape(q_socp[:, i_shooting, i_random], (-1, ))
     q_all_socp[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.reshape(q_mean_socp[:, i_shooting], (-1, ))
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_all : ", socp_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all_socp, q_all_socp, "SOCP_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_all : ", socp_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all_socp, q_all_socp, "SOCP_all")
 
 
 # SOCP+
@@ -875,36 +876,17 @@ motor_noise_numerical_socp_plus_10, sensory_noise_numerical_socp_plus_10, socp_p
 
 with open(socp_plus_path_to_results, "rb") as file:
     data = pickle.load(file)
-    if "lam_x" in data.keys():
-        sol_socp_plus = Solution.from_vector(socp_plus, data["x"])
-
-        states = sol_socp_plus.decision_states(to_merge=SolutionMerge.NODES)
-        controls = sol_socp_plus.decision_controls(to_merge=SolutionMerge.NODES)
-
-        q_roots_socp_plus, q_joints_socp_plus, qdot_roots_socp_plus, qdot_joints_socp_plus = (
-            states["q_roots"],
-            states["q_joints"],
-            states["qdot_roots"],
-            states["qdot_joints"],
-        )
-        tau_joints_socp_plus, k_socp_plus, ref_fb_socp_plus = controls["tau_joints"], controls["k"], controls["ref"]
-        time_socp_plus = sol_socp_plus.decision_time()[-1]
-        ref_ff_socp_plus = sol_socp_plus.parameters["final_somersault"]
-        motor_noise_numerical_socp_plus = motor_noise_numerical_socp_plus_10
-        sensory_noise_numerical_socp_plus = sensory_noise_numerical_socp_plus_10
-
-    else:
-        q_roots_socp_plus = data["q_roots_sol"]
-        q_joints_socp_plus = data["q_joints_sol"]
-        qdot_roots_socp_plus = data["qdot_roots_sol"]
-        qdot_joints_socp_plus = data["qdot_joints_sol"]
-        tau_joints_socp_plus = data["tau_joints_sol"]
-        time_socp_plus = data["time_sol"]
-        k_socp_plus = data["k_sol"]
-        ref_fb_socp_plus = data["ref_fb_sol"]
-        ref_ff_socp_plus = data["ref_ff_sol"]
-        motor_noise_numerical_socp_plus = data["motor_noise_numerical"]
-        sensory_noise_numerical_socp_plus = data["sensory_noise_numerical"]
+    q_roots_socp_plus = data["q_roots_sol"]
+    q_joints_socp_plus = data["q_joints_sol"]
+    qdot_roots_socp_plus = data["qdot_roots_sol"]
+    qdot_joints_socp_plus = data["qdot_joints_sol"]
+    tau_joints_socp_plus = data["tau_joints_sol"]
+    time_socp_plus = data["time_sol"]
+    k_socp_plus = data["k_sol"]
+    ref_fb_socp_plus = data["ref_sol"]
+    ref_ff_socp_plus = data["ref_ff_sol"]
+    motor_noise_numerical_socp_plus = data["motor_noise_numerical"]
+    sensory_noise_numerical_socp_plus = data["sensory_noise_numerical"]
 
 time_vector_socp_plus = np.linspace(0, float(time_socp_plus), n_shooting + 1)
 
@@ -1165,6 +1147,48 @@ axs[1, 0].set_ylabel(r"$\Delta \tau$ (sum) [Nm]")
 plt.savefig("tau_and_delta_tau.png")
 plt.show()
 
+
+
+# Plot tau and delta tau
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+for i in range(2):
+    for j in range(5):
+        axs[i, j].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
+# Tau
+axs[0].step(normalized_time_vector, np.sum(tau_joints_ocp, axis=0) + np.sum(joint_friction_ocp, axis=0), color=OCP_color)
+for i_random in range(nb_random):
+    axs[0, i_dof].step(normalized_time_vector, np.sum(tau_joints_socp, axis=0) + np.sum(joint_frictions_socp[:, i_random, :], axis=0) + np.sum(motor_noises_socp[:, i_random, :], axis=0) + np.sum(feedbacks_socp[:, i_random, :], axis=0), color=SOCP_color, linewidth=0.5, alpha=0.5)
+    axs[0, i_dof].step(normalized_time_vector, tau_joints_socp_plus[0, :] + joint_frictions_socp_plus[0, i_random, :] + motor_noises_socp_plus[0, i_random, :] + feedbacks_socp_plus[0, i_random, :] + feedforwards_socp_plus[0, i_random, :], color=SOCP_plus_color, linewidth=0.5, alpha=0.5)
+axs[0, 0].set_ylabel(r"$\tau$ (sum) [Nm]")
+
+# Delta tau
+delta_time_vector = (normalized_time_vector[1:] + normalized_time_vector[:-1]) / 2
+for i_dof in range(5):
+    if i_dof == 0:
+        axs[1, i_dof].step(delta_time_vector, tau_joints_ocp[0, 1:]  + joint_friction_ocp[0, 1:] -
+                           (tau_joints_ocp[0, :-1] + joint_friction_ocp[0, :-1]), color=OCP_color)
+        for i_random in range(nb_random):
+            axs[1, i_dof].step(delta_time_vector, tau_joints_socp[0, 1:]  + joint_frictions_socp[0, i_random, 1:]  + motor_noises_socp[0, i_random, 1:]  + feedbacks_socp[0, i_random, 1:] -
+                               (tau_joints_socp[0, :-1] + joint_frictions_socp[0, i_random, :-1] + motor_noises_socp[0, i_random, :-1] + feedbacks_socp[0, i_random, :-1]), color=SOCP_color, linewidth=0.5, alpha=0.5)
+            axs[1, i_dof].step(delta_time_vector, tau_joints_socp_plus[0, 1:]  + joint_frictions_socp_plus[0, i_random, 1:]  + motor_noises_socp_plus[0, i_random, 1:]  + feedbacks_socp_plus[0, i_random, 1:]  + feedforwards_socp_plus[0, i_random, 1:] -
+                               (tau_joints_socp_plus[0, :-1] + joint_frictions_socp_plus[0, i_random, :-1] + motor_noises_socp_plus[0, i_random, :-1] + feedbacks_socp_plus[0, i_random, :-1] + feedforwards_socp_plus[0, i_random, :-1]), color=SOCP_plus_color, linewidth=0.5, alpha=0.5)
+    elif i_dof == 1:
+        axs[1, 1].step(delta_time_vector, tau_joints_socp_plus[1, 1:]  + joint_frictions_socp_plus[1, i_random, 1:]  + motor_noises_socp_plus[1, i_random, 1:]  + feedbacks_socp_plus[1, i_random, 1:]  + feedforwards_socp_plus[1, i_random, 1:] -
+                       (tau_joints_socp_plus[1, :-1] + joint_frictions_socp_plus[1, i_random, :-1] + motor_noises_socp_plus[1, i_random, :-1] + feedbacks_socp_plus[1, i_random, :-1] + feedforwards_socp_plus[1, i_random, :-1]), color=SOCP_plus_color)
+    else:
+        axs[1, i_dof].step(delta_time_vector, tau_joints_ocp[i_dof-1, 1:]  + joint_friction_ocp[i_dof-1, 1:] -
+                           (tau_joints_ocp[i_dof-1, :-1] + joint_friction_ocp[i_dof-1, :-1]), color=OCP_color)
+        for i_random in range(nb_random):
+            axs[1, i_dof].step(delta_time_vector, tau_joints_socp[i_dof-1, 1:]  + joint_frictions_socp[i_dof-1, i_random, 1:]  + motor_noises_socp[i_dof-1, i_random, 1:]  + feedbacks_socp[i_dof-1, i_random, 1:] -
+                               (tau_joints_socp[i_dof-1, :-1] + joint_frictions_socp[i_dof-1, i_random, :-1] + motor_noises_socp[i_dof-1, i_random, :-1] + feedbacks_socp[i_dof-1, i_random, :-1]), color=SOCP_color, linewidth=0.5, alpha=0.5)
+            axs[1, i_dof].step(delta_time_vector, tau_joints_socp_plus[i_dof, 1:]  + joint_frictions_socp_plus[i_dof, i_random, 1:]  + motor_noises_socp_plus[i_dof, i_random, 1:]  + feedbacks_socp_plus[i_dof, i_random, 1:]  + feedforwards_socp_plus[i_dof, i_random, 1:] -
+                               (tau_joints_socp_plus[i_dof, :-1] + joint_frictions_socp_plus[i_dof, i_random, :-1] + motor_noises_socp_plus[i_dof, i_random, :-1] + feedbacks_socp_plus[i_dof, i_random, :-1] + feedforwards_socp_plus[i_dof, i_random, :-1]), color=SOCP_plus_color, linewidth=0.5, alpha=0.5)
+axs[1, 0].set_ylabel(r"$\Delta \tau$ (sum) [Nm]")
+
+plt.savefig("sum_tau_and_delta_tau.png")
+plt.show()
+
+
 print("Movement durations: ", time_ocp, time_socp, time_socp_plus)
 
 
@@ -1295,6 +1319,20 @@ plt.savefig("landing_variability.png")
 plt.show()
 
 
-
-
-
+time_vector = np.linspace(0, 1, n_shooting+1)
+fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+axs = axs.ravel()
+for i_dof in range(8):
+    if i_dof < 4:
+        axs[i_dof].plot(time_vector, q_ocp[i_dof, :], color=OCP_color)
+    elif i_dof > 4:
+        axs[i_dof].plot(time_vector, q_ocp[i_dof-1, :], color=OCP_color)
+    for i_random in range(nb_random):
+        if i_dof < 4:
+            axs[i_dof].plot(time_vector, q_socp[i_dof, :, i_random], color=SOCP_color, linewidth=0.5)
+        elif i_dof > 4:
+            axs[i_dof].plot(time_vector, q_socp[i_dof-1, :, i_random], color=SOCP_color, linewidth=0.5)
+    for i_random in range(nb_random):
+        axs[i_dof].plot(time_vector, q_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, linewidth=0.5)
+plt.savefig("kinematics.png")
+plt.show()
