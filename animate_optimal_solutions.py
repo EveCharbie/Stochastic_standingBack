@@ -3,6 +3,7 @@ import pickle
 # sys.path.append("/home/charbie/Documents/Programmation/pyorerun/")
 # from pyorerun import BiorbdModel, MultiPhaseRerun
 
+
 def noisy_animate_rerun(model_name, model_name_mean, q_integrated, time_vector, q_mean_last, animation_name):
 
     # Options
@@ -68,4 +69,11 @@ with open(ocp_out_path_to_results, "rb") as file:
     q_nominal = data["q_nominal"]
 
 time_vector_animate = time_vector * 10
-noisy_animate(biorbd_model_path_with_mesh, biorbd_model_path_with_mesh_mean, q_ocp_integrated, time_vector_animate, q_nominal, "OCP")
+noisy_animate(
+    biorbd_model_path_with_mesh,
+    biorbd_model_path_with_mesh_mean,
+    q_ocp_integrated,
+    time_vector_animate,
+    q_nominal,
+    "OCP",
+)
