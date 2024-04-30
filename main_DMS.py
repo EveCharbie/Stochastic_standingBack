@@ -548,43 +548,6 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     socp.add_plot_penalty()
     socp.add_plot_ipopt_outputs()
 
-    """
-    path_to_results = "results/2p5pi/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_DVG_1p0e-06_exact.pkl"
-    with open(path_to_results, "rb") as file:
-        data = pickle.load(file)
-        q_roots_last = data["q_roots_sol"]
-        q_joints_last = data["q_joints_sol"]
-        qdot_roots_last = data["qdot_roots_sol"]
-        qdot_joints_last = data["qdot_joints_sol"]
-        tau_joints_last = data["tau_joints_sol"]
-        time_last = data["time_sol"]
-        k_last = data["k_sol"]
-        ref_last = data["ref_sol"]
-        ref_ff_last = data["ref_ff_sol"]
-    path_to_sol_results = "results/2p5pi/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_DVG_1p0e-06_sol_exact.pkl"
-    with open(path_to_sol_results, "rb") as file:
-        sol_last = pickle.load(file)
-    motor_noise_numerical, sensory_noise_numerical, sol_last.ocp = prepare_socp_VARIABLE_FEEDFORWARD(
-        biorbd_model_path=biorbd_model_path_vision,
-        time_last=float(time_last),
-        n_shooting=n_shooting,
-        motor_noise_magnitude=motor_noise_magnitude,
-        sensory_noise_magnitude=sensory_noise_magnitude,
-        q_roots_last=q_roots_last,
-        q_joints_last=q_joints_last,
-        qdot_roots_last=qdot_roots_last,
-        qdot_joints_last=qdot_joints_last,
-        tau_joints_last=tau_joints_last,
-        k_last=k_last,
-        ref_last=ref_last,
-        ref_ff_last=ref_ff_last,
-        nb_random=nb_random,
-    )
-
-    sol_last.ocp.add_plot_penalty()
-    sol_last.ocp.add_plot_ipopt_outputs()
-    """
-
     save_path = save_path.replace(".", "p")
 
     date_time = datetime.now().strftime("%d-%m-%H-%M-%S")
@@ -597,7 +560,6 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     )
 
     solver.set_tol(tol)
-    # sol_socp = sol_last.ocp.solve(solver, warm_start=sol_last)
     sol_socp = socp.solve(solver)
 
     states = sol_socp.decision_states(to_merge=SolutionMerge.NODES)
