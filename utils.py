@@ -364,6 +364,14 @@ def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
     return visual_feedforward
 
 
+def minimize_deterministic_efforts(controller: PenaltyController) -> cas.MX:
+    qdot_joints = controller.states["qdot_joints"].cx
+    tau_joints = controller.controls["tau_joints"].cx
+    tau_this_time = tau_joints[:]
+    tau_this_time -= controller.model.friction_coefficients @ qdot_joints
+    return cas.sum1(tau_this_time**2)
+
+
 def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
