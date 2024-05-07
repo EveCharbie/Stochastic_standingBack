@@ -214,7 +214,6 @@ def DMS_fb_noised_sensory_input_VARIABLE_no_eyes(model, q_roots, q_joints, qdot_
     vestibular_noise = cas.MX.zeros(2, 1)
     head_idx = model.segment_index("Head")
     head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
-    # head_velocity = qdot_roots[2] + qdot_joints[0]  # pelvis + head rotations
     for i in range(2):
         vestibular_noise[i] = gaussian_function(
             x=head_velocity,
@@ -339,7 +338,6 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
     vestibular_noise = cas.MX.zeros(2, 1)
     head_idx = model.segment_index("Head")
     head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
-    # head_velocity = qdot_roots[2] + qdot_joints[0]  # pelvis + head rotations
     for i in range(2):
         vestibular_noise[i] = gaussian_function(
             x=head_velocity,

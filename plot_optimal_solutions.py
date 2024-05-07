@@ -639,7 +639,7 @@ def integrate_socp_plus(
 def plot_comparison_reintegration(q_ocp_nominal, q_socp_nominal, q_socp_plus_nominal,
                                   q_all_socp, q_all_socp_plus,
                                   q_ocp_reintegrated, q_socp_reintegrated, q_socp_plus_reintegrated,
-                                  time_vector_ocp, time_vector_socp, time_vector_socp_plus,
+                                  time_vector,
                                   OCP_color, SOCP_color, SOCP_plus_color,
                                   nb_random, nb_reintegrations):
 
@@ -650,33 +650,43 @@ def plot_comparison_reintegration(q_ocp_nominal, q_socp_nominal, q_socp_plus_nom
         # Reintegrated
         for i_random in range(nb_random*nb_reintegrations):
             if i_dof < 4:
-                axs[i_dof, 0].plot(time_vector_ocp, q_ocp_reintegrated[i_dof, :, i_random], color=OCP_color, label="OCP reintegration")
-                axs[i_dof, 1].plot(time_vector_socp, q_socp_reintegrated[i_dof, :, i_random], color=SOCP_color,
-                                   label="SOCP reintegration")
+                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof, :, i_random], color=OCP_color, label="OCP reintegration", alpha=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof, :, i_random], color=SOCP_color,
+                                   label="SOCP reintegration", alpha=0.5)
             elif i_dof > 4:
-                axs[i_dof, 0].plot(time_vector_ocp, q_ocp_reintegrated[i_dof-1, :, i_random], color=OCP_color)
-                axs[i_dof, 1].plot(time_vector_socp, q_socp_reintegrated[i_dof - 1, :, i_random], color=SOCP_color)
-            axs[i_dof, 2].plot(time_vector_socp_plus, q_socp_plus_reintegrated[i_dof, :, i_random], color=SOCP_plus_color,
-                               label="SOCP+ reintegration")
+                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof-1, :, i_random], color=OCP_color, alpha=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof - 1, :, i_random], color=SOCP_color, alpha=0.5)
+            axs[i_dof, 2].plot(time_vector, q_socp_plus_reintegrated[i_dof, :, i_random], color=SOCP_plus_color,
+                               label="SOCP+ reintegration", alpha=0.5)
 
         # Optimzation variables
         for i_random in range(nb_random):
             if i_dof < 4:
-                axs[i_dof, 1].plot(time_vector_socp, q_all_socp[i_dof, :, i_random], color=SOCP_color, label="SOCP 15 models")
+                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof, :, i_random], color=SOCP_color, label="SOCP 15 models")
             elif i_dof > 4:
-                axs[i_dof, 1].plot(time_vector_socp, q_all_socp[i_dof-1, :, i_random], color=SOCP_color)
-            axs[i_dof, 2].plot(time_vector_socp_plus, q_all_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, label="SOCP+ 15 models")
+                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof-1, :, i_random], color=SOCP_color)
+            axs[i_dof, 2].plot(time_vector, q_all_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, label="SOCP+ 15 models")
 
         # Nominal
         if i_dof < 4:
-            axs[i_dof, 0].plot(time_vector_ocp, q_ocp_nominal[i_dof, :], color=OCP_color, label="OCP", linewidth=2)
-            axs[i_dof, 1].plot(time_vector_socp, q_socp_nominal[i_dof, :], color=SOCP_color, label="SOCP nominal", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color=OCP_color, label="OCP", linewidth=2)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color=SOCP_color, label="SOCP nominal", linewidth=2)
         elif i_dof > 4:
-            axs[i_dof, 0].plot(time_vector_ocp, q_ocp_nominal[i_dof-1, :], color=OCP_color, linewidth=2)
-            axs[i_dof, 1].plot(time_vector_socp, q_socp_nominal[i_dof-1, :], color=SOCP_color, linewidth=2)
-        axs[i_dof, 2].plot(time_vector_socp_plus, q_socp_plus_nominal[i_dof, :], color=SOCP_plus_color, label="SOCP+ nominal", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof-1, :], color=OCP_color, linewidth=2)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof-1, :], color=SOCP_color, linewidth=2)
+        axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color=SOCP_plus_color, label="SOCP+ nominal", linewidth=2)
 
-    axs[0, 0].legend()
+
+    axs[0, 0].plot(0, 0, color=OCP_color, linewidth=2, label="OCP")
+    axs[0, 0].plot(0, 0, color=SOCP_color, linewidth=2, label="SOCP nominal")
+    axs[0, 0].plot(0, 0, color=SOCP_plus_color, linewidth=2, label="SOCP+ nominal")
+    axs[0, 0].plot(0, 0, color=OCP_color, label="OCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP 15 models")
+    axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ 15 models")
+    fig.subplots_adjust(right=0.8)
+    axs[0, 0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png")
     plt.show()
@@ -1976,8 +1986,8 @@ plt.show()
 
 
 plot_comparison_reintegration(q_ocp, q_mean_socp, q_mean_socp_plus,
-                                  q_all_socp, q_all_socp_plus,
+                                  q_socp, q_socp_plus,
                                   q_ocp_reintegrated, q_socp_reintegrated, q_socp_plus_reintegrated,
-                                  time_vector_ocp, time_vector_socp, time_vector_socp_plus,
+                                  time_vector,
                                   OCP_color, SOCP_color, SOCP_plus_color,
                                   nb_random, nb_reintegrations)
