@@ -75,7 +75,7 @@ def OCP_dynamics(q, qdot, tau, motor_noise_numerical, ocp):
     dxdt[:nb_q, :] = qdot
 
     # Joint friction
-    tau_this_time = tau + ocp.nlp[0].model.friction_coefficients @ qdot[nb_root:]
+    tau_this_time = tau - ocp.nlp[0].model.friction_coefficients @ qdot[nb_root:]
 
     # Motor noise
     tau_this_time += motor_noise_numerical
@@ -107,7 +107,7 @@ def SOCP_dynamics(nb_random, q, qdot, tau, k_matrix, ref, motor_noise_numerical,
 
         # Joint friction
         joint_friction[:, i_random] = socp.nlp[0].model.friction_coefficients @ qdot_this_time[nb_root:]
-        tau_this_time += joint_friction[:, i_random]
+        tau_this_time -= joint_friction[:, i_random]
 
         # Motor noise
         motor_noise[:, i_random] = motor_noise_numerical[:, i_random]
@@ -163,7 +163,7 @@ def SOCP_PLUS_dynamics(
 
         # Joint friction
         joint_friction[:, i_random] = socp_plus.nlp[0].model.friction_coefficients @ qdot_this_time[nb_root:]
-        tau_this_time += joint_friction[:, i_random]
+        tau_this_time -= joint_friction[:, i_random]
 
         # Motor noise
         motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau)
@@ -1090,6 +1090,7 @@ for i_random in range(nb_random):
                 qdot_joints_socp_plus[i_random * n_joints : (i_random + 1) * n_joints, i_shooting],
             )
         )
+
 (
     q_socp_plus_integrated,
     qdot_socp_plus_integrated,
@@ -1175,7 +1176,8 @@ if FLAG_GENERATE_VIDEOS:
     print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
     bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
 
-# Comparison
+
+# Comparison ----------------------------------------------------------------------------------------------------------
 q_mean_comparison = np.zeros((7 + 7 + 8, n_shooting + 1))
 q_mean_comparison[:7, :] = q_ocp
 q_mean_comparison[7:14, :] = q_mean_socp
@@ -1184,6 +1186,8 @@ if FLAG_GENERATE_VIDEOS:
     print("Generating comparison")
     bioviz_animate(biorbd_model_path_comparison, q_mean_comparison, "Comparison")
 
+
+# Plots ---------------------------------------------------------------------------------------------------------------
 time_vector_ocp = time_vector_ocp[:-1]
 time_vector_socp = time_vector_socp[:-1]
 time_vector_socp_plus = time_vector_socp_plus[:-1]
@@ -1253,28 +1257,28 @@ axs[0, 0].set_ylabel("Nominal torques [Nm]")
 # Joint friction
 for i_dof in range(5):
     if i_dof == 0:
-        axs[1, 0].step(normalized_time_vector, joint_friction_ocp[0, :], color=OCP_color)
+        axs[1, 0].step(normalized_time_vector, -joint_friction_ocp[0, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[1, 0].step(
-                normalized_time_vector, joint_frictions_socp[0, i_random, :], color=SOCP_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp[0, i_random, :], color=SOCP_color, linewidth=0.5
             )
             axs[1, 0].step(
-                normalized_time_vector, joint_frictions_socp_plus[0, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp_plus[0, i_random, :], color=SOCP_plus_color, linewidth=0.5
             )
     elif i_dof == 1:
         for i_random in range(nb_random):
             axs[1, 1].step(
-                normalized_time_vector, joint_frictions_socp_plus[1, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp_plus[1, i_random, :], color=SOCP_plus_color, linewidth=0.5
             )
     else:
-        axs[1, i_dof].step(normalized_time_vector, joint_friction_ocp[i_dof - 1, :], color=OCP_color)
+        axs[1, i_dof].step(normalized_time_vector, -joint_friction_ocp[i_dof - 1, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[1, i_dof].step(
-                normalized_time_vector, joint_frictions_socp[i_dof - 1, i_random, :], color=SOCP_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp[i_dof - 1, i_random, :], color=SOCP_color, linewidth=0.5
             )
             axs[1, i_dof].step(
                 normalized_time_vector,
-                joint_frictions_socp_plus[i_dof, i_random, :],
+                -joint_frictions_socp_plus[i_dof, i_random, :],
                 color=SOCP_plus_color,
                 linewidth=0.5,
             )
@@ -1312,12 +1316,12 @@ axs[3, 0].set_ylabel("Feedforwards [Nm]")
 # Sum
 for i_dof in range(5):
     if i_dof == 0:
-        axs[4, i_dof].step(normalized_time_vector, tau_joints_ocp[0, :] + joint_friction_ocp[0, :], color=OCP_color)
+        axs[4, i_dof].step(normalized_time_vector, tau_joints_ocp[0, :] - joint_friction_ocp[0, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[0, :]
-                + joint_frictions_socp[0, i_random, :]
+                - joint_frictions_socp[0, i_random, :]
                 + motor_noises_socp[0, i_random, :]
                 + feedbacks_socp[0, i_random, :],
                 color=SOCP_color,
@@ -1327,7 +1331,7 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[0, :]
-                + joint_frictions_socp_plus[0, i_random, :]
+                - joint_frictions_socp_plus[0, i_random, :]
                 + motor_noises_socp_plus[0, i_random, :]
                 + feedbacks_socp_plus[0, i_random, :]
                 + feedforwards_socp_plus[0, i_random, :],
@@ -1339,7 +1343,7 @@ for i_dof in range(5):
         axs[4, 1].step(
             normalized_time_vector,
             tau_joints_socp_plus[1, :]
-            + joint_frictions_socp_plus[1, i_random, :]
+            - joint_frictions_socp_plus[1, i_random, :]
             + motor_noises_socp_plus[1, i_random, :]
             + feedbacks_socp_plus[1, i_random, :]
             + feedforwards_socp_plus[1, i_random, :],
@@ -1347,13 +1351,13 @@ for i_dof in range(5):
         )
     else:
         axs[4, i_dof].step(
-            normalized_time_vector, tau_joints_ocp[i_dof - 1, :] + joint_friction_ocp[i_dof - 1, :], color=OCP_color
+            normalized_time_vector, tau_joints_ocp[i_dof - 1, :] - joint_friction_ocp[i_dof - 1, :], color=OCP_color
         )
         for i_random in range(nb_random):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[i_dof - 1, :]
-                + joint_frictions_socp[i_dof - 1, i_random, :]
+                - joint_frictions_socp[i_dof - 1, i_random, :]
                 + motor_noises_socp[i_dof - 1, i_random, :]
                 + feedbacks_socp[i_dof - 1, i_random, :],
                 color=SOCP_color,
@@ -1363,7 +1367,7 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[i_dof, :]
-                + joint_frictions_socp_plus[i_dof, i_random, :]
+                - joint_frictions_socp_plus[i_dof, i_random, :]
                 + motor_noises_socp_plus[i_dof, i_random, :]
                 + feedbacks_socp_plus[i_dof, i_random, :]
                 + feedforwards_socp_plus[i_dof, i_random, :],
@@ -1373,7 +1377,7 @@ for i_dof in range(5):
             )
 axs[4, 0].set_ylabel(r"\tau (sum) [Nm]")
 
-plt.savefig("controls.png")
+plt.savefig("graphs/controls.png")
 plt.show()
 
 
@@ -1385,12 +1389,12 @@ for i in range(2):
 # Tau
 for i_dof in range(5):
     if i_dof == 0:
-        axs[0, i_dof].step(normalized_time_vector, tau_joints_ocp[0, :] + joint_friction_ocp[0, :], color=OCP_color)
+        axs[0, i_dof].step(normalized_time_vector, tau_joints_ocp[0, :] - joint_friction_ocp[0, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[0, :]
-                + joint_frictions_socp[0, i_random, :]
+                - joint_frictions_socp[0, i_random, :]
                 + motor_noises_socp[0, i_random, :]
                 + feedbacks_socp[0, i_random, :],
                 color=SOCP_color,
@@ -1400,7 +1404,7 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[0, :]
-                + joint_frictions_socp_plus[0, i_random, :]
+                - joint_frictions_socp_plus[0, i_random, :]
                 + motor_noises_socp_plus[0, i_random, :]
                 + feedbacks_socp_plus[0, i_random, :]
                 + feedforwards_socp_plus[0, i_random, :],
@@ -1412,7 +1416,7 @@ for i_dof in range(5):
         axs[0, 1].step(
             normalized_time_vector,
             tau_joints_socp_plus[1, :]
-            + joint_frictions_socp_plus[1, i_random, :]
+            - joint_frictions_socp_plus[1, i_random, :]
             + motor_noises_socp_plus[1, i_random, :]
             + feedbacks_socp_plus[1, i_random, :]
             + feedforwards_socp_plus[1, i_random, :],
@@ -1420,13 +1424,13 @@ for i_dof in range(5):
         )
     else:
         axs[0, i_dof].step(
-            normalized_time_vector, tau_joints_ocp[i_dof - 1, :] + joint_friction_ocp[i_dof - 1, :], color=OCP_color
+            normalized_time_vector, tau_joints_ocp[i_dof - 1, :] - joint_friction_ocp[i_dof - 1, :], color=OCP_color
         )
         for i_random in range(nb_random):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[i_dof - 1, :]
-                + joint_frictions_socp[i_dof - 1, i_random, :]
+                - joint_frictions_socp[i_dof - 1, i_random, :]
                 + motor_noises_socp[i_dof - 1, i_random, :]
                 + feedbacks_socp[i_dof - 1, i_random, :],
                 color=SOCP_color,
@@ -1436,7 +1440,7 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[i_dof, :]
-                + joint_frictions_socp_plus[i_dof, i_random, :]
+                - joint_frictions_socp_plus[i_dof, i_random, :]
                 + motor_noises_socp_plus[i_dof, i_random, :]
                 + feedbacks_socp_plus[i_dof, i_random, :]
                 + feedforwards_socp_plus[i_dof, i_random, :],
@@ -1452,19 +1456,19 @@ for i_dof in range(5):
     if i_dof == 0:
         axs[1, i_dof].step(
             delta_time_vector,
-            tau_joints_ocp[0, 1:] + joint_friction_ocp[0, 1:] - (tau_joints_ocp[0, :-1] + joint_friction_ocp[0, :-1]),
+            tau_joints_ocp[0, 1:] - joint_friction_ocp[0, 1:] - (tau_joints_ocp[0, :-1] + joint_friction_ocp[0, :-1]),
             color=OCP_color,
         )
         for i_random in range(nb_random):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp[0, 1:]
-                + joint_frictions_socp[0, i_random, 1:]
+                - joint_frictions_socp[0, i_random, 1:]
                 + motor_noises_socp[0, i_random, 1:]
                 + feedbacks_socp[0, i_random, 1:]
                 - (
                     tau_joints_socp[0, :-1]
-                    + joint_frictions_socp[0, i_random, :-1]
+                    - joint_frictions_socp[0, i_random, :-1]
                     + motor_noises_socp[0, i_random, :-1]
                     + feedbacks_socp[0, i_random, :-1]
                 ),
@@ -1475,13 +1479,13 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp_plus[0, 1:]
-                + joint_frictions_socp_plus[0, i_random, 1:]
+                - joint_frictions_socp_plus[0, i_random, 1:]
                 + motor_noises_socp_plus[0, i_random, 1:]
                 + feedbacks_socp_plus[0, i_random, 1:]
                 + feedforwards_socp_plus[0, i_random, 1:]
                 - (
                     tau_joints_socp_plus[0, :-1]
-                    + joint_frictions_socp_plus[0, i_random, :-1]
+                    - joint_frictions_socp_plus[0, i_random, :-1]
                     + motor_noises_socp_plus[0, i_random, :-1]
                     + feedbacks_socp_plus[0, i_random, :-1]
                     + feedforwards_socp_plus[0, i_random, :-1]
@@ -1494,13 +1498,13 @@ for i_dof in range(5):
         axs[1, 1].step(
             delta_time_vector,
             tau_joints_socp_plus[1, 1:]
-            + joint_frictions_socp_plus[1, i_random, 1:]
+            - joint_frictions_socp_plus[1, i_random, 1:]
             + motor_noises_socp_plus[1, i_random, 1:]
             + feedbacks_socp_plus[1, i_random, 1:]
             + feedforwards_socp_plus[1, i_random, 1:]
             - (
                 tau_joints_socp_plus[1, :-1]
-                + joint_frictions_socp_plus[1, i_random, :-1]
+                - joint_frictions_socp_plus[1, i_random, :-1]
                 + motor_noises_socp_plus[1, i_random, :-1]
                 + feedbacks_socp_plus[1, i_random, :-1]
                 + feedforwards_socp_plus[1, i_random, :-1]
@@ -1511,20 +1515,20 @@ for i_dof in range(5):
         axs[1, i_dof].step(
             delta_time_vector,
             tau_joints_ocp[i_dof - 1, 1:]
-            + joint_friction_ocp[i_dof - 1, 1:]
-            - (tau_joints_ocp[i_dof - 1, :-1] + joint_friction_ocp[i_dof - 1, :-1]),
+            - joint_friction_ocp[i_dof - 1, 1:]
+            - (tau_joints_ocp[i_dof - 1, :-1] - joint_friction_ocp[i_dof - 1, :-1]),
             color=OCP_color,
         )
         for i_random in range(nb_random):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp[i_dof - 1, 1:]
-                + joint_frictions_socp[i_dof - 1, i_random, 1:]
+                - joint_frictions_socp[i_dof - 1, i_random, 1:]
                 + motor_noises_socp[i_dof - 1, i_random, 1:]
                 + feedbacks_socp[i_dof - 1, i_random, 1:]
                 - (
                     tau_joints_socp[i_dof - 1, :-1]
-                    + joint_frictions_socp[i_dof - 1, i_random, :-1]
+                    - joint_frictions_socp[i_dof - 1, i_random, :-1]
                     + motor_noises_socp[i_dof - 1, i_random, :-1]
                     + feedbacks_socp[i_dof - 1, i_random, :-1]
                 ),
@@ -1535,13 +1539,13 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp_plus[i_dof, 1:]
-                + joint_frictions_socp_plus[i_dof, i_random, 1:]
+                - joint_frictions_socp_plus[i_dof, i_random, 1:]
                 + motor_noises_socp_plus[i_dof, i_random, 1:]
                 + feedbacks_socp_plus[i_dof, i_random, 1:]
                 + feedforwards_socp_plus[i_dof, i_random, 1:]
                 - (
                     tau_joints_socp_plus[i_dof, :-1]
-                    + joint_frictions_socp_plus[i_dof, i_random, :-1]
+                    - joint_frictions_socp_plus[i_dof, i_random, :-1]
                     + motor_noises_socp_plus[i_dof, i_random, :-1]
                     + feedbacks_socp_plus[i_dof, i_random, :-1]
                     + feedforwards_socp_plus[i_dof, i_random, :-1]
@@ -1552,7 +1556,7 @@ for i_dof in range(5):
             )
 axs[1, 0].set_ylabel(r"$\Delta \tau$ (sum) [Nm]")
 
-plt.savefig("tau_and_delta_tau.png")
+plt.savefig("graphs/tau_and_delta_tau.png")
 plt.show()
 
 
@@ -1562,13 +1566,13 @@ for i in range(2):
     axs[i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
 # Tau
 axs[0].step(
-    normalized_time_vector, np.sum(np.abs(tau_joints_ocp), axis=0) + np.sum(np.abs(joint_friction_ocp), axis=0), color=OCP_color
+    normalized_time_vector, np.sum(np.abs(tau_joints_ocp), axis=0) - np.sum(np.abs(joint_friction_ocp), axis=0), color=OCP_color
 )
 for i_random in range(nb_random):
     axs[0].step(
         normalized_time_vector,
         np.sum(np.abs(tau_joints_socp), axis=0)
-        + np.sum(np.abs(joint_frictions_socp[:, i_random, :]), axis=0)
+        - np.sum(np.abs(joint_frictions_socp[:, i_random, :]), axis=0)
         + np.sum(np.abs(motor_noises_socp[:, i_random, :]), axis=0)
         + np.sum(np.abs(feedbacks_socp[:, i_random, :]), axis=0),
         color=SOCP_color,
@@ -1578,7 +1582,7 @@ for i_random in range(nb_random):
     axs[0].step(
         normalized_time_vector,
         np.sum(np.abs(tau_joints_socp_plus), axis=0)
-        + np.sum(np.abs(joint_frictions_socp_plus[:, i_random, :]), axis=0)
+        - np.sum(np.abs(joint_frictions_socp_plus[:, i_random, :]), axis=0)
         + np.sum(np.abs(motor_noises_socp_plus[:, i_random, :]), axis=0)
         + np.sum(np.abs(feedbacks_socp_plus[:, i_random, :]), axis=0)
         + np.sum(np.abs(feedforwards_socp_plus[:, i_random, :]), axis=0),
@@ -1592,19 +1596,19 @@ axs[0].set_ylabel(r"$\tau$ (sum) [Nm]")
 delta_time_vector = (normalized_time_vector[1:] + normalized_time_vector[:-1]) / 2
 axs[1].step(
     delta_time_vector,
-    np.sum(np.abs(tau_joints_ocp[:, 1:] + joint_friction_ocp[:, 1:] - (tau_joints_ocp[:, :-1] + joint_friction_ocp[:, :-1])), axis=0),
+    np.sum(np.abs(tau_joints_ocp[:, 1:] - joint_friction_ocp[:, 1:] - (tau_joints_ocp[:, :-1] + joint_friction_ocp[:, :-1])), axis=0),
     color=OCP_color,
 )
 for i_random in range(nb_random):
     axs[1].step(
         delta_time_vector,
         np.sum(np.abs(tau_joints_socp[:, 1:]
-        + joint_frictions_socp[:, i_random, 1:]
+        - joint_frictions_socp[:, i_random, 1:]
         + motor_noises_socp[:, i_random, 1:]
         + feedbacks_socp[:, i_random, 1:]
         - (
             tau_joints_socp[:, :-1]
-            + joint_frictions_socp[:, i_random, :-1]
+            - joint_frictions_socp[:, i_random, :-1]
             + motor_noises_socp[:, i_random, :-1]
             + feedbacks_socp[:, i_random, :-1]
         )), axis=0),
@@ -1615,13 +1619,13 @@ for i_random in range(nb_random):
     axs[1].step(
         delta_time_vector,
         np.sum(np.abs(tau_joints_socp_plus[:, 1:]
-        + joint_frictions_socp_plus[:, i_random, 1:]
+        - joint_frictions_socp_plus[:, i_random, 1:]
         + motor_noises_socp_plus[:, i_random, 1:]
         + feedbacks_socp_plus[:, i_random, 1:]
         + feedforwards_socp_plus[:, i_random, 1:]
         - (
             tau_joints_socp_plus[:, :-1]
-            + joint_frictions_socp_plus[:, i_random, :-1]
+            - joint_frictions_socp_plus[:, i_random, :-1]
             + motor_noises_socp_plus[:, i_random, :-1]
             + feedbacks_socp_plus[:, i_random, :-1]
             + feedforwards_socp_plus[:, i_random, :-1]
@@ -1632,7 +1636,7 @@ for i_random in range(nb_random):
     )
 axs[1].set_ylabel(r"$\Delta \tau$ (sum) [Nm]")
 
-plt.savefig("sum_tau_and_delta_tau.png")
+plt.savefig("graphs/sum_tau_and_delta_tau.png")
 plt.show()
 
 plt.figure()
@@ -1641,7 +1645,7 @@ plt.bar(1, float(time_socp), color=SOCP_color, label="SOCP")
 plt.bar(2, float(time_socp_plus), color=SOCP_plus_color, label="SOCP+")
 plt.xticks([0, 1, 2], ["OCP", "SOCP", "SOCP+"])
 print("Movement durations: ", time_ocp, time_socp, time_socp_plus)
-plt.savefig("movement_durations.png")
+plt.savefig("graphs/movement_durations.png")
 plt.show()
 
 
@@ -1660,7 +1664,7 @@ for i_dof in range(5):
 axs[0, 0].set_ylim(-35, 35)
 axs[0, 1].set_ylim(-35, 35)
 axs[1, 1].set_ylim(-35, 35)
-plt.savefig("gains.png")
+plt.savefig("graphs/gains.png")
 plt.show()
 
 
@@ -1676,7 +1680,7 @@ axs[1, 1].step(normalized_time_vector, np.sum(np.abs(k_socp_plus[n_k_fb:, :]), a
 axs[0, 0].set_ylim(0, 800)
 axs[0, 1].set_ylim(0, 800)
 axs[1, 1].set_ylim(0, 800)
-plt.savefig("sum_gains.png")
+plt.savefig("graphs/sum_gains.png")
 plt.show()
 
 
@@ -1702,7 +1706,7 @@ for i_dof in range(5):
 axs[0, 0].set_ylim(-40, 35)
 axs[0, 1].set_ylim(-40, 35)
 axs[1, 1].set_ylim(-40, 35)
-plt.savefig("delta_gains.png")
+plt.savefig("graphs/delta_gains.png")
 
 
 # Plot the delta gains
@@ -1720,7 +1724,7 @@ axs[1, 1].step(
 axs[0, 0].set_ylim(0, 800)
 axs[0, 1].set_ylim(0, 800)
 axs[1, 1].set_ylim(0, 800)
-plt.savefig("sum_delta_gains.png")
+plt.savefig("graphs/sum_delta_gains.png")
 plt.show()
 
 # Plot the FF gains vs acuity
@@ -1748,7 +1752,7 @@ axs[2].plot(normalized_time_vector, visual_acuity_normalized, color="turquoise",
 axs[2].set_ylabel("Visual acuity")
 axs[3].plot(normalized_time_vector, vestibular_acquity_normalized, color="hotpink", label="Vestibular acuity")
 axs[3].set_ylabel("Vestibular acuity")
-plt.savefig("ff_gains.png")
+plt.savefig("graphs/ff_gains.png")
 plt.show()
 
 
@@ -1823,7 +1827,7 @@ box_plot(0, BodyVelocity_ocp, axs[2], OCP_color)
 box_plot(0.5, BodyVelocity_socp, axs[2], SOCP_color)
 box_plot(1, BodyVelocity_socp_plus, axs[2], SOCP_plus_color)
 
-plt.savefig("landing_variability.png")
+plt.savefig("graphs/landing_variability.png")
 plt.show()
 
 
@@ -1842,5 +1846,5 @@ for i_dof in range(8):
             axs[i_dof].plot(time_vector, q_socp[i_dof - 1, :, i_random], color=SOCP_color, linewidth=0.5)
     for i_random in range(nb_random):
         axs[i_dof].plot(time_vector, q_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, linewidth=0.5)
-plt.savefig("kinematics.png")
+plt.savefig("graphs/kinematics.png")
 plt.show()
