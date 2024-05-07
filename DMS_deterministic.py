@@ -8,7 +8,7 @@ import biorbd_casadi as biorbd
 import casadi as cas
 import numpy as np
 
-from utils import CoM_over_toes
+from utils import CoM_over_toes, minimize_deterministic_efforts
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import (
@@ -56,11 +56,15 @@ def prepare_ocp(
     # Add objective functions
     objective_functions = ObjectiveList()
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL, key="tau_joints", node=Node.ALL_SHOOTING, weight=0.01, quadratic=True
+        minimize_deterministic_efforts,
+        custom_type=ObjectiveFcn.Lagrange,
+        node=Node.ALL_SHOOTING,
+        weight=0.01,
+        quadratic=False,  # Already squared in the function
     )
     objective_functions.add(
-        ObjectiveFcn.Lagrange.MINIMIZE_CONTROL,
-        key="tau_joints",
+        minimize_deterministic_efforts,
+        custom_type=ObjectiveFcn.Lagrange,
         node=Node.ALL_SHOOTING,
         weight=0.01,
         quadratic=True,

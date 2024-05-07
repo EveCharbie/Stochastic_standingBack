@@ -96,7 +96,7 @@ def custom_dynamics(
         tau_this_time = tau_joints[:]
 
         # Joint friction
-        tau_this_time += nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
+        tau_this_time -= nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
         tau_this_time += motor_noise[:, i]
