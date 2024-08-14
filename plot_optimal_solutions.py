@@ -167,7 +167,7 @@ def SOCP_PLUS_dynamics(
 
         # Motor noise
         motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau)
-        motor_noise[1, i_random] = 0
+        motor_noise[1, i_random] = 0  # No noise on the eyes
         tau_this_time += motor_noise[:, i_random]
 
         # Feedback
@@ -554,10 +554,10 @@ def integrate_socp_plus(
     motor_noise_numerical,
     sensory_noise_numerical,
     dyn_fun,
-    socp,
+    socp_plus,
 ):
 
-    dt_socp = time_vector[1] - time_vector[0]
+    dt_socp_plus = time_vector[1] - time_vector[0]
     n_q = q_socp_plus.shape[0]
     n_shooting = q_socp_plus.shape[1] - 1
     nb_random = q_socp_plus.shape[2]
@@ -578,15 +578,16 @@ def integrate_socp_plus(
     motor_noises = np.zeros((n_q - 3, nb_random, n_shooting))
     feedbacks = np.zeros((n_q - 3, nb_random, n_shooting))
     feedforwards = np.zeros((n_q - 3, nb_random, n_shooting))
+
     for i_shooting in range(n_shooting):
-        k_matrix = StochasticBioModel.reshape_to_matrix(k_socp_plus[:, i_shooting], socp.nlp[0].model.matrix_shape_k)
+        k_matrix = StochasticBioModel.reshape_to_matrix(k_socp_plus[:, i_shooting], socp_plus.nlp[0].model.matrix_shape_k)
         k_fb_matrix = k_matrix[:, :-1]
         k_ff_matrix = k_matrix[:, -1]
         states_integrated, joint_friction_out, motor_noise_out, feedback_out, feedforward_out = RK4_SOCP_PLUS(
             q_integrated[:, i_shooting, :],
             qdot_integrated[:, i_shooting, :],
             tau_joints_socp_plus[:, i_shooting],
-            dt_socp,
+            dt_socp_plus,
             k_fb_matrix,
             k_ff_matrix,
             ref_fb_socp_plus[:, i_shooting],
@@ -611,7 +612,7 @@ def integrate_socp_plus(
             q_socp_plus[:, i_shooting, :],
             qdot_socp_plus[:, i_shooting, :],
             tau_joints_socp_plus[:, i_shooting],
-            dt_socp,
+            dt_socp_plus,
             k_fb_matrix,
             k_ff_matrix,
             ref_fb_socp_plus[:, i_shooting],
@@ -650,31 +651,29 @@ def plot_comparison_reintegration(q_ocp_nominal, q_socp_nominal, q_socp_plus_nom
         # Reintegrated
         for i_random in range(nb_random*nb_reintegrations):
             if i_dof < 4:
-                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof, :, i_random], color=OCP_color, label="OCP reintegration", alpha=0.5)
-                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof, :, i_random], color=SOCP_color,
-                                   label="SOCP reintegration", alpha=0.5)
+                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof, :, i_random], color=OCP_color, alpha=0.2, linewidth=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof, :, i_random], color=SOCP_color, alpha=0.2, linewidth=0.5)
             elif i_dof > 4:
-                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof-1, :, i_random], color=OCP_color, alpha=0.5)
-                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof - 1, :, i_random], color=SOCP_color, alpha=0.5)
-            axs[i_dof, 2].plot(time_vector, q_socp_plus_reintegrated[i_dof, :, i_random], color=SOCP_plus_color,
-                               label="SOCP+ reintegration", alpha=0.5)
+                axs[i_dof, 0].plot(time_vector, q_ocp_reintegrated[i_dof-1, :, i_random], color=OCP_color, alpha=0.2, linewidth=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_reintegrated[i_dof - 1, :, i_random], color=SOCP_color, alpha=0.2, linewidth=0.5)
+            axs[i_dof, 2].plot(time_vector, q_socp_plus_reintegrated[i_dof, :, i_random], color=SOCP_plus_color, alpha=0.2, linewidth=0.5)
 
         # Optimzation variables
         for i_random in range(nb_random):
             if i_dof < 4:
-                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof, :, i_random], color=SOCP_color, label="SOCP 15 models")
+                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof, :, i_random], color="#6C165C", linewidth=0.5)
             elif i_dof > 4:
-                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof-1, :, i_random], color=SOCP_color)
-            axs[i_dof, 2].plot(time_vector, q_all_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, label="SOCP+ 15 models")
+                axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof-1, :, i_random], color="#6C165C", linewidth=0.5)
+            axs[i_dof, 2].plot(time_vector, q_all_socp_plus[i_dof, :, i_random], color="#016C93", linewidth=0.5)
 
         # Nominal
         if i_dof < 4:
-            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color=OCP_color, label="OCP", linewidth=2)
-            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color=SOCP_color, label="SOCP nominal", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color="k", linewidth=2)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color="k", linewidth=2)
         elif i_dof > 4:
-            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof-1, :], color=OCP_color, linewidth=2)
-            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof-1, :], color=SOCP_color, linewidth=2)
-        axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color=SOCP_plus_color, label="SOCP+ nominal", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof-1, :], color="k", linewidth=2)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof-1, :], color="k", linewidth=2)
+        axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color="k", linewidth=2)
 
 
     axs[0, 0].plot(0, 0, color=OCP_color, linewidth=2, label="OCP")
@@ -686,10 +685,37 @@ def plot_comparison_reintegration(q_ocp_nominal, q_socp_nominal, q_socp_plus_nom
     axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP 15 models")
     axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ 15 models")
     fig.subplots_adjust(right=0.8)
-    axs[0, 0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axs[0, 0].legend(bbox_to_anchor=(3.05, 1), loc='upper left')
     plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png")
     plt.show()
+
+    return
+
+def plot_mean_comparison(q_ocp, q_mean_socp, q_mean_socp_plus,
+                      q_socp, q_socp_plus,
+                      q_ocp_reintegrated, q_socp_reintegrated, q_socp_plus_reintegrated,
+                      time_vector,
+                      OCP_color, SOCP_color, SOCP_plus_color):
+
+    socp_variable_mean = np.mean(q_socp, axis=1)
+    socp_plus_variable_mean = np.mean(q_socp_plus, axis=1)
+    ocp_reintegration_mean = np.mean(q_ocp_reintegrated, axis=2)
+    socp_reintegration_mean = np.mean(q_socp_reintegrated, axis=2)
+    socp_plus_reintegration_mean = np.mean(q_socp_plus_reintegrated, axis=2)
+
+    fig, axs = plt.subplots(7, 3, figsize=(15, 10))
+    for i_dof in range(7):
+        axs[i_dof, 0].plot(time_vector, q_ocp[i_dof, :], color=OCP_color, linewidth=2)
+        axs[i_dof, 1].plot(time_vector, q_mean_socp[i_dof, :], color=SOCP_color, linewidth=2)
+        axs[i_dof, 2].plot(time_vector, q_mean_socp_plus[i_dof, :], color=SOCP_plus_color, linewidth=2)
+
+        axs[i_dof, 0].plot(time_vector, ocp_reintegration_mean[i_dof, :], color=OCP_color, alpha=0.5)
+        axs[i_dof, 1].plot(time_vector, socp_reintegration_mean[i_dof, :], color=SOCP_color, alpha=0.5)
+        axs[i_dof, 2].plot(time_vector, socp_plus_reintegration_mean[i_dof, :], color=SOCP_plus_color, alpha=0.5)
+
+        axs[i_dof, 1].plot(time_vector, socp_variable_mean[i_dof, :], color="#6C165C", linewidth=0.5)
+        axs[i_dof, 2].plot(time_vector, socp_plus_variable_mean[i_dof, :], color="#016C93", linewidth=0.5)
 
     return
 
@@ -719,6 +745,8 @@ FLAG_GENERATE_VIDEOS = False
 
 OCP_color = "#5dc962"
 SOCP_color = "#ac2594"
+SOCP_VARIABLE_color = "#F18F01"
+SOCP_FEEDFORWARD_color = "#A469F1"
 SOCP_plus_color = "#06b0f0"
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -736,6 +764,8 @@ biorbd_model_path_comparison = f"models/{model_name}_comparison.bioMod"
 result_folder = "good"
 ocp_path_to_results = f"results/{result_folder}/{model_name}_ocp_DMS_CVG_1e-8.pkl"
 socp_path_to_results = f"results/{result_folder}/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_DMS_15random_CVG_1p0e-06.pkl"
+socp_variable_path_to_results= f"results/{result_folder}/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_DMS_15random_CVG_1p0e-06.pkl"
+socp_feedforward_path_to_results = f"results/{result_folder}/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_FEEDFORWARD_DMS_15random_CVG_1p0e-06.pkl"
 socp_plus_path_to_results = (
     f"results/{result_folder}/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD_DMS_15random_CVG_1p0e-06.pkl"
 )
@@ -1991,3 +2021,9 @@ plot_comparison_reintegration(q_ocp, q_mean_socp, q_mean_socp_plus,
                                   time_vector,
                                   OCP_color, SOCP_color, SOCP_plus_color,
                                   nb_random, nb_reintegrations)
+
+plot_mean_comparison(q_ocp, q_mean_socp, q_mean_socp_plus,
+                      q_socp, q_socp_plus,
+                      q_ocp_reintegrated, q_socp_reintegrated, q_socp_plus_reintegrated,
+                      time_vector,
+                      OCP_color, SOCP_color, SOCP_plus_color,)

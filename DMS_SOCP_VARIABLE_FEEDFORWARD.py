@@ -110,7 +110,9 @@ def custom_dynamics(
         tau_this_time -= nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
 
         # Motor noise
-        tau_this_time += motor_acuity(motor_noise[:, i], tau_joints)
+        motor_noise_computed = motor_acuity(motor_noise[:, i], tau_joints)
+        motor_noise_computed[1] = 0  # No noise on the eyes
+        tau_this_time += motor_noise_computed
 
         # Feedback
         tau_this_time += k_fb @ (
@@ -529,7 +531,13 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     else:
         u_init.add("k", initial_guess=[0.01] * n_k, interpolation=InterpolationType.CONSTANT)
 
-    u_bounds.add("k", min_bound=[-50] * n_k, max_bound=[50] * n_k, interpolation=InterpolationType.CONSTANT)
+    k_min = np.ones((n_joints, n_ref + 1)) * -50
+    k_min[1, :] = 0  # No feedbacks on the eyes
+    k_min_vector = StochasticBioModel.reshape_to_vector(k_min)
+    k_max = np.ones((n_joints, n_ref + 1)) * 50
+    k_max[1, :] = 0  # No feedbacks on the eyes
+    k_max_vector = StochasticBioModel.reshape_to_vector(k_max)
+    u_bounds.add("k", min_bound=k_min_vector, max_bound=k_max_vector, interpolation=InterpolationType.CONSTANT)
 
     ref_min = [-1000] * n_ref
     ref_max = [1000] * n_ref
