@@ -248,6 +248,7 @@ def prepare_socp(
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
     nb_random: int = 30,
+    seed: int = 0,
 ):
     """
     Sensory inputs:
@@ -278,7 +279,7 @@ def prepare_socp(
     bio_model.nb_random = nb_random
 
     # Prepare the noises
-    np.random.seed(0)
+    np.random.seed(seed)
     # the last node deos not need motor and sensory noise
     motor_noise_numerical = np.zeros((n_joints, nb_random, n_shooting + 1))
     sensory_noise_numerical = np.zeros((2 * (n_joints + 1), nb_random, n_shooting + 1))
