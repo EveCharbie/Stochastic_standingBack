@@ -542,4 +542,4 @@ def prepare_socp_VARIABLE(
         ode_solver=OdeSolver.RK4(),
         n_threads=32,
     )
-    return motor_noise_numerical, sensory_noise_numerical, ocp
+    return motor_noise_numerical, sensory_noise_numerical, ocp, noised_states
