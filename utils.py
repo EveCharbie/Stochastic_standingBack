@@ -439,6 +439,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
 
     return all_tau_cx
 
+
 def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
     nb_q = controller.model.nb_q
@@ -660,5 +661,3 @@ def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, se
     noised_curent_somersault_angle = curent_somersault_angle + curent_somersault_angle_noise
 
     return noised_curent_somersault_angle + noised_somersault_velocity * noised_time_to_contact
-
-

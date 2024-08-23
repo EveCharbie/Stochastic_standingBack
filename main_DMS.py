@@ -180,9 +180,7 @@ if RUN_SOCP:
     if path_to_temporary_results not in os.listdir("results/"):
         os.mkdir("results/" + path_to_temporary_results)
     nb_iter_save = 10
-    socp.save_intermediary_ipopt_iterations(
-        "results/" + path_to_temporary_results, "SOCP", nb_iter_save
-    )
+    socp.save_intermediary_ipopt_iterations("results/" + path_to_temporary_results, "SOCP", nb_iter_save)
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
