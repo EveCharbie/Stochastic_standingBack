@@ -20,6 +20,7 @@ from utils import (
     visual_noise,
     gaussian_function,
     DMS_sensory_reference_no_eyes,
+    DMS_ff_sensory_input,
 )
 
 
@@ -710,6 +711,188 @@ def noisy_integrate_socp_variable(biorbd_model_path,
 
     return q_socp_variable_integrated, qdot_socp_variable_integrated, q_all_socp_variable, joint_friction_socp_variable, motor_noise_socp_variable, feedbacks_socp_variable
 
+def noisy_integrate_socp_feedforward(biorbd_model_path,
+                                        time_ocp,
+                                        motor_noise_magnitude,
+                                        sensory_noise_magnitude,
+                                        q_roots_ocp,
+                                        q_joints_ocp,
+                                        qdot_roots_ocp,
+                                        qdot_joints_ocp,
+                                        tau_joints_ocp,
+                                        n_q,
+                                        n_shooting,
+                                        nb_random,
+                                        nb_reintegrations,
+                                        q_roots_socp_feedforward,
+                                        q_joints_socp_feedforward,
+                                        qdot_roots_socp_feedforward,
+                                        qdot_joints_socp_feedforward,
+                                        q_socp_feedforward,
+                                        qdot_socp_feedforward,
+                                        tau_joints_socp_feedforward,
+                                        k_socp_feedforward,
+                                        ref_fb_socp_feedforward,
+                                        ref_ff_socp_feedforward,
+                                        time_vector_socp_feedforward,
+                                        q_mean_socp_feedforward,
+                                        DMS_sensory_reference_no_eyes_func):
+
+     dt = time_vector_socp_feedforward[1] - time_vector_socp_feedforward[0]
+
+     states = None
+     controls = None
+     parameters = None
+     algebraic_states = InitialGuessList()
+
+     q_all_socp_feedforward = np.zeros((n_q * (nb_random + 1), n_shooting + 1))
+     for i_shooting in range(n_shooting + 1):
+         for i_random in range(nb_random):
+             q_all_socp_feedforward[i_random * n_q: (i_random + 1) * n_q, i_shooting] = np.reshape(
+                 q_socp_feedforward[:, i_shooting, i_random], (-1,)
+             )
+         q_all_socp_feedforward[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.reshape(
+             q_mean_socp_feedforward[:, i_shooting],
+             (-1,))
+
+     q_roots_integrated_socp_feedforward = np.zeros((3, n_shooting + 1, nb_random * nb_reintegrations))
+     q_joints_integrated_socp_feedforward = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
+     qdot_roots_integrated_socp_feedforward = np.zeros((3, n_shooting + 1, nb_random * nb_reintegrations))
+     qdot_joints_integrated_socp_feedforward = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
+     joint_friction_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+     motor_noise_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+     feedbacks_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+     for i_reintegration in range(nb_reintegrations):
+
+         _, _, socp_feedforward, noised_states = prepare_socp_FEEDFORWARD(
+             biorbd_model_path=biorbd_model_path,
+             time_last=time_ocp,
+             n_shooting=n_shooting,
+             motor_noise_magnitude=motor_noise_magnitude,
+             sensory_noise_magnitude=sensory_noise_magnitude,
+             q_roots_last=q_roots_ocp,
+             q_joints_last=q_joints_ocp,
+             qdot_roots_last=qdot_roots_ocp,
+             qdot_joints_last=qdot_joints_ocp,
+             tau_joints_last=tau_joints_ocp,
+             k_last=None,
+             ref_last=None,
+             nb_random=nb_random,
+             seed=i_reintegration,
+         )
+
+         # initial variability
+         q_roots_socp_feedforward_this_time = q_roots_socp_feedforward[:, :]
+         q_joints_socp_feedforward_this_time = q_joints_socp_feedforward[:, :]
+         qdot_roots_socp_feedforward_this_time = qdot_roots_socp_feedforward[:, :]
+         qdot_joints_socp_feedforward_this_time = qdot_joints_socp_feedforward[:, :]
+         for i_random in range(nb_random):
+             q_roots_socp_feedforward_this_time[3 * i_random:3 * (i_random + 1), 0] += noised_states[:3, i_random]
+             q_joints_socp_feedforward_this_time[(n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0] += noised_states[
+                                                                                                     3:n_q, i_random]
+             qdot_roots_socp_feedforward_this_time[3 * i_random:3 * (i_random + 1), 0] += noised_states[n_q:n_q + 3,
+                                                                                       i_random]
+             qdot_joints_socp_feedforward_this_time[(n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0] += noised_states[
+                                                                                                        n_q + 3:,
+                                                                                                        i_random]
+
+         del states, controls, parameters
+         states = InitialGuessList()
+         controls = InitialGuessList()
+         parameters = InitialGuessList()
+         states.add("q_roots", q_roots_socp_feedforward_this_time, interpolation=InterpolationType.EACH_FRAME)
+         states.add("q_joints", q_joints_socp_feedforward_this_time, interpolation=InterpolationType.EACH_FRAME)
+         states.add("qdot_roots", qdot_roots_socp_feedforward_this_time, interpolation=InterpolationType.EACH_FRAME)
+         states.add("qdot_joints", qdot_joints_socp_feedforward_this_time, interpolation=InterpolationType.EACH_FRAME)
+         controls.add("tau_joints", tau_joints_socp_feedforward,
+                      interpolation=InterpolationType.EACH_FRAME)
+         controls.add("k", k_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
+         controls.add("ref", ref_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
+         parameters["time"] = time_vector_socp_feedforward[-1]
+         parameters["ref_ff"] = ref_ff_socp_feedforward
+
+         sol_from_initial_guess = Solution.from_initial_guess(
+             socp_feedforward, [np.array([dt]), states, controls, parameters, algebraic_states]
+         )
+         integrated_sol_socp_feedforward = sol_from_initial_guess.integrate(shooting_type=Shooting.SINGLE,
+                                                                         integrator=SolutionIntegrator.OCP)
+
+         for i_shooting in range(n_shooting + 1):
+             for i_random in range(nb_random):
+                 q_roots_integrated_socp_feedforward[:, i_shooting, i_reintegration * nb_random + i_random] = \
+                     integrated_sol_socp_feedforward["q_roots"][i_shooting][3 * i_random:3 * (i_random + 1), 0]
+                 q_joints_integrated_socp_feedforward[:, i_shooting, i_reintegration * nb_random + i_random] = \
+                     integrated_sol_socp_feedforward["q_joints"][i_shooting][
+                     (n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0]
+                 qdot_roots_integrated_socp_feedforward[:, i_shooting, i_reintegration * nb_random + i_random] = \
+                     integrated_sol_socp_feedforward["qdot_roots"][i_shooting][3 * i_random:3 * (i_random + 1), 0]
+                 qdot_joints_integrated_socp_feedforward[:, i_shooting, i_reintegration * nb_random + i_random] = \
+                     integrated_sol_socp_feedforward["qdot_joints"][i_shooting][
+                     (n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0]
+
+                 if i_shooting < n_shooting:
+                     # Joint friction
+                     joint_friction_socp_feedforward[:, i_shooting,
+                     i_reintegration * nb_random + (n_q - 3) * i_random: i_reintegration * nb_random + (n_q - 3) * (
+                                 i_random + 1)] = -socp_feedforward.nlp[0].model.friction_coefficients @ \
+                                                  integrated_sol_socp_feedforward["qdot_joints"][i_shooting][
+                                                  (n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0]
+
+                     # Motor noise
+                     motor_noise_socp_feedforward[:, i_shooting,
+                     i_reintegration * nb_random + (n_q - 3) * i_random: i_reintegration * nb_random + (n_q - 3) * (
+                                 i_random + 1)] = np.reshape(
+                         socp.nlp[0].dynamics_type.numerical_data_timeseries['motor_noise_numerical'][:, i_random, i_shooting],
+                         (-1, 1))
+
+                     # Feedback
+                     k_fb_matrix = StochasticBioModel.reshape_to_matrix(k_socp_feedforward[:-1, i_shooting],
+                                                                     socp.nlp[0].model.matrix_shape_k)
+                     feedbacks_socp_feedforward[:, i_shooting,
+                     i_reintegration * nb_random + (n_q - 3) * i_random: i_reintegration * nb_random + (n_q - 3) * (
+                                 i_random + 1)] = np.reshape(k_fb_matrix @ (
+                                ref_fb_socp_feedforward
+                             - DMS_ff_sensory_input(np.hstack(
+                         (integrated_sol_socp_feedforward["q_roots"][i_shooting][3 * i_random:3 * (i_random + 1), 0],
+                          integrated_sol_socp_feedforward["q_joints"][i_shooting][
+                          (n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0])),
+                                                          np.hstack((integrated_sol_socp_feedforward["qdot_roots"][
+                                                                         i_shooting][3 * i_random:3 * (i_random + 1),
+                                                                     0],
+                                                                     integrated_sol_socp_feedforward["qdot_joints"][
+                                                                         i_shooting][
+                                                                     (n_q - 3) * i_random:(n_q - 3) * (i_random + 1),
+                                                                     0])))
+                             + socp_feedforward.nlp[0].dynamics_type.numerical_data_timeseries['sensory_noise_numerical'][
+                               :-1, i_random, i_shooting]), (-1, 1))
+
+                     # Feedforward
+                     k_ff = k_socp_feedforward[-1, i_shooting]
+                     sensory_input = DMS_sensory_reference_no_eyes_func(socp_feedforward.nlp[0].model,
+                                                           time_vector_socp_feedforward[-1],
+                                                           time_vector_socp_feedforward[i_shooting],
+                                                           np.hstack(
+                                                             (integrated_sol_socp_feedforward["q_roots"][i_shooting][3 * i_random:3 * (i_random + 1), 0],
+                                                              integrated_sol_socp_feedforward["q_joints"][i_shooting][
+                                                              (n_q - 3) * i_random:(n_q - 3) * (i_random + 1), 0])),
+                                                           np.hstack((integrated_sol_socp_feedforward["qdot_roots"][
+                                                                         i_shooting][3 * i_random:3 * (i_random + 1),
+                                                                     0],
+                                                                     integrated_sol_socp_feedforward["qdot_joints"][
+                                                                         i_shooting][
+                                                                     (n_q - 3) * i_random:(n_q - 3) * (i_random + 1),
+                                                                     0])))
+                     sensory_noise = socp_feedforward.nlp[0].dynamics_type.numerical_data_timeseries[
+                                                                 'sensory_noise_numerical'][
+                                                             -1, i_random, i_shooting]
+                     feedforwards_socp_feedforward[:, i_shooting, i_reintegration * nb_random + (n_q - 3) * i_random: i_reintegration * nb_random + (n_q - 3) * (
+                                 i_random + 1)] = np.reshape(k_ff @ (ref_socp_feedforward[:, i_shooting] - sensory_input + sensory_noise), (-1, 1))
+
+     q_socp_feedforward_integrated = np.vstack((q_roots_integrated_socp_feedforward, q_joints_integrated_socp_feedforward))
+     qdot_socp_feedforward_integrated = np.vstack(
+         (qdot_roots_integrated_socp_feedforward, qdot_joints_integrated_socp_feedforward))
+
+     return q_socp_feedforward_integrated, qdot_socp_feedforward_integrated, q_all_socp_feedforward, joint_frictions_socp_feedforward, motor_noises_socp_feedforward, feedbacks_socp_feedforward, feedforwards_socp_feedforward
 
 def integrate_socp(
     time_vector,
@@ -1003,20 +1186,26 @@ def create_random_noise(seed, nb_random, n_shooting, n_joints, motor_noise_magni
 
 
 FLAG_GENERATE_VIDEOS = True
+model_name = "Model2D_7Dof_0C_3M"
 
-OCP_color = "#5dc962"
-SOCP_color = "#ac2594"
+OCP_color = "#5DC962"
+SOCP_color = "#AC2594"
 SOCP_VARIABLE_color = "#F18F01"
 SOCP_FEEDFORWARD_color = "#A469F1"
 SOCP_plus_color = "#06b0f0"
-model_name = "Model2D_7Dof_0C_3M"
+
 biorbd_model_path = f"models/{model_name}.bioMod"
 biorbd_model_path_with_mesh_ocp = f"models/{model_name}_with_mesh_ocp.bioMod"
-biorbd_model_path_with_mesh_socp = f"models/{model_name}_with_mesh_socp.bioMod"
-biorbd_model_path_with_mesh_socp_variable = f"models/{model_name}_with_mesh_socp_variable.bioMod"
 biorbd_model_path_with_mesh_all = f"models/{model_name}_with_mesh_all.bioMod"
+
+biorbd_model_path_with_mesh_socp = f"models/{model_name}_with_mesh_socp.bioMod"
 biorbd_model_path_with_mesh_all_socp = f"models/{model_name}_with_mesh_all_socp.bioMod"
+
+biorbd_model_path_with_mesh_socp_variable = f"models/{model_name}_with_mesh_socp_variable.bioMod"
 biorbd_model_path_with_mesh_all_socp_variable = f"models/{model_name}_with_mesh_all_socp_variable.bioMod"
+
+biorbd_model_path_with_mesh_socp_feedforward = f"models/{model_name}_with_mesh_socp_feedforward.bioMod"
+biorbd_model_path_with_mesh_all_socp_feedforward = f"models/{model_name}_with_mesh_all_socp_feedforward.bioMod"
 
 biorbd_model_path_vision = f"models/{model_name}_vision.bioMod"
 biorbd_model_path_vision_with_mesh = f"models/{model_name}_vision_with_mesh.bioMod"
@@ -1342,9 +1531,9 @@ q_socp_variable_integrated, qdot_socp_variable_integrated, q_all_socp_variable, 
                                                                             DMS_sensory_reference_func)
 
 q_mean_socp_variable = np.mean(q_socp_variable, axis=2)
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_VARIABLE_one : ", socp_variable_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_socp_variable, q_mean_socp_variable, "SOCP_VARIABLE_one")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_VARIABLE_one : ", socp_variable_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_socp_variable, q_mean_socp_variable, "SOCP_VARIABLE_one")
 
 socp_variable_out_path_to_results = socp_variable_path_to_results.replace(".pkl", "_integrated.pkl")
 with open(socp_variable_out_path_to_results, "wb") as file:
@@ -1357,9 +1546,126 @@ with open(socp_variable_out_path_to_results, "wb") as file:
     }
     pickle.dump(data, file)
 
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_VARIABLE_all : ", socp_variable_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all_socp_variable, q_all_socp_variable, "SOCP_VARIABLE_all")
+
+
+# SOCP FEEDFORWARD
+motor_noise_magnitude = cas.DM(
+    np.array(
+        [
+            motor_noise_std**2 / dt,
+            0.0,
+            motor_noise_std**2 / dt,
+            motor_noise_std**2 / dt,
+            motor_noise_std**2 / dt,
+        ]
+    )
+)  # All DoFs except root
+sensory_noise_magnitude = cas.DM(
+    np.array(
+        [
+            wPq_std**2 / dt,  # Proprioceptive position
+            wPq_std**2 / dt,
+            wPq_std**2 / dt,
+            wPq_std**2 / dt,
+            wPqdot_std**2 / dt,  # Proprioceptive velocity
+            wPqdot_std**2 / dt,
+            wPqdot_std**2 / dt,
+            wPqdot_std**2 / dt,
+            wPq_std**2 / dt,  # Vestibular position
+            wPq_std**2 / dt,  # Vestibular velocity
+            wPq_std**2 / dt,  # Visual
+        ]
+    )
+)
+
+with open(socp_feedforward_path_to_results, "rb") as file:
+    data = pickle.load(file)
+    q_roots_socp_feedforward = data["q_roots_sol"]
+    q_joints_socp_feedforward = data["q_joints_sol"]
+    qdot_roots_socp_feedforward = data["qdot_roots_sol"]
+    qdot_joints_socp_feedforward = data["qdot_joints_sol"]
+    tau_joints_socp_feedforward = data["tau_joints_sol"]
+    time_socp_feedforward = data["time_sol"]
+    k_socp_feedforward = data["k_sol"]
+    ref_fb_socp_feedforward = data["ref_sol"]
+    ref_ff_socp_feedforward = data["ref_ff_sol"]
+    motor_noise_numerical_socp_feedforward = data["motor_noise_numerical"]
+    sensory_noise_numerical_socp_feedforward = data["sensory_noise_numerical"]
+
+time_vector_socp_feedforward = np.linspace(0, float(time_socp_feedforward), n_shooting + 1)
+
+q_socp_feedforward = np.zeros((n_q, n_shooting + 1, nb_random))
+qdot_socp_feedforward = np.zeros((n_q, n_shooting + 1, nb_random))
+for i_random in range(nb_random):
+    for i_shooting in range(n_shooting + 1):
+        q_socp_feedforward[:, i_shooting, i_random] = np.hstack(
+            (
+                q_roots_socp_feedforward[i_random * n_root : (i_random + 1) * n_root, i_shooting],
+                q_joints_socp_feedforward[i_random * n_joints : (i_random + 1) * n_joints, i_shooting],
+            )
+        )
+        qdot_socp_feedforward[:, i_shooting, i_random] = np.hstack(
+            (
+                qdot_roots_socp_feedforward[i_random * n_root : (i_random + 1) * n_root, i_shooting],
+                qdot_joints_socp_feedforward[i_random * n_joints : (i_random + 1) * n_joints, i_shooting],
+            )
+        )
+q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
+
+DMS_sensory_reference_no_eyes_func = cas.Function("DMS_sensory_reference",
+                                          [Q, Qdot],
+                                          [DMS_sensory_reference_no_eyes(socp.nlp[0].model, n_root, Q, Qdot)])
+
+
+q_socp_feedforward_integrated, qdot_socp_feedforward_integrated, q_all_socp_feedforward, joint_frictions_socp_feedforward, motor_noises_socp_feedforward, feedbacks_socp_feedforward, feedforwards_socp_feedforward = noisy_integrate_socp_feedforward(biorbd_model_path,
+                                                                            time_ocp,
+                                                                            motor_noise_magnitude,
+                                                                            sensory_noise_magnitude,
+                                                                            q_roots_ocp,
+                                                                            q_joints_ocp,
+                                                                            qdot_roots_ocp,
+                                                                            qdot_joints_ocp,
+                                                                            tau_joints_ocp,
+                                                                            n_q,
+                                                                            n_shooting,
+                                                                            nb_random,
+                                                                            nb_reintegrations,
+                                                                            q_roots_socp_feedforward,
+                                                                            q_joints_socp_feedforward,
+                                                                            qdot_roots_socp_feedforward,
+                                                                            qdot_joints_socp_feedforward,
+                                                                            q_socp_feedforward,
+                                                                            qdot_socp_feedforward,
+                                                                            tau_joints_socp_feedforward,
+                                                                            k_socp_feedforward,
+                                                                            ref_fb_socp_feedforward,
+                                                                            ref_ff_socp_feedforward,
+                                                                            time_vector_socp_feedforward,
+                                                                            q_mean_socp_feedforward,
+                                                                            DMS_sensory_reference_no_eyes_func)
+
+q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
 if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_VARIABLE_all : ", socp_variable_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all_socp_variable, q_all_socp_variable, "SOCP_VARIABLE_all")
+    print("Generating SOCP_FEEDFORWARD_one : ", socp_feedforward_path_to_results)
+    bioviz_animate(biorbd_model_path_with_mesh_socp_feedforward, q_mean_socp_feedforward, "SOCP_FEEDFORWARD_one")
+
+socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(".pkl", "_integrated.pkl")
+with open(socp_feedforward_out_path_to_results, "wb") as file:
+    data = {
+        "q_integrated": q_socp_feedforward_integrated,
+        "qdot_integrated": qdot_socp_feedforward_integrated,
+        "time_vector": time_vector_socp_feedforward,
+        "q_mean_integrated": np.mean(q_socp_feedforward_integrated, axis=2),
+        "q_mean": q_mean_socp_feedforward,
+    }
+    pickle.dump(data, file)
+
+if FLAG_GENERATE_VIDEOS:
+    print("Generating SOCP_FEEDFORWARD_all : ", socp_feedforward_path_to_results)
+    bioviz_animate(biorbd_model_path_with_mesh_all_socp_feedforward, q_all_socp_feedforward, "SOCP_FEEDFORWARD_all")
 
 
 # SOCP+
