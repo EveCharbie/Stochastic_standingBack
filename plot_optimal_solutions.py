@@ -803,43 +803,37 @@ def noisy_integrate_socp_variable(
                     joint_friction_socp_variable[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
-                    ] = (
+                        i_reintegration * nb_random + i_random,
+                    ] = np.reshape(
                         -socp_variable.nlp[0].model.friction_coefficients
                         @ integrated_sol_socp_variable["qdot_joints"][i_shooting][
                             (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                        ]
+                        ], (-1, )
                     )
 
                     # Motor noise
                     motor_noise_socp_variable[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
+                        i_reintegration * nb_random + i_random,
                     ] = np.reshape(
                         motor_acuity(
-                            socp.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
+                            socp_variable.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
                                 :, i_random, i_shooting
                             ],
                             tau_joints_socp_variable[:, i_shooting],
                         ),
-                        (-1, 1),
+                        (-1, ),
                     )
 
                     # Feedback
                     k_matrix = StochasticBioModel.reshape_to_matrix(
-                        k_socp_variable[:, i_shooting], socp.nlp[0].model.matrix_shape_k
+                        k_socp_variable[:, i_shooting], socp_variable.nlp[0].model.matrix_shape_k
                     )
                     feedbacks_socp_variable[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
+                        i_reintegration * nb_random + i_random,
                     ] = np.reshape(
                         k_matrix
                         @ (
@@ -870,7 +864,7 @@ def noisy_integrate_socp_variable(
                                 :, i_random, i_shooting
                             ]
                         ),
-                        (-1, 1),
+                        (-1, ),
                     )
 
     q_socp_variable_integrated = np.vstack((q_roots_integrated_socp_variable, q_joints_integrated_socp_variable))
@@ -915,6 +909,7 @@ def noisy_integrate_socp_feedforward(
     time_vector_socp_feedforward,
     q_mean_socp_feedforward,
     DMS_sensory_reference_no_eyes_func,
+    DMS_ff_sensory_input_func,
 ):
 
     dt = time_vector_socp_feedforward[1] - time_vector_socp_feedforward[0]
@@ -938,13 +933,14 @@ def noisy_integrate_socp_feedforward(
     q_joints_integrated_socp_feedforward = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
     qdot_roots_integrated_socp_feedforward = np.zeros((3, n_shooting + 1, nb_random * nb_reintegrations))
     qdot_joints_integrated_socp_feedforward = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
-    joint_friction_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
-    motor_noise_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    joint_frictions_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    motor_noises_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
     feedbacks_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    feedforwards_socp_feedforward = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
     for i_reintegration in range(nb_reintegrations):
 
         _, _, socp_feedforward, noised_states = prepare_socp_FEEDFORWARD(
-            biorbd_model_path=biorbd_model_path,
+            biorbd_model_path=biorbd_model_path_vision,
             time_last=time_ocp,
             n_shooting=n_shooting,
             motor_noise_magnitude=motor_noise_magnitude,
@@ -987,9 +983,9 @@ def noisy_integrate_socp_feedforward(
         states.add("qdot_joints", qdot_joints_socp_feedforward_this_time, interpolation=InterpolationType.EACH_FRAME)
         controls.add("tau_joints", tau_joints_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
         controls.add("k", k_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
-        controls.add("ref", ref_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
+        controls.add("ref", ref_fb_socp_feedforward, interpolation=InterpolationType.EACH_FRAME)
         parameters["time"] = time_vector_socp_feedforward[-1]
-        parameters["ref_ff"] = ref_ff_socp_feedforward
+        parameters["final_somersault"] = ref_ff_socp_feedforward
 
         sol_from_initial_guess = Solution.from_initial_guess(
             socp_feedforward, [np.array([dt]), states, controls, parameters, algebraic_states]
@@ -1019,7 +1015,7 @@ def noisy_integrate_socp_feedforward(
 
                 if i_shooting < n_shooting:
                     # Joint friction
-                    joint_friction_socp_feedforward[
+                    joint_frictions_socp_feedforward[
                         :,
                         i_shooting,
                         i_reintegration * nb_random
@@ -1033,34 +1029,31 @@ def noisy_integrate_socp_feedforward(
                     )
 
                     # Motor noise
-                    motor_noise_socp_feedforward[
+                    motor_noises_socp_feedforward[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
+                        i_reintegration * nb_random + i_random,
                     ] = np.reshape(
-                        socp.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
+                        socp_feedforward.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
                             :, i_random, i_shooting
                         ],
-                        (-1, 1),
+                        (-1, ),
                     )
 
                     # Feedback
                     k_fb_matrix = StochasticBioModel.reshape_to_matrix(
-                        k_socp_feedforward[:-1, i_shooting], socp.nlp[0].model.matrix_shape_k
+                        k_socp_feedforward[:, i_shooting], socp_feedforward.nlp[0].model.matrix_shape_k
                     )
+                    k_fb_matrix = k_fb_matrix[:, :-1]
                     feedbacks_socp_feedforward[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
+                        i_reintegration * nb_random + i_random,
                     ] = np.reshape(
                         k_fb_matrix
                         @ (
-                            ref_fb_socp_feedforward
-                            - DMS_ff_sensory_input(
+                            ref_fb_socp_feedforward[:, i_shooting]
+                            - DMS_sensory_reference_no_eyes_func(
                                 np.hstack(
                                     (
                                         integrated_sol_socp_feedforward["q_roots"][i_shooting][
@@ -1086,13 +1079,15 @@ def noisy_integrate_socp_feedforward(
                                 "sensory_noise_numerical"
                             ][:-1, i_random, i_shooting]
                         ),
-                        (-1, 1),
+                        (-1, ),
                     )
 
                     # Feedforward
-                    k_ff = k_socp_feedforward[-1, i_shooting]
-                    sensory_input = DMS_sensory_reference_no_eyes_func(
-                        socp_feedforward.nlp[0].model,
+                    k_ff_matrix = StochasticBioModel.reshape_to_matrix(
+                        k_socp_feedforward[:, i_shooting], socp_feedforward.nlp[0].model.matrix_shape_k
+                    )
+                    k_ff = k_ff_matrix[:, -1]
+                    sensory_input = DMS_ff_sensory_input_func(
                         time_vector_socp_feedforward[-1],
                         time_vector_socp_feedforward[i_shooting],
                         np.hstack(
@@ -1122,11 +1117,9 @@ def noisy_integrate_socp_feedforward(
                     feedforwards_socp_feedforward[
                         :,
                         i_shooting,
-                        i_reintegration * nb_random
-                        + (n_q - 3) * i_random : i_reintegration * nb_random
-                        + (n_q - 3) * (i_random + 1),
+                        i_reintegration * nb_random + i_random,
                     ] = np.reshape(
-                        k_ff @ (ref_socp_feedforward[:, i_shooting] - sensory_input + sensory_noise), (-1, 1)
+                        k_ff @ (ref_ff_socp_feedforward - sensory_input + sensory_noise), (-1, )
                     )
 
     q_socp_feedforward_integrated = np.vstack(
@@ -1552,6 +1545,7 @@ ref_sym = cas.MX.sym("Ref", 2 * n_joints + 2)
 motor_noise_sym = cas.MX.sym("Motor_noise", n_joints, nb_random)
 sensory_noise_sym = cas.MX.sym("sensory_noise", n_ref, nb_random)
 time_sym = cas.MX.sym("Time", 1)
+tf_sym = cas.MX.sym("Tf", 1)
 
 q_8_sym = cas.MX.sym("Q", n_q + 1, nb_random)
 qdot_8_sym = cas.MX.sym("Qdot", n_q + 1, nb_random)
@@ -1797,7 +1791,7 @@ for i_random in range(nb_random):
 q_mean_socp_variable = np.mean(q_socp_variable, axis=2)
 
 DMS_sensory_reference_func = cas.Function(
-    "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference(socp.nlp[0].model, n_root, Q, Qdot)]
+    "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference(socp_variable.nlp[0].model, n_root, Q, Qdot)]
 )
 
 
@@ -1858,6 +1852,8 @@ with open(socp_variable_out_path_to_results, "wb") as file:
 
 
 # SOCP FEEDFORWARD
+n_q = 8
+n_joints = n_q - 3
 motor_noise_magnitude = cas.DM(
     np.array(
         [
@@ -1887,6 +1883,34 @@ sensory_noise_magnitude = cas.DM(
     )
 )
 
+q_joints_last = np.vstack((q_joints_ocp[0, :], np.zeros((1, q_joints_ocp.shape[1])), q_joints_ocp[1:, :]))
+q_joints_last[1, :5] = -0.5
+q_joints_last[1, 5:-5] = np.linspace(-0.5, 0.3, n_shooting + 1 - 10)
+q_joints_last[1, -5:] = 0.3
+
+qdot_joints_last = np.vstack(
+    (qdot_joints_ocp[0, :], np.ones((1, qdot_joints_ocp.shape[1])) * 0.01, qdot_joints_ocp[1:, :])
+)
+tau_joints_last = np.vstack(
+    (tau_joints_ocp[0, :], np.ones((1, tau_joints_ocp.shape[1])) * 0.01, tau_joints_ocp[1:, :])
+)
+
+_, _, socp_feedforward, noised_states = prepare_socp_FEEDFORWARD(
+    biorbd_model_path=biorbd_model_path_vision,
+    time_last=time_ocp,
+    n_shooting=n_shooting,
+    motor_noise_magnitude=motor_noise_magnitude,
+    sensory_noise_magnitude=sensory_noise_magnitude,
+    q_roots_last=q_roots_ocp,
+    q_joints_last=q_joints_last,
+    qdot_roots_last=qdot_roots_ocp,
+    qdot_joints_last=qdot_joints_last,
+    tau_joints_last=tau_joints_last,
+    k_last=None,
+    ref_last=None,
+    nb_random=nb_random,
+)
+
 with open(socp_feedforward_path_to_results, "rb") as file:
     data = pickle.load(file)
     q_roots_socp_feedforward = data["q_roots_sol"]
@@ -1896,7 +1920,7 @@ with open(socp_feedforward_path_to_results, "rb") as file:
     tau_joints_socp_feedforward = data["tau_joints_sol"]
     time_socp_feedforward = data["time_sol"]
     k_socp_feedforward = data["k_sol"]
-    ref_fb_socp_feedforward = data["ref_sol"]
+    ref_fb_socp_feedforward = data["ref_fb_sol"]
     ref_ff_socp_feedforward = data["ref_ff_sol"]
     motor_noise_numerical_socp_feedforward = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_feedforward = data["sensory_noise_numerical"]
@@ -1922,9 +1946,11 @@ for i_random in range(nb_random):
 q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
 
 DMS_sensory_reference_no_eyes_func = cas.Function(
-    "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference_no_eyes(socp.nlp[0].model, n_root, Q, Qdot)]
+    "DMS_fb_sensory_reference", [Q_8, Qdot_8], [DMS_sensory_reference_no_eyes(socp_feedforward.nlp[0].model, n_root, Q_8, Qdot_8)]
 )
-
+DMS_ff_sensory_input_func = cas.Function(
+    "DMS_ff_sensory_reference", [tf_sym, time_sym, Q_8, Qdot_8], [DMS_ff_sensory_input(socp_feedforward.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8)]
+)
 
 (
     q_socp_feedforward_integrated,
@@ -1940,10 +1966,10 @@ DMS_sensory_reference_no_eyes_func = cas.Function(
     motor_noise_magnitude,
     sensory_noise_magnitude,
     q_roots_ocp,
-    q_joints_ocp,
+    q_joints_last,
     qdot_roots_ocp,
-    qdot_joints_ocp,
-    tau_joints_ocp,
+    qdot_joints_last,
+    tau_joints_last,
     n_q,
     n_shooting,
     nb_random,
@@ -1961,6 +1987,7 @@ DMS_sensory_reference_no_eyes_func = cas.Function(
     time_vector_socp_feedforward,
     q_mean_socp_feedforward,
     DMS_sensory_reference_no_eyes_func,
+    DMS_ff_sensory_input_func
 )
 
 q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
@@ -2048,7 +2075,7 @@ with open(socp_plus_path_to_results, "rb") as file:
     tau_joints_socp_plus = data["tau_joints_sol"]
     time_socp_plus = data["time_sol"]
     k_socp_plus = data["k_sol"]
-    ref_fb_socp_plus = data["ref_sol"]
+    ref_fb_socp_plus = data["ref_fb_sol"]
     ref_ff_socp_plus = data["ref_ff_sol"]
     motor_noise_numerical_socp_plus = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_plus = data["sensory_noise_numerical"]
