@@ -1140,6 +1140,264 @@ def noisy_integrate_socp_feedforward(
     )
 
 
+def noisy_integrate_socp_plus(
+    biorbd_model_path,
+    time_ocp,
+    motor_noise_magnitude,
+    sensory_noise_magnitude,
+    q_roots_ocp,
+    q_joints_ocp,
+    qdot_roots_ocp,
+    qdot_joints_ocp,
+    tau_joints_ocp,
+    n_q,
+    n_shooting,
+    nb_random,
+    nb_reintegrations,
+    q_roots_socp_plus,
+    q_joints_socp_plus,
+    qdot_roots_socp_plus,
+    qdot_joints_socp_plus,
+    q_socp_plus,
+    qdot_socp_plus,
+    tau_joints_socp_plus,
+    k_socp_plus,
+    ref_fb_socp_plus,
+    ref_ff_socp_plus,
+    time_vector_socp_plus,
+    q_mean_socp_plus,
+    DMS_sensory_reference_no_eyes_func,
+    DMS_ff_sensory_input_func,
+):
+
+    dt = time_vector_socp_plus[1] - time_vector_socp_plus[0]
+
+    states = None
+    controls = None
+    parameters = None
+    algebraic_states = InitialGuessList()
+
+    q_all_socp_plus = np.zeros((n_q * (nb_random + 1), n_shooting + 1))
+    for i_shooting in range(n_shooting + 1):
+        for i_random in range(nb_random):
+            q_all_socp_plus[i_random * n_q : (i_random + 1) * n_q, i_shooting] = np.reshape(
+                q_socp_plus[:, i_shooting, i_random], (-1,)
+            )
+        q_all_socp_plus[(i_random + 1) * n_q : (i_random + 2) * n_q, i_shooting] = np.reshape(
+            q_mean_socp_plus[:, i_shooting], (-1,)
+        )
+
+    q_roots_integrated_socp_plus = np.zeros((3, n_shooting + 1, nb_random * nb_reintegrations))
+    q_joints_integrated_socp_plus = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
+    qdot_roots_integrated_socp_plus = np.zeros((3, n_shooting + 1, nb_random * nb_reintegrations))
+    qdot_joints_integrated_socp_plus = np.zeros((n_q - 3, n_shooting + 1, nb_random * nb_reintegrations))
+    joint_frictions_socp_plus = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    motor_noises_socp_plus = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    feedbacks_socp_plus = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    feedforwards_socp_plus = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
+    for i_reintegration in range(nb_reintegrations):
+
+        _, _, socp_plus, noised_states = prepare_socp_VARIABLE_FEEDFORWARD(
+            biorbd_model_path=biorbd_model_path_vision,
+            time_last=time_ocp,
+            n_shooting=n_shooting,
+            motor_noise_magnitude=motor_noise_magnitude,
+            sensory_noise_magnitude=sensory_noise_magnitude,
+            q_roots_last=q_roots_ocp,
+            q_joints_last=q_joints_ocp,
+            qdot_roots_last=qdot_roots_ocp,
+            qdot_joints_last=qdot_joints_ocp,
+            tau_joints_last=tau_joints_ocp,
+            k_last=None,
+            ref_last=None,
+            nb_random=nb_random,
+            seed=i_reintegration,
+        )
+
+        # initial variability
+        q_roots_socp_plus_this_time = q_roots_socp_plus[:, :]
+        q_joints_socp_plus_this_time = q_joints_socp_plus[:, :]
+        qdot_roots_socp_plus_this_time = qdot_roots_socp_plus[:, :]
+        qdot_joints_socp_plus_this_time = qdot_joints_socp_plus[:, :]
+        for i_random in range(nb_random):
+            q_roots_socp_plus_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[:3, i_random]
+            q_joints_socp_plus_this_time[(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0] += noised_states[
+                3:n_q, i_random
+            ]
+            qdot_roots_socp_plus_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[
+                n_q : n_q + 3, i_random
+            ]
+            qdot_joints_socp_plus_this_time[
+                (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+            ] += noised_states[n_q + 3 :, i_random]
+
+        del states, controls, parameters
+        states = InitialGuessList()
+        controls = InitialGuessList()
+        parameters = InitialGuessList()
+        states.add("q_roots", q_roots_socp_plus_this_time, interpolation=InterpolationType.EACH_FRAME)
+        states.add("q_joints", q_joints_socp_plus_this_time, interpolation=InterpolationType.EACH_FRAME)
+        states.add("qdot_roots", qdot_roots_socp_plus_this_time, interpolation=InterpolationType.EACH_FRAME)
+        states.add("qdot_joints", qdot_joints_socp_plus_this_time, interpolation=InterpolationType.EACH_FRAME)
+        controls.add("tau_joints", tau_joints_socp_plus, interpolation=InterpolationType.EACH_FRAME)
+        controls.add("k", k_socp_plus, interpolation=InterpolationType.EACH_FRAME)
+        controls.add("ref", ref_fb_socp_plus, interpolation=InterpolationType.EACH_FRAME)
+        parameters["time"] = time_vector_socp_plus[-1]
+        parameters["final_somersault"] = ref_ff_socp_plus
+
+        sol_from_initial_guess = Solution.from_initial_guess(
+            socp_plus, [np.array([dt]), states, controls, parameters, algebraic_states]
+        )
+        integrated_sol_socp_plus = sol_from_initial_guess.integrate(
+            shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
+        )
+
+        for i_shooting in range(n_shooting + 1):
+            for i_random in range(nb_random):
+                q_roots_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp_plus["q_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+                )
+                q_joints_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp_plus["q_joints"][i_shooting][
+                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                    ]
+                )
+                qdot_roots_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp_plus["qdot_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+                )
+                qdot_joints_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp_plus["qdot_joints"][i_shooting][
+                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                    ]
+                )
+
+                if i_shooting < n_shooting:
+                    # Joint friction
+                    joint_frictions_socp_plus[
+                        :,
+                        i_shooting,
+                        i_reintegration * nb_random
+                        + (n_q - 3) * i_random : i_reintegration * nb_random
+                        + (n_q - 3) * (i_random + 1),
+                    ] = (
+                        -socp_plus.nlp[0].model.friction_coefficients
+                        @ integrated_sol_socp_plus["qdot_joints"][i_shooting][
+                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                        ]
+                    )
+
+                    # Motor noise
+                    motor_noises_socp_plus[
+                        :,
+                        i_shooting,
+                        i_reintegration * nb_random + i_random,
+                    ] = np.reshape(motor_acuity(
+                        socp_plus.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
+                            :, i_random, i_shooting
+                        ],
+                        tau_joints_socp_plus[:, i_shooting],
+                    ), (-1, ))
+
+                    # Feedback
+                    k_fb_matrix = StochasticBioModel.reshape_to_matrix(
+                        k_socp_plus[:, i_shooting], socp_plus.nlp[0].model.matrix_shape_k
+                    )
+                    k_fb_matrix = k_fb_matrix[:, :-1]
+                    feedbacks_socp_plus[
+                        :,
+                        i_shooting,
+                        i_reintegration * nb_random + i_random,
+                    ] = np.reshape(
+                        k_fb_matrix
+                        @ (
+                            ref_fb_socp_plus[:, i_shooting]
+                            - DMS_sensory_reference_no_eyes_func(
+                                np.hstack(
+                                    (
+                                        integrated_sol_socp_plus["q_roots"][i_shooting][
+                                            3 * i_random : 3 * (i_random + 1), 0
+                                        ],
+                                        integrated_sol_socp_plus["q_joints"][i_shooting][
+                                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                                        ],
+                                    )
+                                ),
+                                np.hstack(
+                                    (
+                                        integrated_sol_socp_plus["qdot_roots"][i_shooting][
+                                            3 * i_random : 3 * (i_random + 1), 0
+                                        ],
+                                        integrated_sol_socp_plus["qdot_joints"][i_shooting][
+                                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                                        ],
+                                    )
+                                ),
+                            )
+                            + socp_plus.nlp[0].dynamics_type.numerical_data_timeseries[
+                                "sensory_noise_numerical"
+                            ][:-1, i_random, i_shooting]
+                        ),
+                        (-1, ),
+                    )
+
+                    # Feedforward
+                    k_ff_matrix = StochasticBioModel.reshape_to_matrix(
+                        k_socp_plus[:, i_shooting], socp_plus.nlp[0].model.matrix_shape_k
+                    )
+                    k_ff = k_ff_matrix[:, -1]
+                    sensory_input = DMS_ff_sensory_input_func(
+                        time_vector_socp_plus[-1],
+                        time_vector_socp_plus[i_shooting],
+                        np.hstack(
+                            (
+                                integrated_sol_socp_plus["q_roots"][i_shooting][
+                                    3 * i_random : 3 * (i_random + 1), 0
+                                ],
+                                integrated_sol_socp_plus["q_joints"][i_shooting][
+                                    (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                                ],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                integrated_sol_socp_plus["qdot_roots"][i_shooting][
+                                    3 * i_random : 3 * (i_random + 1), 0
+                                ],
+                                integrated_sol_socp_plus["qdot_joints"][i_shooting][
+                                    (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                                ],
+                            )
+                        ),
+                    )
+                    sensory_noise = socp_plus.nlp[0].dynamics_type.numerical_data_timeseries[
+                        "sensory_noise_numerical"
+                    ][-1, i_random, i_shooting]
+                    feedforwards_socp_plus[
+                        :,
+                        i_shooting,
+                        i_reintegration * nb_random + i_random,
+                    ] = np.reshape(
+                        k_ff @ (ref_ff_socp_plus - sensory_input + sensory_noise), (-1, )
+                    )
+
+    q_socp_plus_integrated = np.vstack(
+        (q_roots_integrated_socp_plus, q_joints_integrated_socp_plus)
+    )
+    qdot_socp_plus_integrated = np.vstack(
+        (qdot_roots_integrated_socp_plus, qdot_joints_integrated_socp_plus)
+    )
+
+    return (
+        q_socp_plus_integrated,
+        qdot_socp_plus_integrated,
+        q_all_socp_plus,
+        joint_frictions_socp_plus,
+        motor_noises_socp_plus,
+        feedbacks_socp_plus,
+        feedforwards_socp_plus,
+    )
+
+
 def integrate_socp(
     time_vector,
     q_socp,
@@ -1991,9 +2249,9 @@ DMS_ff_sensory_input_func = cas.Function(
 )
 
 q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_FEEDFORWARD_one : ", socp_feedforward_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_socp_feedforward, q_mean_socp_feedforward, "SOCP_FEEDFORWARD_one")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_FEEDFORWARD_one : ", socp_feedforward_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_socp_feedforward, q_mean_socp_feedforward, "SOCP_FEEDFORWARD_one")
 
 socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(".pkl", "_integrated.pkl")
 with open(socp_feedforward_out_path_to_results, "wb") as file:
@@ -2006,9 +2264,9 @@ with open(socp_feedforward_out_path_to_results, "wb") as file:
     }
     pickle.dump(data, file)
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_FEEDFORWARD_all : ", socp_feedforward_path_to_results)
-    bioviz_animate(biorbd_model_path_with_mesh_all_socp_feedforward, q_all_socp_feedforward, "SOCP_FEEDFORWARD_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_FEEDFORWARD_all : ", socp_feedforward_path_to_results)
+#     bioviz_animate(biorbd_model_path_with_mesh_all_socp_feedforward, q_all_socp_feedforward, "SOCP_FEEDFORWARD_all")
 
 
 # SOCP+
@@ -2050,7 +2308,7 @@ qdot_joints_last = np.vstack(
 )
 tau_joints_last = np.vstack((tau_joints_ocp[0, :], np.ones((1, tau_joints_ocp.shape[1])) * 0.01, tau_joints_ocp[1:, :]))
 
-_, _, socp_plus = prepare_socp_VARIABLE_FEEDFORWARD(
+_, _, socp_plus, _ = prepare_socp_VARIABLE_FEEDFORWARD(
     biorbd_model_path=biorbd_model_path_vision,
     time_last=time_ocp,
     n_shooting=n_shooting,
@@ -2075,7 +2333,8 @@ with open(socp_plus_path_to_results, "rb") as file:
     tau_joints_socp_plus = data["tau_joints_sol"]
     time_socp_plus = data["time_sol"]
     k_socp_plus = data["k_sol"]
-    ref_fb_socp_plus = data["ref_fb_sol"]
+    # ref_fb_socp_plus = data["ref_fb_sol"]
+    ref_fb_socp_plus = data["ref_sol"]
     ref_ff_socp_plus = data["ref_ff_sol"]
     motor_noise_numerical_socp_plus = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_plus = data["sensory_noise_numerical"]
@@ -2099,260 +2358,56 @@ for i_random in range(nb_random):
             )
         )
 
-_, _, socp_plus = prepare_socp_VARIABLE_FEEDFORWARD(
-    biorbd_model_path=biorbd_model_path_vision,
-    time_last=time_ocp,
-    n_shooting=n_shooting,
-    motor_noise_magnitude=motor_noise_magnitude,
-    sensory_noise_magnitude=sensory_noise_magnitude,
-    q_roots_last=q_roots_ocp,
-    q_joints_last=q_joints_last,
-    qdot_roots_last=qdot_roots_ocp,
-    qdot_joints_last=qdot_joints_last,
-    tau_joints_last=tau_joints_last,
-    k_last=None,
-    ref_last=None,
-    nb_random=nb_random,
-    seed=0,
+q_mean_socp_plus = np.mean(q_socp_plus, axis=2)
+qdot_mean_socp_plus = np.mean(qdot_socp_plus, axis=2)
+
+DMS_sensory_reference_no_eyes_func = cas.Function(
+    "DMS_fb_sensory_reference", [Q_8, Qdot_8], [DMS_sensory_reference_no_eyes(socp_plus.nlp[0].model, n_root, Q_8, Qdot_8)]
 )
-
-states = None
-controls = None
-parameters = None
-algebraic_states = None
-q_roots_reintegrated_socp_plus = np.zeros((n_root, n_shooting + 1, nb_random * nb_reintegrations))
-q_joints_reintegrated_socp_plus = np.zeros((n_joints, n_shooting + 1, nb_random * nb_reintegrations))
-for i_reintegration in range(nb_reintegrations):
-
-    _, _, socp_plus = prepare_socp_VARIABLE_FEEDFORWARD(
-        biorbd_model_path=biorbd_model_path_vision,
-        time_last=time_ocp,
-        n_shooting=n_shooting,
-        motor_noise_magnitude=motor_noise_magnitude,
-        sensory_noise_magnitude=sensory_noise_magnitude,
-        q_roots_last=q_roots_ocp,
-        q_joints_last=q_joints_last,
-        qdot_roots_last=qdot_roots_ocp,
-        qdot_joints_last=qdot_joints_last,
-        tau_joints_last=tau_joints_last,
-        k_last=None,
-        ref_last=None,
-        nb_random=nb_random,
-        seed=i_reintegration,
-    )
-
-    del states, controls, parameters, algebraic_states
-    states = InitialGuessList()
-    controls = InitialGuessList()
-    parameters = InitialGuessList()
-    algebraic_states = InitialGuessList()
-
-    states.add("q_roots", q_roots_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    states.add("q_joints", q_joints_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    states.add("qdot_roots", qdot_roots_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    states.add("qdot_joints", qdot_joints_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    controls.add("tau_joints", tau_joints_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    controls.add("k", k_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    controls.add("ref", ref_fb_socp_plus, interpolation=InterpolationType.EACH_FRAME)
-    parameters["ref_ff"] = ref_ff_socp_plus
-
-    sol_from_initial_guess = Solution.from_initial_guess(
-        socp_plus,
-        [
-            np.array([time_vector_socp_plus[1] - time_vector_socp_plus[0]]),
-            states,
-            controls,
-            parameters,
-            algebraic_states,
-        ],
-    )
-    integrated_sol_socp_plus = sol_from_initial_guess.integrate(
-        shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
-    )
-
-    for i_shooting in range(n_shooting + 1):
-        for i_random in range(nb_random):
-            q_roots_reintegrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                integrated_sol_socp_plus["q_roots"][i_shooting][i_random * n_root : (i_random + 1) * n_root, 0]
-            )
-            q_joints_reintegrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                integrated_sol_socp_plus["q_joints"][i_shooting][i_random * n_joints : (i_random + 1) * n_joints, 0]
-            )
-q_socp_plus_reintegrated = np.vstack((q_roots_reintegrated_socp_plus, q_joints_reintegrated_socp_plus))
-
-
-out = DMS_sensory_reference_no_eyes(socp_plus.nlp[0].model, n_root, Q_8, Qdot_8)
-DMS_sensory_reference_func = cas.Function("DMS_sensory_reference", [Q_8, Qdot_8], [out])
-dyn_fun_out, joint_friction_out, motor_noise_out, feedback_out, feedforward_out = SOCP_PLUS_dynamics(
-    nb_random,
-    q_8_sym,
-    qdot_8_sym,
-    tau_8_sym,
-    k_fb_matrix_sym,
-    k_ff_matrix_sym,
-    fb_ref_sym,
-    ff_ref_sym,
-    float(time_socp_plus),
-    time_sym,
-    motor_noise_8_sym,
-    sensory_noise_8_sym,
-    socp_plus,
+DMS_ff_sensory_input_func = cas.Function(
+    "DMS_ff_sensory_reference", [tf_sym, time_sym, Q_8, Qdot_8], [DMS_ff_sensory_input(socp_plus.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8)]
 )
-dyn_fun_socp_plus = cas.Function(
-    "dynamics",
-    [
-        q_8_sym,
-        qdot_8_sym,
-        tau_8_sym,
-        k_fb_matrix_sym,
-        k_ff_matrix_sym,
-        fb_ref_sym,
-        ff_ref_sym,
-        time_sym,
-        motor_noise_8_sym,
-        sensory_noise_8_sym,
-    ],
-    [dyn_fun_out, joint_friction_out, motor_noise_out, feedback_out, feedforward_out],
-)
-dyn_fun_socp_plus_nominal = cas.Function(
-    "nominal_dyn",
-    [
-        Q_8,
-        Qdot_8,
-        Tau_8,
-        k_fb_matrix_sym,
-        k_ff_matrix_sym,
-        fb_ref_sym,
-        ff_ref_sym,
-        time_sym,
-        MotorNoise_8,
-        SensoryNoise_8,
-    ],
-    [OCP_dynamics(Q_8, Qdot_8, Tau_8, np.zeros(MotorNoise_8.shape), socp_plus), cas.MX(), cas.MX(), cas.MX(), cas.MX()],
-)
-
-visual_noise_fcn = cas.Function(
-    "visual_noise", [Q_8, FF_SensoryNoise], [visual_noise(socp_plus.nlp[0].model, Q_8, FF_SensoryNoise)]
-)
-head_angular_velocity = socp_plus.nlp[0].model.segment_angular_velocity(
-    Q_8, Qdot_8, socp_plus.nlp[0].model.segment_index("Head")
-)[0]
-vestibular_noise = gaussian_function(
-    x=head_angular_velocity,
-    sigma=10,
-    offset=FF_SensoryNoise,
-    scaling_factor=10,
-    flip=True,
-)
-vestibular_noise_fcn = cas.Function("vestibular_noise", [Q_8, Qdot_8, FF_SensoryNoise], [vestibular_noise])
 
 (
     q_socp_plus_integrated,
     qdot_socp_plus_integrated,
-    q_socp_plus_multiple_shooting,
-    qdot_socp_plus_multiple_shooting,
+    q_all_socp_plus,
     joint_frictions_socp_plus,
     motor_noises_socp_plus,
     feedbacks_socp_plus,
     feedforwards_socp_plus,
-) = integrate_socp_plus(
-    time_vector_socp_plus,
+) = noisy_integrate_socp_plus(
+    biorbd_model_path,
+    time_ocp,
+    motor_noise_magnitude,
+    sensory_noise_magnitude,
+    q_roots_ocp,
+    q_joints_last,
+    qdot_roots_ocp,
+    qdot_joints_last,
+    tau_joints_last,
+    n_q,
+    n_shooting,
+    nb_random,
+    nb_reintegrations,
+    q_roots_socp_plus,
+    q_joints_socp_plus,
+    qdot_roots_socp_plus,
+    qdot_joints_socp_plus,
     q_socp_plus,
     qdot_socp_plus,
     tau_joints_socp_plus,
     k_socp_plus,
     ref_fb_socp_plus,
     ref_ff_socp_plus,
-    motor_noise_numerical_socp_plus,
-    sensory_noise_numerical_socp_plus,
-    dyn_fun_socp_plus,
-    socp_plus,
-)
-
-# fig, axs = plt.subplots(1, 2)
-# for i_random in range(nb_random):
-#     for i in range(len(time_vector_socp_plus) - 1):
-#         axs[0].plot(np.array([time_vector_socp_plus[i], time_vector_socp_plus[i+1]]),
-#                     np.array([q_socp_plus[3, i, i_random], q_socp_plus_reintegrated[3, i, i_random]]),
-#                     '-r')
-#         axs[1].plot(time_vector_socp_plus[i+1], q_socp_plus_reintegrated[3, i, i_random] - q_socp_plus[3, i+1, i_random], '.b')
-#     axs[0].plot(time_vector_socp_plus, q_socp_plus[3, :-1, i_random], '-k')
-# plt.savefig('graphs/test_DMS.png')
-
-
-# q_socp_plus_reintegrated = np.zeros((n_q, n_shooting + 1, nb_random * nb_reintegrations))
-motor_noise_numerical_socp_plus_random = np.zeros(
-    (motor_noise_magnitude.shape[0], nb_random * nb_reintegrations, n_shooting + 1)
-)
-sensory_noise_numerical_socp_plus_random = np.zeros(
-    (sensory_noise_magnitude.shape[0], nb_random * nb_reintegrations, n_shooting + 1)
-)
-for i_reintegration in range(nb_reintegrations):
-    tempo_motor, tempo_sensory = create_random_noise(
-        i_reintegration, nb_random, n_shooting, n_joints, motor_noise_magnitude, sensory_noise_magnitude
-    )
-    tempo_motor[1, :, :] = 0  # No noise on the eyes
-    motor_noise_numerical_socp_plus_random[:, i_reintegration * nb_random : (i_reintegration + 1) * nb_random, :] = (
-        tempo_motor
-    )
-    sensory_noise_numerical_socp_plus_random[:, i_reintegration * nb_random : (i_reintegration + 1) * nb_random, :] = (
-        tempo_sensory
-    )
-
-    (
-        q,
-        _,
-        _,
-        _,
-        _,
-        _,
-        _,
-        _,
-    ) = integrate_socp_plus(
-        time_vector_socp_plus,
-        q_socp_plus,
-        qdot_socp_plus,
-        tau_joints_socp_plus,
-        k_socp_plus,
-        ref_fb_socp_plus,
-        ref_ff_socp_plus,
-        motor_noise_numerical_socp_plus_random[:, i_reintegration * nb_random : (i_reintegration + 1) * nb_random, :],
-        sensory_noise_numerical_socp_plus_random[:, i_reintegration * nb_random : (i_reintegration + 1) * nb_random, :],
-        dyn_fun_socp_plus,
-        socp_plus,
-    )
-    # q_socp_plus_reintegrated[:, :, i_reintegration * nb_random : (i_reintegration + 1) * nb_random] = q
-
-(
-    q_socp_plus_nominal,
-    qdot_socp_plus_nominal,
-    _,
-    _,
-    _,
-    _,
-    _,
-    _,
-) = integrate_socp_plus(
     time_vector_socp_plus,
-    np.mean(q_socp_plus, axis=2)[:, :, np.newaxis],
-    np.mean(qdot_socp_plus, axis=2)[:, :, np.newaxis],
-    tau_joints_socp_plus,
-    np.zeros(np.shape(k_socp_plus)),
-    np.zeros(np.shape(ref_fb_socp_plus)),
-    0,
-    np.zeros((5, 1, n_shooting)),
-    np.zeros((11, 1, n_shooting)),
-    dyn_fun_socp_plus_nominal,
-    socp_plus,
+    q_mean_socp_plus,
+    DMS_sensory_reference_no_eyes_func,
+    DMS_ff_sensory_input_func
 )
 
-# q_mean_socp_plus = np.mean(q_socp_plus_integrated, axis=2)
-q_mean_socp_plus = np.mean(q_socp_plus, axis=2)
-qdot_mean_socp_plus = np.mean(qdot_socp_plus, axis=2)
 # if FLAG_GENERATE_VIDEOS:
-#     # TODO: fix this integration issue ?
 #     print("Generating SOCP_plus_one : ", socp_plus_path_to_results)
-#     # bioviz_animate(biorbd_model_path_with_mesh_socp, q_socp_plus_nominal, "SOCP_plus_one")
 #     bioviz_animate(biorbd_model_path_vision_with_mesh, q_mean_socp_plus, "SOCP_plus_one")
 
 
@@ -2361,39 +2416,27 @@ with open(socp_plus_out_path_to_results, "wb") as file:
     data = {
         "q_integrated": q_socp_plus_integrated,
         "qdot_integrated": qdot_socp_plus_integrated,
-        "q_multiple_shooting": q_socp_plus_multiple_shooting,
-        "qdot_multiple_shooting": qdot_socp_plus_multiple_shooting,
-        "motor_noise_numerical": motor_noise_numerical_socp_plus,
         "time_vector": time_vector_socp_plus,
         "q_mean_integrated": np.mean(q_socp_plus_integrated, axis=2),
-        "q_nominal": q_socp_plus_nominal,
+        "q_mean": q_mean_socp_plus,
     }
     pickle.dump(data, file)
 
-q_all_socp_plus = np.zeros((n_q * (nb_random + 1), n_shooting + 1))
-for i_shooting in range(n_shooting + 1):
-    for i_random in range(nb_random):
-        q_all_socp_plus[i_random * n_q : (i_random + 1) * n_q, i_shooting] = np.reshape(
-            q_socp_plus[:, i_shooting, i_random], (-1,)
-        )
-    # q_all_socp_plus[(i_random + 1) * n_q: (i_random + 2) * n_q, i_shooting] = np.reshape(q_socp_plus_nominal[:, i_shooting], (-1, ))
-    q_all_socp_plus[(i_random + 1) * n_q : (i_random + 2) * n_q, i_shooting] = np.reshape(
-        q_mean_socp_plus[:, i_shooting], (-1,)
-    )
-
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
-    bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
+#     bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
 
 
 # Comparison ----------------------------------------------------------------------------------------------------------
-q_mean_comparison = np.zeros((7 + 7 + 8, n_shooting + 1))
+q_mean_comparison = np.zeros((7 + 7 + 7 + 8 + 8, n_shooting + 1))
 q_mean_comparison[:7, :] = q_ocp
-q_mean_comparison[7:14, :] = q_mean_socp
-q_mean_comparison[14:, :] = q_mean_socp_plus
-if FLAG_GENERATE_VIDEOS:
-    print("Generating comparison")
-    bioviz_animate(biorbd_model_path_comparison, q_mean_comparison, "Comparison")
+q_mean_comparison[7:7+7, :] = q_mean_socp
+q_mean_comparison[7+7: 7+7+7, :] = q_mean_socp_variable
+q_mean_comparison[7+7+7: 7+7+7+8, :] = q_mean_socp_feedforward
+q_mean_comparison[7+7+7+8:, :] = q_mean_socp_plus
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating comparison")
+#     bioviz_animate(biorbd_model_path_comparison, q_mean_comparison, "Comparison")
 
 
 # Plots ---------------------------------------------------------------------------------------------------------------
@@ -2412,7 +2455,7 @@ axs[0, 0].step(normalized_time_vector, tau_joints_ocp[0, :], color=OCP_color, la
 for i_random in range(nb_random):
     axs[0, 0].step(
         normalized_time_vector,
-        tau_joints_socp[0, :] + motor_noises_socp[0, i_random, :],
+        tau_joints_socp[0, :] + motor_noises_socp[0, :, i_random],
         color=SOCP_color,
         label="SOCP",
         linewidth=0.5,
@@ -2420,7 +2463,7 @@ for i_random in range(nb_random):
     )
     axs[0, 0].step(
         normalized_time_vector,
-        tau_joints_socp_plus[0, :] + motor_noises_socp_plus[0, i_random, :],
+        tau_joints_socp_plus[0, :] + motor_noises_socp_plus[0, :, i_random],
         color=SOCP_plus_color,
         label="SOCP+",
         linewidth=0.5,
@@ -2441,7 +2484,7 @@ for i_dof in range(2, 5):
     for i_random in range(nb_random):
         axs[0, i_dof].step(
             normalized_time_vector,
-            tau_joints_socp[i_dof - 1, :] + motor_noises_socp[i_dof - 1, i_random, :],
+            tau_joints_socp[i_dof - 1, :] + motor_noises_socp[i_dof - 1, :, i_random],
             color=SOCP_color,
             label="OCP",
             linewidth=0.5,
@@ -2450,7 +2493,7 @@ for i_dof in range(2, 5):
     for i_random in range(nb_random):
         axs[0, i_dof].step(
             normalized_time_vector,
-            tau_joints_socp_plus[i_dof, :] + motor_noises_socp_plus[i_dof, i_random, :],
+            tau_joints_socp_plus[i_dof, :] + motor_noises_socp_plus[i_dof, :, i_random],
             color=SOCP_plus_color,
             label="SOCP+",
             linewidth=0.5,
@@ -2469,25 +2512,25 @@ for i_dof in range(5):
         axs[1, 0].step(normalized_time_vector, -joint_friction_ocp[0, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[1, 0].step(
-                normalized_time_vector, -joint_frictions_socp[0, i_random, :], color=SOCP_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp[0, :, i_random], color=SOCP_color, linewidth=0.5
             )
             axs[1, 0].step(
-                normalized_time_vector, -joint_frictions_socp_plus[0, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp_plus[0, :, i_random], color=SOCP_plus_color, linewidth=0.5
             )
     elif i_dof == 1:
         for i_random in range(nb_random):
             axs[1, 1].step(
-                normalized_time_vector, -joint_frictions_socp_plus[1, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp_plus[1, :, i_random], color=SOCP_plus_color, linewidth=0.5
             )
     else:
         axs[1, i_dof].step(normalized_time_vector, -joint_friction_ocp[i_dof - 1, :], color=OCP_color)
         for i_random in range(nb_random):
             axs[1, i_dof].step(
-                normalized_time_vector, -joint_frictions_socp[i_dof - 1, i_random, :], color=SOCP_color, linewidth=0.5
+                normalized_time_vector, -joint_frictions_socp[i_dof - 1, :, i_random], color=SOCP_color, linewidth=0.5
             )
             axs[1, i_dof].step(
                 normalized_time_vector,
-                -joint_frictions_socp_plus[i_dof, i_random, :],
+                -joint_frictions_socp_plus[i_dof, :, i_random],
                 color=SOCP_plus_color,
                 linewidth=0.5,
             )
@@ -2497,20 +2540,20 @@ axs[1, 0].set_ylabel("Joint friction [Nm]")
 for i_dof in range(5):
     for i_random in range(nb_random):
         if i_dof == 0:
-            axs[2, 0].step(normalized_time_vector, feedbacks_socp[0, i_random, :], color=SOCP_color, linewidth=0.5)
+            axs[2, 0].step(normalized_time_vector, feedbacks_socp[0, :, i_random], color=SOCP_color, linewidth=0.5)
             axs[2, 0].step(
-                normalized_time_vector, feedbacks_socp_plus[0, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, feedbacks_socp_plus[0, :, i_random], color=SOCP_plus_color, linewidth=0.5
             )
         elif i_dof == 1:
             axs[2, 1].step(
-                normalized_time_vector, feedbacks_socp_plus[1, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, feedbacks_socp_plus[1, :, i_random], color=SOCP_plus_color, linewidth=0.5
             )
         else:
             axs[2, i_dof].step(
-                normalized_time_vector, feedbacks_socp[i_dof - 1, i_random, :], color=SOCP_color, linewidth=0.5
+                normalized_time_vector, feedbacks_socp[i_dof - 1, :, i_random], color=SOCP_color, linewidth=0.5
             )
             axs[2, i_dof].step(
-                normalized_time_vector, feedbacks_socp_plus[i_dof, i_random, :], color=SOCP_plus_color, linewidth=0.5
+                normalized_time_vector, feedbacks_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, linewidth=0.5
             )
 axs[2, 0].set_ylabel("Feedbacks [Nm]")
 
@@ -2518,7 +2561,7 @@ axs[2, 0].set_ylabel("Feedbacks [Nm]")
 for i_dof in range(5):
     for i_random in range(nb_random):
         axs[3, i_dof].step(
-            normalized_time_vector, feedforwards_socp_plus[i_dof, i_random, :], color=SOCP_plus_color, linewidth=0.5
+            normalized_time_vector, feedforwards_socp_plus[i_dof, :, i_random], color=SOCP_plus_color, linewidth=0.5
         )
 axs[3, 0].set_ylabel("Feedforwards [Nm]")
 
@@ -2530,9 +2573,9 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[0, :]
-                - joint_frictions_socp[0, i_random, :]
-                + motor_noises_socp[0, i_random, :]
-                + feedbacks_socp[0, i_random, :],
+                - joint_frictions_socp[0, :, i_random]
+                + motor_noises_socp[0, :, i_random]
+                + feedbacks_socp[0, :, i_random],
                 color=SOCP_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2540,10 +2583,10 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[0, :]
-                - joint_frictions_socp_plus[0, i_random, :]
-                + motor_noises_socp_plus[0, i_random, :]
-                + feedbacks_socp_plus[0, i_random, :]
-                + feedforwards_socp_plus[0, i_random, :],
+                - joint_frictions_socp_plus[0, :, i_random]
+                + motor_noises_socp_plus[0, :, i_random]
+                + feedbacks_socp_plus[0, :, i_random]
+                + feedforwards_socp_plus[0, :, i_random],
                 color=SOCP_plus_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2552,10 +2595,10 @@ for i_dof in range(5):
         axs[4, 1].step(
             normalized_time_vector,
             tau_joints_socp_plus[1, :]
-            - joint_frictions_socp_plus[1, i_random, :]
-            + motor_noises_socp_plus[1, i_random, :]
-            + feedbacks_socp_plus[1, i_random, :]
-            + feedforwards_socp_plus[1, i_random, :],
+            - joint_frictions_socp_plus[1, :, i_random]
+            + motor_noises_socp_plus[1, :, i_random]
+            + feedbacks_socp_plus[1, :, i_random]
+            + feedforwards_socp_plus[1, :, i_random],
             color=SOCP_plus_color,
         )
     else:
@@ -2566,9 +2609,9 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[i_dof - 1, :]
-                - joint_frictions_socp[i_dof - 1, i_random, :]
-                + motor_noises_socp[i_dof - 1, i_random, :]
-                + feedbacks_socp[i_dof - 1, i_random, :],
+                - joint_frictions_socp[i_dof - 1, :, i_random]
+                + motor_noises_socp[i_dof - 1, :, i_random]
+                + feedbacks_socp[i_dof - 1, :, i_random],
                 color=SOCP_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2576,10 +2619,10 @@ for i_dof in range(5):
             axs[4, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[i_dof, :]
-                - joint_frictions_socp_plus[i_dof, i_random, :]
-                + motor_noises_socp_plus[i_dof, i_random, :]
-                + feedbacks_socp_plus[i_dof, i_random, :]
-                + feedforwards_socp_plus[i_dof, i_random, :],
+                - joint_frictions_socp_plus[i_dof, :, i_random]
+                + motor_noises_socp_plus[i_dof, :, i_random]
+                + feedbacks_socp_plus[i_dof, :, i_random]
+                + feedforwards_socp_plus[i_dof, :, i_random],
                 color=SOCP_plus_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2603,9 +2646,9 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[0, :]
-                - joint_frictions_socp[0, i_random, :]
-                + motor_noises_socp[0, i_random, :]
-                + feedbacks_socp[0, i_random, :],
+                - joint_frictions_socp[0, :, i_random]
+                + motor_noises_socp[0, :, i_random]
+                + feedbacks_socp[0, :, i_random],
                 color=SOCP_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2613,10 +2656,10 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[0, :]
-                - joint_frictions_socp_plus[0, i_random, :]
-                + motor_noises_socp_plus[0, i_random, :]
-                + feedbacks_socp_plus[0, i_random, :]
-                + feedforwards_socp_plus[0, i_random, :],
+                - joint_frictions_socp_plus[0, :, i_random]
+                + motor_noises_socp_plus[0, :, i_random]
+                + feedbacks_socp_plus[0, :, i_random]
+                + feedforwards_socp_plus[0, :, i_random],
                 color=SOCP_plus_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2625,10 +2668,10 @@ for i_dof in range(5):
         axs[0, 1].step(
             normalized_time_vector,
             tau_joints_socp_plus[1, :]
-            - joint_frictions_socp_plus[1, i_random, :]
-            + motor_noises_socp_plus[1, i_random, :]
-            + feedbacks_socp_plus[1, i_random, :]
-            + feedforwards_socp_plus[1, i_random, :],
+            - joint_frictions_socp_plus[1, :, i_random]
+            + motor_noises_socp_plus[1, :, i_random]
+            + feedbacks_socp_plus[1, :, i_random]
+            + feedforwards_socp_plus[1, :, i_random],
             color=SOCP_plus_color,
         )
     else:
@@ -2639,9 +2682,9 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp[i_dof - 1, :]
-                - joint_frictions_socp[i_dof - 1, i_random, :]
-                + motor_noises_socp[i_dof - 1, i_random, :]
-                + feedbacks_socp[i_dof - 1, i_random, :],
+                - joint_frictions_socp[i_dof - 1, :, i_random]
+                + motor_noises_socp[i_dof - 1, :, i_random]
+                + feedbacks_socp[i_dof - 1, :, i_random],
                 color=SOCP_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2649,10 +2692,10 @@ for i_dof in range(5):
             axs[0, i_dof].step(
                 normalized_time_vector,
                 tau_joints_socp_plus[i_dof, :]
-                - joint_frictions_socp_plus[i_dof, i_random, :]
-                + motor_noises_socp_plus[i_dof, i_random, :]
-                + feedbacks_socp_plus[i_dof, i_random, :]
-                + feedforwards_socp_plus[i_dof, i_random, :],
+                - joint_frictions_socp_plus[i_dof, :, i_random]
+                + motor_noises_socp_plus[i_dof, :, i_random]
+                + feedbacks_socp_plus[i_dof, :, i_random]
+                + feedforwards_socp_plus[i_dof, :, i_random],
                 color=SOCP_plus_color,
                 linewidth=0.5,
                 alpha=0.5,
@@ -2672,14 +2715,14 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp[0, 1:]
-                - joint_frictions_socp[0, i_random, 1:]
-                + motor_noises_socp[0, i_random, 1:]
-                + feedbacks_socp[0, i_random, 1:]
+                - joint_frictions_socp[0, 1:, i_random]
+                + motor_noises_socp[0, 1:, i_random]
+                + feedbacks_socp[0, 1:, i_random]
                 - (
                     tau_joints_socp[0, :-1]
-                    - joint_frictions_socp[0, i_random, :-1]
-                    + motor_noises_socp[0, i_random, :-1]
-                    + feedbacks_socp[0, i_random, :-1]
+                    - joint_frictions_socp[0, :-1, i_random]
+                    + motor_noises_socp[0, :-1, i_random]
+                    + feedbacks_socp[0, :-1, i_random]
                 ),
                 color=SOCP_color,
                 linewidth=0.5,
@@ -2688,16 +2731,16 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp_plus[0, 1:]
-                - joint_frictions_socp_plus[0, i_random, 1:]
-                + motor_noises_socp_plus[0, i_random, 1:]
-                + feedbacks_socp_plus[0, i_random, 1:]
-                + feedforwards_socp_plus[0, i_random, 1:]
+                - joint_frictions_socp_plus[0, 1:, i_random]
+                + motor_noises_socp_plus[0, 1:, i_random]
+                + feedbacks_socp_plus[0, 1:, i_random]
+                + feedforwards_socp_plus[0, 1:, i_random]
                 - (
                     tau_joints_socp_plus[0, :-1]
-                    - joint_frictions_socp_plus[0, i_random, :-1]
-                    + motor_noises_socp_plus[0, i_random, :-1]
-                    + feedbacks_socp_plus[0, i_random, :-1]
-                    + feedforwards_socp_plus[0, i_random, :-1]
+                    - joint_frictions_socp_plus[0, :-1, i_random]
+                    + motor_noises_socp_plus[0, :-1, i_random]
+                    + feedbacks_socp_plus[0, :-1, i_random]
+                    + feedforwards_socp_plus[0, :-1, i_random]
                 ),
                 color=SOCP_plus_color,
                 linewidth=0.5,
@@ -2707,16 +2750,16 @@ for i_dof in range(5):
         axs[1, 1].step(
             delta_time_vector,
             tau_joints_socp_plus[1, 1:]
-            - joint_frictions_socp_plus[1, i_random, 1:]
-            + motor_noises_socp_plus[1, i_random, 1:]
-            + feedbacks_socp_plus[1, i_random, 1:]
-            + feedforwards_socp_plus[1, i_random, 1:]
+            - joint_frictions_socp_plus[1, 1:, i_random]
+            + motor_noises_socp_plus[1, 1:, i_random]
+            + feedbacks_socp_plus[1, 1:, i_random]
+            + feedforwards_socp_plus[1, 1:, i_random]
             - (
                 tau_joints_socp_plus[1, :-1]
-                - joint_frictions_socp_plus[1, i_random, :-1]
-                + motor_noises_socp_plus[1, i_random, :-1]
-                + feedbacks_socp_plus[1, i_random, :-1]
-                + feedforwards_socp_plus[1, i_random, :-1]
+                - joint_frictions_socp_plus[1, :-1, i_random]
+                + motor_noises_socp_plus[1, :-1, i_random]
+                + feedbacks_socp_plus[1, :-1, i_random]
+                + feedforwards_socp_plus[1, :-1, i_random]
             ),
             color=SOCP_plus_color,
         )
@@ -2732,14 +2775,14 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp[i_dof - 1, 1:]
-                - joint_frictions_socp[i_dof - 1, i_random, 1:]
-                + motor_noises_socp[i_dof - 1, i_random, 1:]
-                + feedbacks_socp[i_dof - 1, i_random, 1:]
+                - joint_frictions_socp[i_dof - 1, 1:, i_random]
+                + motor_noises_socp[i_dof - 1, 1:, i_random]
+                + feedbacks_socp[i_dof - 1, 1:, i_random]
                 - (
                     tau_joints_socp[i_dof - 1, :-1]
-                    - joint_frictions_socp[i_dof - 1, i_random, :-1]
-                    + motor_noises_socp[i_dof - 1, i_random, :-1]
-                    + feedbacks_socp[i_dof - 1, i_random, :-1]
+                    - joint_frictions_socp[i_dof - 1, :-1, i_random]
+                    + motor_noises_socp[i_dof - 1, :-1, i_random]
+                    + feedbacks_socp[i_dof - 1, :-1, i_random]
                 ),
                 color=SOCP_color,
                 linewidth=0.5,
@@ -2748,16 +2791,16 @@ for i_dof in range(5):
             axs[1, i_dof].step(
                 delta_time_vector,
                 tau_joints_socp_plus[i_dof, 1:]
-                - joint_frictions_socp_plus[i_dof, i_random, 1:]
-                + motor_noises_socp_plus[i_dof, i_random, 1:]
-                + feedbacks_socp_plus[i_dof, i_random, 1:]
-                + feedforwards_socp_plus[i_dof, i_random, 1:]
+                - joint_frictions_socp_plus[i_dof, 1:, i_random]
+                + motor_noises_socp_plus[i_dof, 1:, i_random]
+                + feedbacks_socp_plus[i_dof, 1:, i_random]
+                + feedforwards_socp_plus[i_dof, 1:, i_random]
                 - (
                     tau_joints_socp_plus[i_dof, :-1]
-                    - joint_frictions_socp_plus[i_dof, i_random, :-1]
-                    + motor_noises_socp_plus[i_dof, i_random, :-1]
-                    + feedbacks_socp_plus[i_dof, i_random, :-1]
-                    + feedforwards_socp_plus[i_dof, i_random, :-1]
+                    - joint_frictions_socp_plus[i_dof, :-1, i_random]
+                    + motor_noises_socp_plus[i_dof, :-1, i_random]
+                    + feedbacks_socp_plus[i_dof, :-1, i_random]
+                    + feedforwards_socp_plus[i_dof, :-1, i_random]
                 ),
                 color=SOCP_plus_color,
                 linewidth=0.5,
@@ -2783,9 +2826,9 @@ for i_random in range(nb_random):
     axs[0].step(
         normalized_time_vector,
         np.sum(np.abs(tau_joints_socp), axis=0)
-        - np.sum(np.abs(joint_frictions_socp[:, i_random, :]), axis=0)
-        + np.sum(np.abs(motor_noises_socp[:, i_random, :]), axis=0)
-        + np.sum(np.abs(feedbacks_socp[:, i_random, :]), axis=0),
+        - np.sum(np.abs(joint_frictions_socp[:, :, i_random]), axis=0)
+        + np.sum(np.abs(motor_noises_socp[:, :, i_random]), axis=0)
+        + np.sum(np.abs(feedbacks_socp[:, :, i_random]), axis=0),
         color=SOCP_color,
         linewidth=0.5,
         alpha=0.5,
@@ -2793,10 +2836,10 @@ for i_random in range(nb_random):
     axs[0].step(
         normalized_time_vector,
         np.sum(np.abs(tau_joints_socp_plus), axis=0)
-        - np.sum(np.abs(joint_frictions_socp_plus[:, i_random, :]), axis=0)
-        + np.sum(np.abs(motor_noises_socp_plus[:, i_random, :]), axis=0)
-        + np.sum(np.abs(feedbacks_socp_plus[:, i_random, :]), axis=0)
-        + np.sum(np.abs(feedforwards_socp_plus[:, i_random, :]), axis=0),
+        - np.sum(np.abs(joint_frictions_socp_plus[:, :, i_random]), axis=0)
+        + np.sum(np.abs(motor_noises_socp_plus[:, :, i_random]), axis=0)
+        + np.sum(np.abs(feedbacks_socp_plus[:, :, i_random]), axis=0)
+        + np.sum(np.abs(feedforwards_socp_plus[:, :, i_random]), axis=0),
         color=SOCP_plus_color,
         linewidth=0.5,
         alpha=0.5,
@@ -2821,14 +2864,14 @@ for i_random in range(nb_random):
         np.sum(
             np.abs(
                 tau_joints_socp[:, 1:]
-                - joint_frictions_socp[:, i_random, 1:]
-                + motor_noises_socp[:, i_random, 1:]
-                + feedbacks_socp[:, i_random, 1:]
+                - joint_frictions_socp[:, 1:, i_random]
+                + motor_noises_socp[:, 1:, i_random]
+                + feedbacks_socp[:, 1:, i_random]
                 - (
                     tau_joints_socp[:, :-1]
-                    - joint_frictions_socp[:, i_random, :-1]
-                    + motor_noises_socp[:, i_random, :-1]
-                    + feedbacks_socp[:, i_random, :-1]
+                    - joint_frictions_socp[:, :-1, i_random]
+                    + motor_noises_socp[:, :-1, i_random]
+                    + feedbacks_socp[:, :-1, i_random]
                 )
             ),
             axis=0,
@@ -2842,16 +2885,16 @@ for i_random in range(nb_random):
         np.sum(
             np.abs(
                 tau_joints_socp_plus[:, 1:]
-                - joint_frictions_socp_plus[:, i_random, 1:]
-                + motor_noises_socp_plus[:, i_random, 1:]
-                + feedbacks_socp_plus[:, i_random, 1:]
-                + feedforwards_socp_plus[:, i_random, 1:]
+                - joint_frictions_socp_plus[:, 1:, i_random]
+                + motor_noises_socp_plus[:, 1:, i_random]
+                + feedbacks_socp_plus[:, 1:, i_random]
+                + feedforwards_socp_plus[:, 1:, i_random]
                 - (
                     tau_joints_socp_plus[:, :-1]
-                    - joint_frictions_socp_plus[:, i_random, :-1]
-                    + motor_noises_socp_plus[:, i_random, :-1]
-                    + feedbacks_socp_plus[:, i_random, :-1]
-                    + feedforwards_socp_plus[:, i_random, :-1]
+                    - joint_frictions_socp_plus[:, :-1, i_random]
+                    + motor_noises_socp_plus[:, :-1, i_random]
+                    + feedbacks_socp_plus[:, :-1, i_random]
+                    + feedforwards_socp_plus[:, :-1, i_random]
                 )
             ),
             axis=0,
@@ -3097,9 +3140,9 @@ plot_comparison_reintegration(
     q_mean_socp_plus,
     q_socp,
     q_socp_plus,
-    q_ocp_reintegrated,
-    q_socp_reintegrated,
-    q_socp_plus_reintegrated,
+    q_ocp_integrated,
+    q_socp_integrated,
+    q_socp_plus_integrated,
     time_vector,
     OCP_color,
     SOCP_color,
@@ -3114,9 +3157,9 @@ plot_mean_comparison(
     q_mean_socp_plus,
     q_socp,
     q_socp_plus,
-    q_ocp_reintegrated,
-    q_socp_reintegrated,
-    q_socp_plus_reintegrated,
+    q_ocp_integrated,
+    q_socp_integrated,
+    q_socp_plus_integrated,
     time_vector,
     OCP_color,
     SOCP_color,
