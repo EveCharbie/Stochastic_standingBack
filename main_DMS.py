@@ -6,7 +6,7 @@ from datetime import datetime
 import casadi as cas
 import numpy as np
 
-sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
+# sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import Solver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
@@ -16,10 +16,10 @@ from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
-RUN_SOCP = False
+RUN_SOCP = True
 RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = False
-RUN_SOCP_VARIABLE_FEEDFORWARD = True
+RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 

@@ -159,11 +159,9 @@ def SOCP_PLUS_dynamics(
         q_this_time = q[:, i_random]
         qdot_this_time = qdot[:, i_random]
 
-        tau_this_time = tau[:]
-
         # Joint friction
         joint_friction[:, i_random] = socp_plus.nlp[0].model.friction_coefficients @ qdot_this_time[nb_root:]
-        tau_this_time -= joint_friction[:, i_random]
+        tau_this_time = tau - joint_friction[:, i_random]
 
         # Motor noise
         motor_noise[:, i_random] = motor_acuity(motor_noise_numerical[:, i_random], tau)
@@ -676,16 +674,16 @@ def plot_comparison_reintegration(q_ocp_nominal, q_socp_nominal, q_socp_plus_nom
         axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color="k", linewidth=2)
 
 
-    axs[0, 0].plot(0, 0, color=OCP_color, linewidth=2, label="OCP")
-    axs[0, 0].plot(0, 0, color=SOCP_color, linewidth=2, label="SOCP nominal")
-    axs[0, 0].plot(0, 0, color=SOCP_plus_color, linewidth=2, label="SOCP+ nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="OCP")
+    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="SOCP nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="SOCP+ nominal")
     axs[0, 0].plot(0, 0, color=OCP_color, label="OCP reintegrated", alpha=0.5)
     axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP reintegrated", alpha=0.5)
     axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ reintegrated", alpha=0.5)
-    axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP 15 models")
-    axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ 15 models")
+    axs[0, 0].plot(0, 0, color="#6C165C", label="SOCP 15 models")
+    axs[0, 0].plot(0, 0, color="#016C93", label="SOCP+ 15 models")
     fig.subplots_adjust(right=0.8)
-    axs[0, 0].legend(bbox_to_anchor=(3.05, 1), loc='upper left')
+    axs[0, 0].legend(bbox_to_anchor=(3.25, 1), loc='upper left')
     plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png")
     plt.show()
@@ -809,6 +807,7 @@ ref_sym = cas.MX.sym("Ref", 2 * n_joints + 2)
 motor_noise_sym = cas.MX.sym("Motor_noise", n_joints, nb_random)
 sensory_noise_sym = cas.MX.sym("sensory_noise", n_ref, nb_random)
 time_sym = cas.MX.sym("Time", 1)
+tf_sym = cas.MX.sym("Tf", 1)
 
 q_8_sym = cas.MX.sym("Q", n_q + 1, nb_random)
 qdot_8_sym = cas.MX.sym("Qdot", n_q + 1, nb_random)
@@ -1152,7 +1151,7 @@ dyn_fun_out, joint_friction_out, motor_noise_out, feedback_out, feedforward_out 
     k_ff_matrix_sym,
     fb_ref_sym,
     ff_ref_sym,
-    float(time_socp_plus),
+    tf_sym,  # float(time_socp_plus),
     time_sym,
     motor_noise_8_sym,
     sensory_noise_8_sym,
@@ -1168,6 +1167,7 @@ dyn_fun_socp_plus = cas.Function(
         k_ff_matrix_sym,
         fb_ref_sym,
         ff_ref_sym,
+        tf_sym,
         time_sym,
         motor_noise_8_sym,
         sensory_noise_8_sym,
@@ -1184,6 +1184,7 @@ dyn_fun_socp_plus_nominal = cas.Function(
         k_ff_matrix_sym,
         fb_ref_sym,
         ff_ref_sym,
+        tf_sym,
         time_sym,
         MotorNoise_8,
         SensoryNoise_8,
