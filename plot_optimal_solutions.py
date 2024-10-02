@@ -216,7 +216,6 @@ def noisy_integrate_socp(
     q_mean_socp,
     DMS_sensory_reference_func,
 ):
-
     dt = time_vector_socp[1] - time_vector_socp[0]
 
     states = None
@@ -270,10 +269,12 @@ def noisy_integrate_socp(
             q_joints_socp_this_time[(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0] += noised_states[
                 3:n_q, i_random
             ]
-            qdot_roots_socp_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[n_q : n_q + 3, i_random]
-            qdot_joints_socp_this_time[(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0] += noised_states[
-                n_q + 3 :, i_random
+            qdot_roots_socp_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[
+                n_q : n_q + 3, i_random
             ]
+            qdot_joints_socp_this_time[
+                (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+            ] += noised_states[n_q + 3 :, i_random]
 
         del states, controls, parameters
         states = InitialGuessList()
@@ -297,17 +298,21 @@ def noisy_integrate_socp(
 
         for i_shooting in range(n_shooting + 1):
             for i_random in range(nb_random):
-                q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = integrated_sol_socp[
-                    "q_roots"
-                ][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
-                q_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = integrated_sol_socp[
-                    "q_joints"
-                ][i_shooting][(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0]
-                qdot_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = integrated_sol_socp[
-                    "qdot_roots"
-                ][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+                q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp["q_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+                )
+                q_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp["q_joints"][i_shooting][
+                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                    ]
+                )
+                qdot_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+                    integrated_sol_socp["qdot_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+                )
                 qdot_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                    integrated_sol_socp["qdot_joints"][i_shooting][(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0]
+                    integrated_sol_socp["qdot_joints"][i_shooting][
+                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+                    ]
                 )
 
                 if i_shooting < n_shooting:
@@ -333,12 +338,10 @@ def noisy_integrate_socp(
                     ] = np.reshape(
                         socp.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
                             :, i_random, i_shooting
-                        ],
-                        (-1, ),
-                    )
+                        ], (-1, ))
 
                     # Feedback
-                    k_matrix = StochasticBioModel.reshape_to_matrix(
+                    k_fb_matrix = StochasticBioModel.reshape_to_matrix(
                         k_socp[:, i_shooting], socp.nlp[0].model.matrix_shape_k
                     )
                     feedbacks_socp[
@@ -346,7 +349,7 @@ def noisy_integrate_socp(
                         i_shooting,
                         i_reintegration * nb_random + i_random,
                     ] = np.reshape(
-                        k_matrix
+                        k_fb_matrix
                         @ (
                             ref_socp[:, i_shooting]
                             - DMS_sensory_reference_func(
@@ -371,17 +374,28 @@ def noisy_integrate_socp(
                                     )
                                 ),
                             )
-                            + socp.nlp[0].dynamics_type.numerical_data_timeseries["sensory_noise_numerical"][
-                                :, i_random, i_shooting
-                            ]
+                            + socp.nlp[0].dynamics_type.numerical_data_timeseries[
+                                "sensory_noise_numerical"
+                            ][:, i_random, i_shooting]
                         ),
                         (-1, ),
                     )
 
-    q_socp_integrated = np.vstack((q_roots_integrated_socp, q_joints_integrated_socp))
-    qdot_socp_integrated = np.vstack((qdot_roots_integrated_socp, qdot_joints_integrated_socp))
+    q_socp_integrated = np.vstack(
+        (q_roots_integrated_socp, q_joints_integrated_socp)
+    )
+    qdot_socp_integrated = np.vstack(
+        (qdot_roots_integrated_socp, qdot_joints_integrated_socp)
+    )
 
-    return q_socp_integrated, qdot_socp_integrated, q_all_socp, joint_frictions_socp, motor_noises_socp, feedbacks_socp
+    return (
+        q_socp_integrated,
+        qdot_socp_integrated,
+        q_all_socp,
+        joint_frictions_socp,
+        motor_noises_socp,
+        feedbacks_socp,
+    )
 
 
 def noisy_integrate_socp_variable(
@@ -1528,7 +1542,7 @@ final_time = 0.8
 n_shooting = int(final_time / dt)
 tol = 1e-6
 nb_random = 15
-nb_reintegrations = 10  # TODO: change to 100
+nb_reintegrations = 3  # TODO: change to 100
 
 motor_noise_std = 0.05 * 10
 wPq_std = 0.001 * 5
