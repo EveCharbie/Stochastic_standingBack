@@ -180,9 +180,7 @@ if RUN_SOCP:
     if path_to_temporary_results not in os.listdir("results/"):
         os.mkdir("results/" + path_to_temporary_results)
     nb_iter_save = 10
-    socp.save_intermediary_ipopt_iterations(
-        "results/" + path_to_temporary_results, "SOCP", nb_iter_save
-    )
+    socp.save_intermediary_ipopt_iterations("results/" + path_to_temporary_results, "SOCP", nb_iter_save)
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
@@ -394,6 +392,10 @@ if RUN_SOCP_FEEDFORWARD:
         ref_last = None
 
     q_joints_last = np.vstack((q_joints_last[0, :], np.zeros((1, q_joints_last.shape[1])), q_joints_last[1:, :]))
+    q_joints_last[1, :5] = -0.5
+    q_joints_last[1, 5:-5] = np.linspace(-0.5, 0.3, n_shooting + 1 - 10)
+    q_joints_last[1, -5:] = 0.3
+
     qdot_joints_last = np.vstack(
         (qdot_joints_last[0, :], np.ones((1, qdot_joints_last.shape[1])) * 0.01, qdot_joints_last[1:, :])
     )
@@ -576,7 +578,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         states["qdot_roots"],
         states["qdot_joints"],
     )
-    tau_joints_sol, k_sol, ref_sol = controls["tau_joints"], controls["k"], controls["ref"]
+    tau_joints_sol, k_sol, ref_fb_sol = controls["tau_joints"], controls["k"], controls["ref"]
     time_sol = sol_socp.decision_time()[-1]
     ref_ff_sol = sol_socp.parameters["final_somersault"]
 
@@ -588,7 +590,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         "tau_joints_sol": tau_joints_sol,
         "time_sol": time_sol,
         "k_sol": k_sol,
-        "ref_sol": ref_sol,
+        "ref_fb_sol": ref_fb_sol,
         "ref_ff_sol": ref_ff_sol,
         "motor_noise_numerical": motor_noise_numerical,
         "sensory_noise_numerical": sensory_noise_numerical,

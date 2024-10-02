@@ -354,8 +354,7 @@ def DMS_fb_noised_sensory_input_VARIABLE(model, q_roots, q_joints, qdot_roots, q
 def DMS_ff_sensory_input(model, tf, time, q_this_time, qdot_this_time):
 
     time_to_contact = tf - time
-    # somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]
-    somersault_velocity = qdot_this_time[2]
+    somersault_velocity = model.body_rotation_rate(q_this_time, qdot_this_time)[0]
     curent_somersault_angle = q_this_time[2]
     visual_feedforward = curent_somersault_angle + somersault_velocity * time_to_contact
 
@@ -439,6 +438,7 @@ def minimize_nominal_and_feedback_efforts_VARIABLE(controller: PenaltyController
     )
 
     return all_tau_cx
+
 
 def minimize_nominal_and_feedback_efforts_FEEDFORWARD(controller: PenaltyController) -> cas.MX:
     nb_root = controller.model.nb_root
@@ -661,5 +661,3 @@ def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, se
     noised_curent_somersault_angle = curent_somersault_angle + curent_somersault_angle_noise
 
     return noised_curent_somersault_angle + noised_somersault_velocity * noised_time_to_contact
-
-

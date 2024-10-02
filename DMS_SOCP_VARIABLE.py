@@ -258,6 +258,7 @@ def prepare_socp_VARIABLE(
     k_last: np.ndarray = None,
     ref_last: np.ndarray = None,
     nb_random: int = 30,
+    seed: int = 0,
 ):
     """
     Sensory inputs:
@@ -288,7 +289,7 @@ def prepare_socp_VARIABLE(
     bio_model.nb_random = nb_random
 
     # Prepare the noises
-    np.random.seed(0)
+    np.random.seed(seed)
     motor_noise_numerical = np.zeros((n_joints, nb_random, n_shooting + 1))
     sensory_noise_numerical = np.zeros((2 * (n_joints + 1), nb_random, n_shooting + 1))
     for i_random in range(nb_random):
@@ -541,4 +542,4 @@ def prepare_socp_VARIABLE(
         ode_solver=OdeSolver.RK4(),
         n_threads=32,
     )
-    return motor_noise_numerical, sensory_noise_numerical, ocp
+    return motor_noise_numerical, sensory_noise_numerical, ocp, noised_states

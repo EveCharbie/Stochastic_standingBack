@@ -280,6 +280,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     ref_last: np.ndarray = None,
     ref_ff_last: np.ndarray = None,
     nb_random: int = 30,
+    seed: int = 0,
 ):
     """
     Sensory inputs:
@@ -331,7 +332,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
 
     # Prepare the noises
     # TODO: the sensory noise on the ff is used both for visual and vestibular, should be separated
-    np.random.seed(0)
+    np.random.seed(seed)
     motor_noise_numerical = np.zeros((n_joints, nb_random, n_shooting + 1))
     sensory_noise_numerical = np.zeros((2 * n_joints + 1, nb_random, n_shooting + 1))
     for i_random in range(nb_random):
@@ -596,7 +597,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
         ode_solver=OdeSolver.RK4(),
         n_threads=32,
     )
-    return motor_noise_numerical, sensory_noise_numerical, ocp
+    return motor_noise_numerical, sensory_noise_numerical, ocp, noised_states
 
 
 if __name__ == "__main__":
