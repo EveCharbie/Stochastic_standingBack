@@ -26,6 +26,8 @@ from utils import (
     DMS_ff_noised_sensory_input,
     DMS_sensory_reference_no_eyes,
     DMS_ff_sensory_input,
+    visual_noise,
+    vestibular_noise,
 )
 
 
@@ -296,6 +298,17 @@ def noisy_integrate_socp(
             shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
         )
 
+        if i_reintegration == 0:
+            plt.figure()
+            for i_shooting in range(5):
+                for ii in range(nb_random):
+                    plt.plot(np.ones((3, ))*i_shooting, integrated_sol_socp["q_roots"][i_shooting][3 * ii: 3*(ii+1), 0], '.b')
+                    plt.plot(np.ones((4, ))*i_shooting, integrated_sol_socp["q_joints"][i_shooting][(n_q - 3) * ii: (n_q - 3) * (ii + 1), 0], '.b')
+                    plt.plot(np.ones((7, ))*i_shooting, q_socp[:, i_shooting, i_random], 'o')
+            plt.savefig("tempo_socp_0.png")
+            plt.show()
+
+
         for i_shooting in range(n_shooting + 1):
             for i_random in range(nb_random):
                 q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
@@ -325,9 +338,7 @@ def noisy_integrate_socp(
                         + (n_q - 3) * (i_random + 1),
                     ] = (
                         socp.nlp[0].model.friction_coefficients
-                        @ integrated_sol_socp["qdot_joints"][i_shooting][
-                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                        ]
+                        @ qdot_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random]
                     )
 
                     # Motor noise
@@ -1189,15 +1200,14 @@ def plot_comparison_reintegration(
 
         # Box plot of the distribution of the last frame
         if i_dof < 4:
-            axs[i_dof, 0].boxplot(q_ocp_reintegrated[i_dof, -1, :], positions=[time_vector + 0.2])
-            axs[i_dof, 1].boxplot(q_socp_reintegrated[i_dof, -1, :], positions=[time_vector + 0.2])
-            axs[i_dof, 1].boxplot(q_all_socp[i_dof, -1, :], positions=[time_vector + 0.1])
+            box_plot(time_vector[-1] + 0.2, q_ocp_reintegrated[i_dof, -1, :], axs[i_dof, 0], OCP_color)
+            box_plot(time_vector[-1] + 0.2, q_socp_reintegrated[i_dof, -1, :], axs[i_dof, 1], SOCP_color)
+            box_plot(time_vector[-1] + 0.2, q_socp_plus_reintegrated[i_dof, -1, :], axs[i_dof, 2], SOCP_plus_color)
         elif i_dof > 4:
-            axs[i_dof, 0].boxplot(q_ocp_reintegrated[i_dof - 1, -1, :], positions=[time_vector + 0.2])
-            axs[i_dof, 1].boxplot(q_socp_reintegrated[i_dof - 1, -1, :], positions=[time_vector + 0.2])
-            axs[i_dof, 1].boxplot(q_all_socp[i_dof - 1, -1, :], positions=[time_vector + 0.1])
-        axs[i_dof, 2].boxplot(q_socp_plus_reintegrated[i_dof, -1, :], positions=[time_vector + 0.2])
-        axs[i_dof, 2].boxplot(q_all_socp_plus[i_dof, -1, :], positions=[time_vector + 0.1])
+            box_plot(time_vector[-1] + 0.2, q_ocp_reintegrated[i_dof - 1, -1, :], axs[i_dof, 0], OCP_color)
+            box_plot(time_vector[-1] + 0.2, q_socp_reintegrated[i_dof - 1, -1, :], axs[i_dof, 1], SOCP_color)
+            box_plot(time_vector[-1] + 0.2, q_socp_plus_reintegrated[i_dof, -1, :], axs[i_dof, 2], SOCP_plus_color)
+        box_plot(time_vector[-1] + 0.2, q_socp_plus_reintegrated[i_dof, -1, :], axs[i_dof, 2], SOCP_plus_color)
 
     axs[0, 0].plot(0, 0, color=OCP_color, linewidth=2, label="OCP")
     axs[0, 0].plot(0, 0, color=SOCP_color, linewidth=2, label="SOCP nominal")
@@ -1208,7 +1218,7 @@ def plot_comparison_reintegration(
     axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP 15 models")
     axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ 15 models")
     fig.subplots_adjust(right=0.8)
-    axs[0, 0].legend(bbox_to_anchor=(3.15, 1), loc="upper left")
+    axs[0, 0].legend(bbox_to_anchor=(3.25, 1), loc="upper left")
     plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png")
     plt.show()
@@ -2624,6 +2634,19 @@ axs[1].step(
     normalized_time_vector, np.sum(np.abs(k_socp_plus[n_k_fb:, :]), axis=0), color=SOCP_plus_color, label="SOCP+"
 )
 axs[1].set_ylabel("Feedforward gains")
+
+visual_noise_sym = cas.MX.sym("visual_noise", 1)
+vestibular_noise_sym = cas.MX.sym("vestibular_noise", 1)
+visual_noise_fcn = cas.Function(
+    "visual_noise",
+    [Q_8, visual_noise_sym],
+    [visual_noise(socp_plus.nlp[0].model, Q_8, visual_noise_sym)],
+)
+vestibular_noise_fcn = cas.Function(
+    "vestibular_noise",
+    [Q_8, Qdot_8, vestibular_noise_sym],
+    [vestibular_noise(socp_plus.nlp[0].model, Q_8, Qdot_8, vestibular_noise_sym)],
+)
 
 visual_acuity = np.zeros((n_shooting, 1))
 vestibular_acquity = np.zeros((n_shooting, 1))

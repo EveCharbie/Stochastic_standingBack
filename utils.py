@@ -632,6 +632,17 @@ def visual_noise(model, q, sensory_noise):
     )
     return noise_on_where_you_look
 
+def vestibular_noise(model, q, qdot, sensory_noise):
+    head_idx = model.segment_index("Head")
+    head_velocity = model.segment_angular_velocity(q, qdot, head_idx)[0]
+    vestibular_noise = gaussian_function(
+        x=head_velocity,
+        sigma=10,
+        offset=sensory_noise,
+        scaling_factor=10,
+        flip=True,
+    )
+    return vestibular_noise
 
 def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, sensory_noise):
 
