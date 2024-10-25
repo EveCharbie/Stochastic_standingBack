@@ -6,7 +6,7 @@ from datetime import datetime
 import casadi as cas
 import numpy as np
 
-sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
+# sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import Solver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
