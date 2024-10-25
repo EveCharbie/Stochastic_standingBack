@@ -432,32 +432,28 @@ def prepare_socp(
     if q_roots_last is None:
         q_roots_init = np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root]))
         q_joints_init = np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:]))
-        qdot_roots_init = np.vstack((np.ones((n_root, 1)), np.ones((n_root, 1))))
-        qdot_joints_init = np.vstack((np.ones((n_joints, 1)), np.ones((n_joints, 1))))
         for i in range(1, nb_random):
             q_roots_init = np.hstack(
-                (q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])))
+                (q_roots_init, np.vstack((pose_at_first_node[:n_root], pose_at_last_node[:n_root])).T)
             )
             q_joints_init = np.hstack(
-                (q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])))
-            )
-            qdot_roots_init = np.hstack((qdot_roots_init, np.vstack((np.ones((n_root, 1)), np.ones((n_root, 1))))))
-            qdot_joints_init = np.hstack(
-                (qdot_joints_init, np.vstack((np.ones((n_joints, 1)), np.ones((n_joints, 1)))))
+                (q_joints_init, np.vstack((pose_at_first_node[n_root:], pose_at_last_node[n_root:])).T)
             )
 
         x_init.add(
             "q_roots",
-            initial_guess=q_roots_init.T,
+            initial_guess=q_roots_init,
             interpolation=InterpolationType.LINEAR,
         )
         x_init.add(
             "q_joints",
-            initial_guess=q_joints_init.T,
+            initial_guess=q_joints_init,
             interpolation=InterpolationType.LINEAR,
         )
-        x_init.add("qdot_roots", initial_guess=[0.01] * n_root * nb_random, interpolation=InterpolationType.CONSTANT)
-        x_init.add("qdot_joints", initial_guess=[0.01] * n_joints * nb_random, interpolation=InterpolationType.CONSTANT)
+        qdot_roots_init = np.ones((n_root * nb_random,)) * 0.01
+        qdot_joints_init = np.ones((n_joints * nb_random,)) * 0.01
+        x_init.add("qdot_roots", initial_guess=qdot_roots_init, interpolation=InterpolationType.CONSTANT)
+        x_init.add("qdot_joints", initial_guess=qdot_joints_init, interpolation=InterpolationType.CONSTANT)
     else:
         q_roots_init = q_roots_last
         q_joints_init = q_joints_last
@@ -503,7 +499,6 @@ def prepare_socp(
         u_init.add("ref", initial_guess=ref_last, interpolation=InterpolationType.EACH_FRAME)
     else:
         ref_init = np.zeros((n_ref, n_shooting + 1))
-        """"
         for i in range(n_shooting):
             q_roots_this_time = q_roots_init[:n_root, i].T
             q_joints_this_time = q_joints_init[:n_joints, i].T
@@ -522,8 +517,8 @@ def prepare_socp(
                 )
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
-            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))   
-        """
+            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
+
     u_bounds.add(
         "ref",
         min_bound=ref_min,
