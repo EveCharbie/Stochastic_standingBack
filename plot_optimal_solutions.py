@@ -218,12 +218,115 @@ def noisy_integrate_socp(
     q_mean_socp,
     DMS_sensory_reference_func,
 ):
-    dt = time_vector_socp[1] - time_vector_socp[0]
+    def socp_dynamics(q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise,
+                      nlp, DMS_sensory_reference_func, forward_dynamics_func):
 
-    states = None
-    controls = None
-    parameters = None
-    algebraic_states = InitialGuessList()
+        k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
+
+        nb_root = 3
+        nb_joints = 4
+
+        ddq_roots = None
+        ddq_joints = None
+        for i in range(nlp.model.nb_random):
+            q_this_time = np.hstack((
+                q_roots[i * nb_root: (i + 1) * nb_root], q_joints[i * nb_joints: (i + 1) * nb_joints]
+            ))
+            qdot_this_time = np.hstack((
+                qdot_roots[i * nb_root: (i + 1) * nb_root], qdot_joints[i * nb_joints: (i + 1) * nb_joints]
+            ))
+            tau_this_time = tau_joints[:]
+
+            # Joint friction
+            tau_this_time -= nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
+
+            # Motor noise
+            tau_this_time += motor_noise[:, i]
+
+            # Feedback
+            tau_this_time += k_matrix @ (
+                    ref - DMS_sensory_reference_func(q_this_time, qdot_this_time) + sensory_noise[:, i]
+            )
+
+            ddq = forward_dynamics_func(q_this_time, qdot_this_time, tau_this_time)
+            ddq_roots = np.vstack((ddq_roots, ddq[:nb_root])) if ddq_roots is not None else ddq[:nb_root]
+            ddq_joints = np.vstack((ddq_joints, ddq[nb_root:])) if ddq_joints is not None else ddq[nb_root:]
+
+        return qdot_roots, qdot_joints, ddq_roots.reshape(-1, ), ddq_joints.reshape(-1, )
+
+    def integrate(time, q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise,
+                  nlp, DMS_sensory_reference_func, forward_dynamics_func):
+        dt = time / n_shooting
+        h = dt / 5
+        q_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
+        q_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
+        qdot_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
+        qdot_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
+        for i_random in range(nb_random):
+            q_roots_integrated[3*i_random:3*(i_random+1), 0] = q_roots[:, i_random]
+            q_joints_integrated[4*i_random:4*(i_random+1), 0] = q_joints[:, i_random]
+            qdot_roots_integrated[3*i_random:3*(i_random+1), 0] = qdot_roots[:, i_random]
+            qdot_joints_integrated[4*i_random:4*(i_random+1), 0] = qdot_joints[:, i_random]
+        for i_shooting in range(16):
+            q_roots_this_time = q_roots_integrated[:, i_shooting]
+            q_joints_this_time = q_joints_integrated[:, i_shooting]
+            qdot_roots_this_time = qdot_roots_integrated[:, i_shooting]
+            qdot_joints_this_time = qdot_joints_integrated[:, i_shooting]
+            tau_joints_this_time = tau_joints[:, i_shooting]
+            k_this_time = k[:, i_shooting]
+            ref_this_time = ref[:, i_shooting]
+            motor_noise_this_time = motor_noise[:, :, i_shooting]
+            sensory_noise_this_time = sensory_noise[:, :, i_shooting]
+            for i_step in range(5):
+                q_roots_dot1, q_joints_dot1, qdot_roots_dot1, qdot_joints_dot1 = socp_dynamics(q_roots_this_time,
+                                                                                               q_joints_this_time,
+                                                                                               qdot_roots_this_time,
+                                                                                               qdot_joints_this_time,
+                                                                                               tau_joints_this_time,
+                                                                                               k_this_time,
+                                                                                               ref_this_time,
+                                                                                               motor_noise_this_time,
+                                                                                               sensory_noise_this_time,
+                                                                                               nlp,
+                                                                                               DMS_sensory_reference_func,
+                                                                                               forward_dynamics_func)
+                q_roots_dot2, q_joints_dot2, qdot_roots_dot2, qdot_joints_dot2 = socp_dynamics(
+                    q_roots_this_time + h / 2 * q_roots_dot1, q_joints_this_time + h / 2 * q_joints_dot1,
+                    qdot_roots_this_time + h / 2 * qdot_roots_dot1,
+                    qdot_joints_this_time + h / 2 * qdot_joints_dot1, tau_joints_this_time, k_this_time,
+                    ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func,
+                    forward_dynamics_func)
+                q_roots_dot3, q_joints_dot3, qdot_roots_dot3, qdot_joints_dot3 = socp_dynamics(
+                    q_roots_this_time + h / 2 * q_roots_dot2, q_joints_this_time + h / 2 * q_joints_dot2,
+                    qdot_roots_this_time + h / 2 * qdot_roots_dot2,
+                    qdot_joints_this_time + h / 2 * qdot_joints_dot2, tau_joints_this_time, k_this_time,
+                    ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func,
+                    forward_dynamics_func)
+                q_roots_dot4, q_joints_dot4, qdot_roots_dot4, qdot_joints_dot4 = socp_dynamics(
+                    q_roots_this_time + h * q_roots_dot3, q_joints_this_time + h * q_joints_dot3,
+                    qdot_roots_this_time + h * qdot_roots_dot3, qdot_joints_this_time + h * qdot_joints_dot3,
+                    tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time,
+                    sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
+                q_roots_this_time = q_roots_this_time + h / 6 * (
+                        q_roots_dot1 + 2 * q_roots_dot2 + 2 * q_roots_dot3 + q_roots_dot4)
+                q_joints_this_time = q_joints_this_time + h / 6 * (
+                        q_joints_dot1 + 2 * q_joints_dot2 + 2 * q_joints_dot3 + q_joints_dot4)
+                qdot_roots_this_time = qdot_roots_this_time + h / 6 * (
+                        qdot_roots_dot1 + 2 * qdot_roots_dot2 + 2 * qdot_roots_dot3 + qdot_roots_dot4)
+                qdot_joints_this_time = qdot_joints_this_time + h / 6 * (
+                        qdot_joints_dot1 + 2 * qdot_joints_dot2 + 2 * qdot_joints_dot3 + qdot_joints_dot4)
+            q_roots_integrated[:, i_shooting + 1] = q_roots_this_time
+            q_joints_integrated[:, i_shooting + 1] = q_joints_this_time
+            qdot_roots_integrated[:, i_shooting + 1] = qdot_roots_this_time
+            qdot_joints_integrated[:, i_shooting + 1] = qdot_joints_this_time
+        return q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated
+
+    # dt = time_vector_socp[1] - time_vector_socp[0]
+    #
+    # states = None
+    # controls = None
+    # parameters = None
+    # algebraic_states = InitialGuessList()
 
     q_all_socp = np.zeros((n_q * (nb_random + 1), n_shooting + 1))
     for i_shooting in range(n_shooting + 1):
@@ -244,90 +347,122 @@ def noisy_integrate_socp(
     feedbacks_socp = np.zeros((n_q - 3, n_shooting, nb_random * nb_reintegrations))
     for i_reintegration in range(nb_reintegrations):
 
-        _, _, socp, noised_states = prepare_socp(
-            biorbd_model_path=biorbd_model_path,
-            time_last=time_ocp,
-            n_shooting=n_shooting,
-            motor_noise_magnitude=motor_noise_magnitude,
-            sensory_noise_magnitude=sensory_noise_magnitude,
-            q_roots_last=q_roots_ocp,
-            q_joints_last=q_joints_ocp,
-            qdot_roots_last=qdot_roots_ocp,
-            qdot_joints_last=qdot_joints_ocp,
-            tau_joints_last=tau_joints_ocp,
-            k_last=None,
-            ref_last=None,
-            nb_random=nb_random,
-            seed=i_reintegration,
+        # _, _, socp, noised_states = prepare_socp(
+        #     biorbd_model_path=biorbd_model_path,
+        #     time_last=time_ocp,
+        #     n_shooting=n_shooting,
+        #     motor_noise_magnitude=motor_noise_magnitude,
+        #     sensory_noise_magnitude=sensory_noise_magnitude,
+        #     q_roots_last=q_roots_ocp,
+        #     q_joints_last=q_joints_ocp,
+        #     qdot_roots_last=qdot_roots_ocp,
+        #     qdot_joints_last=qdot_joints_ocp,
+        #     tau_joints_last=tau_joints_ocp,
+        #     k_last=None,
+        #     ref_last=None,
+        #     nb_random=nb_random,
+        #     seed=i_reintegration,
+        # )
+
+        # Prepare the noises
+        np.random.seed(i_reintegration)
+        # the last node deos not need motor and sensory noise
+        motor_noise_numerical_this_time = np.zeros((n_joints, nb_random, n_shooting + 1))
+        sensory_noise_numerical_this_time = np.zeros((2 * (n_joints + 1), nb_random, n_shooting + 1))
+        for i_random in range(nb_random):
+            for i_shooting in range(n_shooting):
+                motor_noise_numerical_this_time[:, i_random, i_shooting] = np.random.normal(
+                    loc=np.zeros(motor_noise_magnitude.shape[0]),
+                    scale=np.reshape(np.array(motor_noise_magnitude), (n_joints,)),
+                    size=n_joints,
+                )
+                sensory_noise_numerical_this_time[:, i_random, i_shooting] = np.random.normal(
+                    loc=np.zeros(sensory_noise_magnitude.shape[0]),
+                    scale=np.reshape(np.array(sensory_noise_magnitude), (2 * (n_joints + 1),)),
+                    size=2 * (n_joints + 1),
+                )
+
+        initial_cov = np.eye(2 * n_q) * np.hstack((np.ones((n_q,)) * 1e-4, np.ones((n_q,)) * 1e-7))  # P
+        states_init = np.array(
+            [-0.0346, 0.1207, 0.2255, 0.0, 3.1, -0.1787, 0.0,  # q
+             0, 2, 2.5 * np.pi, 0, 0, 0, 0]  # qdot
         )
+        noised_states = np.random.multivariate_normal(
+            states_init, initial_cov, nb_random
+        ).T
 
         # initial variability
-        q_roots_socp_this_time = q_roots_socp[:, :]
-        q_joints_socp_this_time = q_joints_socp[:, :]
-        qdot_roots_socp_this_time = qdot_roots_socp[:, :]
-        qdot_joints_socp_this_time = qdot_joints_socp[:, :]
+        q_roots_init_this_time = noised_states[:3, :]
+        q_joints_init_this_time = noised_states[3:7, :]
+        qdot_roots_init_this_time = noised_states[7:10, :]
+        qdot_joints_init_this_time = noised_states[10:, :]
+
+        q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated = integrate(
+            time_vector_socp[-1], q_roots_init_this_time, q_joints_init_this_time, qdot_roots_init_this_time,
+            qdot_joints_init_this_time, tau_joints_socp,
+            k_socp, ref_socp, motor_noise_numerical_this_time, sensory_noise_numerical_this_time,
+            socp.nlp[0],
+            DMS_sensory_reference_func, forward_dynamics_func)
+
         for i_random in range(nb_random):
-            q_roots_socp_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[:3, i_random]
-            q_joints_socp_this_time[(n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0] += noised_states[
-                3:n_q, i_random
-            ]
-            qdot_roots_socp_this_time[3 * i_random : 3 * (i_random + 1), 0] += noised_states[
-                n_q : n_q + 3, i_random
-            ]
-            qdot_joints_socp_this_time[
-                (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-            ] += noised_states[n_q + 3 :, i_random]
-
-        del states, controls, parameters
-        states = InitialGuessList()
-        controls = InitialGuessList()
-        parameters = InitialGuessList()
-        states.add("q_roots", q_roots_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
-        states.add("q_joints", q_joints_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
-        states.add("qdot_roots", qdot_roots_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
-        states.add("qdot_joints", qdot_joints_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
-        controls.add("tau_joints", tau_joints_socp, interpolation=InterpolationType.EACH_FRAME)
-        controls.add("k", k_socp, interpolation=InterpolationType.EACH_FRAME)
-        controls.add("ref", ref_socp, interpolation=InterpolationType.EACH_FRAME)
-        parameters["time"] = time_vector_socp[-1]
-
-        sol_from_initial_guess = Solution.from_initial_guess(
-            socp, [np.array([dt]), states, controls, parameters, algebraic_states]
-        )
-        integrated_sol_socp = sol_from_initial_guess.integrate(
-            shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
-        )
+            for i_dof in range(4):
+                if i_dof < 3:
+                    q_roots_integrated_socp[i_dof, :, i_reintegration * nb_random + i_random] = q_roots_integrated[i_dof + 3*i_random, :]
+                    qdot_roots_integrated_socp[i_dof, :, i_reintegration * nb_random + i_random] = qdot_roots_integrated[i_dof + 3*i_random, :]
+                q_joints_integrated_socp[i_dof, :, i_reintegration * nb_random + i_random] = q_joints_integrated[i_dof + 4*i_random, :]
+                qdot_joints_integrated_socp[i_dof, :, i_reintegration * nb_random + i_random] = qdot_joints_integrated[i_dof + 4*i_random, :]
 
         if i_reintegration == 0:
             plt.figure()
             for i_shooting in range(5):
-                for ii in range(nb_random):
-                    plt.plot(np.ones((3, ))*i_shooting, integrated_sol_socp["q_roots"][i_shooting][3 * ii: 3*(ii+1), 0], '.b')
-                    plt.plot(np.ones((4, ))*i_shooting, integrated_sol_socp["q_joints"][i_shooting][(n_q - 3) * ii: (n_q - 3) * (ii + 1), 0], '.b')
-                    plt.plot(np.ones((7, ))*i_shooting, q_socp[:, i_shooting, i_random], 'o')
+                for i_random in range(nb_random):
+                    plt.plot(np.ones((3, ))*i_shooting, q_roots_integrated_socp[:, i_shooting, i_random], '.b')
+                    plt.plot(np.ones((4, ))*i_shooting, q_joints_integrated_socp[:, i_shooting, i_random], '.b')
+                    plt.scatter(np.ones((7, ))*i_shooting, q_socp[:, i_shooting, i_random], color='m')
             plt.savefig("tempo_socp_0.png")
             plt.show()
 
+        # del states, controls, parameters
+        # states = InitialGuessList()
+        # controls = InitialGuessList()
+        # parameters = InitialGuessList()
+        # states.add("q_roots", q_roots_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
+        # states.add("q_joints", q_joints_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
+        # states.add("qdot_roots", qdot_roots_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
+        # states.add("qdot_joints", qdot_joints_socp_this_time, interpolation=InterpolationType.EACH_FRAME)
+        # controls.add("tau_joints", tau_joints_socp, interpolation=InterpolationType.EACH_FRAME)
+        # controls.add("k", k_socp, interpolation=InterpolationType.EACH_FRAME)
+        # controls.add("ref", ref_socp, interpolation=InterpolationType.EACH_FRAME)
+        # parameters["time"] = time_vector_socp[-1]
+        #
+        # sol_from_initial_guess = Solution.from_initial_guess(
+        #     socp, [np.array([dt]), states, controls, parameters, algebraic_states]
+        # )
+        # integrated_sol_socp = sol_from_initial_guess.integrate(
+        #     shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
+        # )
+        #
+        #
+        #     for i_shooting in range(n_shooting + 1):
+        #         q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+        #             integrated_sol_socp["q_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+        #         )
+        #         q_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+        #             integrated_sol_socp["q_joints"][i_shooting][
+        #                 (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+        #             ]
+        #         )
+        #         qdot_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+        #             integrated_sol_socp["qdot_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
+        #         )
+        #         qdot_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
+        #             integrated_sol_socp["qdot_joints"][i_shooting][
+        #                 (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
+        #             ]
+        #         )
 
-        for i_shooting in range(n_shooting + 1):
-            for i_random in range(nb_random):
-                q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                    integrated_sol_socp["q_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
-                )
-                q_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                    integrated_sol_socp["q_joints"][i_shooting][
-                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                    ]
-                )
-                qdot_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                    integrated_sol_socp["qdot_roots"][i_shooting][3 * i_random : 3 * (i_random + 1), 0]
-                )
-                qdot_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random] = (
-                    integrated_sol_socp["qdot_joints"][i_shooting][
-                        (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                    ]
-                )
-
+        for i_random in range(nb_random):
+            for i_shooting in range(n_shooting):
                 if i_shooting < n_shooting:
                     # Joint friction
                     joint_frictions_socp[
@@ -346,10 +481,7 @@ def noisy_integrate_socp(
                         :,
                         i_shooting,
                         i_reintegration * nb_random + i_random,
-                    ] = np.reshape(
-                        socp.nlp[0].dynamics_type.numerical_data_timeseries["motor_noise_numerical"][
-                            :, i_random, i_shooting
-                        ], (-1, ))
+                    ] = np.reshape(motor_noise_numerical_this_time[:, i_random, i_shooting], (-1, ))
 
                     # Feedback
                     k_fb_matrix = StochasticBioModel.reshape_to_matrix(
@@ -366,28 +498,18 @@ def noisy_integrate_socp(
                             - DMS_sensory_reference_func(
                                 np.hstack(
                                     (
-                                        integrated_sol_socp["q_roots"][i_shooting][
-                                            3 * i_random : 3 * (i_random + 1), 0
-                                        ],
-                                        integrated_sol_socp["q_joints"][i_shooting][
-                                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                                        ],
+                                        q_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random],
+                                        q_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random],
                                     )
                                 ),
                                 np.hstack(
                                     (
-                                        integrated_sol_socp["qdot_roots"][i_shooting][
-                                            3 * i_random : 3 * (i_random + 1), 0
-                                        ],
-                                        integrated_sol_socp["qdot_joints"][i_shooting][
-                                            (n_q - 3) * i_random : (n_q - 3) * (i_random + 1), 0
-                                        ],
+                                        qdot_roots_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random],
+                                        qdot_joints_integrated_socp[:, i_shooting, i_reintegration * nb_random + i_random],
                                     )
                                 ),
                             )
-                            + socp.nlp[0].dynamics_type.numerical_data_timeseries[
-                                "sensory_noise_numerical"
-                            ][:, i_random, i_shooting]
+                            + sensory_noise_numerical_this_time[:, i_random, i_shooting]
                         ),
                         (-1, ),
                     )
@@ -1191,12 +1313,12 @@ def plot_comparison_reintegration(
 
         # Nominal
         if i_dof < 4:
-            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color="k", linewidth=2)
-            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color="k", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color="k", linewidth=0.5)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color="k", linewidth=0.5)
         elif i_dof > 4:
-            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof - 1, :], color="k", linewidth=2)
-            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof - 1, :], color="k", linewidth=2)
-        axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color="k", linewidth=2)
+            axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof - 1, :], color="k", linewidth=0.5)
+            axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof - 1, :], color="k", linewidth=0.5)
+        axs[i_dof, 2].plot(time_vector, q_socp_plus_nominal[i_dof, :], color="k", linewidth=0.5)
 
         # Box plot of the distribution of the last frame
         if i_dof < 4:
@@ -1209,16 +1331,22 @@ def plot_comparison_reintegration(
             box_plot(time_vector[-1] + 0.2, q_socp_plus_reintegrated[i_dof, -1, :], axs[i_dof, 2], SOCP_plus_color)
         box_plot(time_vector[-1] + 0.2, q_socp_plus_reintegrated[i_dof, -1, :], axs[i_dof, 2], SOCP_plus_color)
 
-    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="OCP")
-    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="SOCP nominal")
-    axs[0, 0].plot(0, 0, color="k", linewidth=2, label="SOCP+ nominal")
-    axs[0, 0].plot(0, 0, color=OCP_color, label="OCP reintegrated", alpha=0.5)
-    axs[0, 0].plot(0, 0, color=SOCP_color, label="SOCP reintegrated", alpha=0.5)
-    axs[0, 0].plot(0, 0, color=SOCP_plus_color, label="SOCP+ reintegrated", alpha=0.5)
-    axs[0, 0].plot(0, 0, color="#6C165C", label="SOCP 15 models")
-    axs[0, 0].plot(0, 0, color="#016C93", label="SOCP+ 15 models")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="OCP")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP+ nominal")
+    axs[0, 0].plot(0, 0, color=OCP_color, linewidth=0.5, label="OCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_color, linewidth=0.5, label="SOCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_plus_color, linewidth=0.5, label="SOCP+ reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color="#6C165C", linewidth=0.5, label="SOCP 15 models")
+    axs[0, 0].plot(0, 0, color="#016C93", linewidth=0.5, label="SOCP+ 15 models")
     fig.subplots_adjust(right=0.8)
-    axs[0, 0].legend(bbox_to_anchor=(3.25, 1), loc="upper left")
+    axs[0, 0].legend(bbox_to_anchor=(3.35, 1), loc="upper left")
+
+    for i_axs_2 in range(3):
+        for i_axs in range(n_q-1):
+            axs[i_axs, i_axs_2].get_xaxis().set_visible(False)
+        axs[-1, i_axs_2].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0], ["0%", "20%", "40%", "60%", "80%", "100%"])
+
     plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png")
     plt.show()
@@ -1696,10 +1824,10 @@ time_vector_socp = np.linspace(0, float(time_socp), n_shooting + 1)
 
 #############
 # initial variability
-q_roots_socp_this_time = q_roots_socp[:, :]
-q_joints_socp_this_time = q_joints_socp[:, :]
-qdot_roots_socp_this_time = qdot_roots_socp[:, :]
-qdot_joints_socp_this_time = qdot_joints_socp[:, :]
+# q_roots_socp_this_time = q_roots_socp[:, :]
+# q_joints_socp_this_time = q_joints_socp[:, :]
+# qdot_roots_socp_this_time = qdot_roots_socp[:, :]
+# qdot_joints_socp_this_time = qdot_joints_socp[:, :]
 # for i_random in range(nb_random):
     # q_roots_socp_this_time[3 * i_random: 3 * (i_random + 1), 0] += noised_states[:3, i_random]
     # q_joints_socp_this_time[(n_q - 3) * i_random: (n_q - 3) * (i_random + 1), 0] += noised_states[
@@ -1732,95 +1860,95 @@ qdot_joints_socp_this_time = qdot_joints_socp[:, :]
 # integrated_sol_socp = sol_from_initial_guess.integrate(
 #     shooting_type=Shooting.SINGLE, integrator=SolutionIntegrator.OCP
 # )
-
-
-def socp_dynamics(q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise, nlp, DMS_sensory_reference_func, forward_dynamics_func):
-
-    k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
-
-    nb_root = 3
-    nb_joints = 4
-
-    ddq_roots = None
-    ddq_joints = None
-    for i in range(nlp.model.nb_random):
-        q_this_time = np.hstack((
-            q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
-        ))
-        qdot_this_time = np.hstack((
-            qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
-        ))
-        tau_this_time = tau_joints[:]
-
-        # Joint friction
-        tau_this_time -= nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
-
-        # Motor noise
-        tau_this_time += motor_noise[:, i]
-
-        # Feedback
-        tau_this_time += k_matrix @ (
-            ref - DMS_sensory_reference_func(q_this_time, qdot_this_time) + sensory_noise[:, i]
-        )
-
-        ddq = forward_dynamics_func(q_this_time, qdot_this_time, tau_this_time)
-        ddq_roots = np.vstack((ddq_roots, ddq[:nb_root])) if ddq_roots is not None else ddq[:nb_root]
-        ddq_joints = np.vstack((ddq_joints, ddq[nb_root:])) if ddq_joints is not None else ddq[nb_root:]
-
-    return qdot_roots, qdot_joints, ddq_roots.reshape(-1, ), ddq_joints.reshape(-1, )
-
-def integrate(time, q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise, nlp, DMS_sensory_reference_func, forward_dynamics_func):
-    dt = time / n_shooting
-    h = dt / 5
-    q_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
-    q_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
-    qdot_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
-    qdot_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
-    q_roots_integrated[:, 0] = q_roots[:, 0]
-    q_joints_integrated[:, 0] = q_joints[:, 0]
-    qdot_roots_integrated[:, 0] = qdot_roots[:, 0]
-    qdot_joints_integrated[:, 0] = qdot_joints[:, 0]
-    for i_shooting in range(16):
-        q_roots_this_time = q_roots_integrated[:, i_shooting]
-        q_joints_this_time = q_joints_integrated[:, i_shooting]
-        qdot_roots_this_time = qdot_roots_integrated[:, i_shooting]
-        qdot_joints_this_time = qdot_joints_integrated[:, i_shooting]
-        tau_joints_this_time = tau_joints[:, i_shooting]
-        k_this_time = k[:, i_shooting]
-        ref_this_time = ref[:, i_shooting]
-        motor_noise_this_time = motor_noise[:, :, i_shooting]
-        sensory_noise_this_time = sensory_noise[:, :, i_shooting]
-        for i_step in range(5):
-            q_roots_dot1, q_joints_dot1, qdot_roots_dot1, qdot_joints_dot1 = socp_dynamics(q_roots_this_time, q_joints_this_time, qdot_roots_this_time, qdot_joints_this_time, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
-            q_roots_dot2, q_joints_dot2, qdot_roots_dot2, qdot_joints_dot2 = socp_dynamics(q_roots_this_time + h/2*q_roots_dot1, q_joints_this_time + h/2*q_joints_dot1, qdot_roots_this_time + h/2*qdot_roots_dot1, qdot_joints_this_time + h/2*qdot_joints_dot1, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
-            q_roots_dot3, q_joints_dot3, qdot_roots_dot3, qdot_joints_dot3 = socp_dynamics(q_roots_this_time + h/2*q_roots_dot2, q_joints_this_time + h/2*q_joints_dot2, qdot_roots_this_time + h/2*qdot_roots_dot2, qdot_joints_this_time + h/2*qdot_joints_dot2, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
-            q_roots_dot4, q_joints_dot4, qdot_roots_dot4, qdot_joints_dot4 = socp_dynamics(q_roots_this_time + h*q_roots_dot3, q_joints_this_time + h*q_joints_dot3, qdot_roots_this_time + h*qdot_roots_dot3, qdot_joints_this_time + h*qdot_joints_dot3, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
-            q_roots_this_time = q_roots_this_time + h / 6 * (q_roots_dot1 + 2 * q_roots_dot2 + 2 * q_roots_dot3 + q_roots_dot4)
-            q_joints_this_time = q_joints_this_time + h / 6 * (q_joints_dot1 + 2 * q_joints_dot2 + 2 * q_joints_dot3 + q_joints_dot4)
-            qdot_roots_this_time = qdot_roots_this_time + h / 6 * (qdot_roots_dot1 + 2 * qdot_roots_dot2 + 2 * qdot_roots_dot3 + qdot_roots_dot4)
-            qdot_joints_this_time = qdot_joints_this_time + h / 6 * (qdot_joints_dot1 + 2 * qdot_joints_dot2 + 2 * qdot_joints_dot3 + qdot_joints_dot4)
-        q_roots_integrated[:, i_shooting+1] = q_roots_this_time
-        q_joints_integrated[:, i_shooting+1] = q_joints_this_time
-        qdot_roots_integrated[:, i_shooting+1] = qdot_roots_this_time
-        qdot_joints_integrated[:, i_shooting+1] = qdot_joints_this_time
-    return q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated
-
-q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated = integrate(time_vector_socp[-1], q_roots_socp, q_joints_socp, qdot_roots_socp, qdot_joints_socp, tau_joints_socp, k_socp, ref_socp, motor_noise_numerical_socp, sensory_noise_numerical_socp, socp.nlp[0], DMS_sensory_reference_func, forward_dynamics_func)
+#
+#
+# def socp_dynamics(q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise, nlp, DMS_sensory_reference_func, forward_dynamics_func):
+#
+#     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
+#
+#     nb_root = 3
+#     nb_joints = 4
+#
+#     ddq_roots = None
+#     ddq_joints = None
+#     for i in range(nlp.model.nb_random):
+#         q_this_time = np.hstack((
+#             q_roots[i * nb_root : (i + 1) * nb_root], q_joints[i * nb_joints : (i + 1) * nb_joints]
+#         ))
+#         qdot_this_time = np.hstack((
+#             qdot_roots[i * nb_root : (i + 1) * nb_root], qdot_joints[i * nb_joints : (i + 1) * nb_joints]
+#         ))
+#         tau_this_time = tau_joints[:]
+#
+#         # Joint friction
+#         tau_this_time -= nlp.model.friction_coefficients @ qdot_this_time[nb_root:]
+#
+#         # Motor noise
+#         tau_this_time += motor_noise[:, i]
+#
+#         # Feedback
+#         tau_this_time += k_matrix @ (
+#             ref - DMS_sensory_reference_func(q_this_time, qdot_this_time) + sensory_noise[:, i]
+#         )
+#
+#         ddq = forward_dynamics_func(q_this_time, qdot_this_time, tau_this_time)
+#         ddq_roots = np.vstack((ddq_roots, ddq[:nb_root])) if ddq_roots is not None else ddq[:nb_root]
+#         ddq_joints = np.vstack((ddq_joints, ddq[nb_root:])) if ddq_joints is not None else ddq[nb_root:]
+#
+#     return qdot_roots, qdot_joints, ddq_roots.reshape(-1, ), ddq_joints.reshape(-1, )
+#
+# def integrate(time, q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise, nlp, DMS_sensory_reference_func, forward_dynamics_func):
+#     dt = time / n_shooting
+#     h = dt / 5
+#     q_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
+#     q_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
+#     qdot_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
+#     qdot_joints_integrated = np.zeros((4 * nb_random, n_shooting + 1))
+#     q_roots_integrated[:, 0] = q_roots[:, 0]
+#     q_joints_integrated[:, 0] = q_joints[:, 0]
+#     qdot_roots_integrated[:, 0] = qdot_roots[:, 0]
+#     qdot_joints_integrated[:, 0] = qdot_joints[:, 0]
+#     for i_shooting in range(16):
+#         q_roots_this_time = q_roots_integrated[:, i_shooting]
+#         q_joints_this_time = q_joints_integrated[:, i_shooting]
+#         qdot_roots_this_time = qdot_roots_integrated[:, i_shooting]
+#         qdot_joints_this_time = qdot_joints_integrated[:, i_shooting]
+#         tau_joints_this_time = tau_joints[:, i_shooting]
+#         k_this_time = k[:, i_shooting]
+#         ref_this_time = ref[:, i_shooting]
+#         motor_noise_this_time = motor_noise[:, :, i_shooting]
+#         sensory_noise_this_time = sensory_noise[:, :, i_shooting]
+#         for i_step in range(5):
+#             q_roots_dot1, q_joints_dot1, qdot_roots_dot1, qdot_joints_dot1 = socp_dynamics(q_roots_this_time, q_joints_this_time, qdot_roots_this_time, qdot_joints_this_time, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
+#             q_roots_dot2, q_joints_dot2, qdot_roots_dot2, qdot_joints_dot2 = socp_dynamics(q_roots_this_time + h/2*q_roots_dot1, q_joints_this_time + h/2*q_joints_dot1, qdot_roots_this_time + h/2*qdot_roots_dot1, qdot_joints_this_time + h/2*qdot_joints_dot1, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
+#             q_roots_dot3, q_joints_dot3, qdot_roots_dot3, qdot_joints_dot3 = socp_dynamics(q_roots_this_time + h/2*q_roots_dot2, q_joints_this_time + h/2*q_joints_dot2, qdot_roots_this_time + h/2*qdot_roots_dot2, qdot_joints_this_time + h/2*qdot_joints_dot2, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
+#             q_roots_dot4, q_joints_dot4, qdot_roots_dot4, qdot_joints_dot4 = socp_dynamics(q_roots_this_time + h*q_roots_dot3, q_joints_this_time + h*q_joints_dot3, qdot_roots_this_time + h*qdot_roots_dot3, qdot_joints_this_time + h*qdot_joints_dot3, tau_joints_this_time, k_this_time, ref_this_time, motor_noise_this_time, sensory_noise_this_time, nlp, DMS_sensory_reference_func, forward_dynamics_func)
+#             q_roots_this_time = q_roots_this_time + h / 6 * (q_roots_dot1 + 2 * q_roots_dot2 + 2 * q_roots_dot3 + q_roots_dot4)
+#             q_joints_this_time = q_joints_this_time + h / 6 * (q_joints_dot1 + 2 * q_joints_dot2 + 2 * q_joints_dot3 + q_joints_dot4)
+#             qdot_roots_this_time = qdot_roots_this_time + h / 6 * (qdot_roots_dot1 + 2 * qdot_roots_dot2 + 2 * qdot_roots_dot3 + qdot_roots_dot4)
+#             qdot_joints_this_time = qdot_joints_this_time + h / 6 * (qdot_joints_dot1 + 2 * qdot_joints_dot2 + 2 * qdot_joints_dot3 + qdot_joints_dot4)
+#         q_roots_integrated[:, i_shooting+1] = q_roots_this_time
+#         q_joints_integrated[:, i_shooting+1] = q_joints_this_time
+#         qdot_roots_integrated[:, i_shooting+1] = qdot_roots_this_time
+#         qdot_joints_integrated[:, i_shooting+1] = qdot_joints_this_time
+#     return q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated
+#
+# q_roots_integrated, q_joints_integrated, qdot_roots_integrated, qdot_joints_integrated = integrate(time_vector_socp[-1], q_roots_socp, q_joints_socp, qdot_roots_socp, qdot_joints_socp, tau_joints_socp, k_socp, ref_socp, motor_noise_numerical_socp, sensory_noise_numerical_socp, socp.nlp[0], DMS_sensory_reference_func, forward_dynamics_func)
 
 # if i_reintegration == 0:
-plt.figure()
-for i_shooting in range(5):
-    for ii in range(nb_random):
-        # plt.plot(np.ones((3,)) * i_shooting, integrated_sol_socp["q_roots"][i_shooting][3 * ii: 3 * (ii + 1), 0],
-        #          '.b')
-        # plt.plot(np.ones((4,)) * i_shooting,
-        #          integrated_sol_socp["q_joints"][i_shooting][ii*4: (ii + 1)*4, 0], '.b')
-        plt.plot(np.ones((3,)) * i_shooting, q_roots_integrated[3 * ii: 3 * (ii + 1), i_shooting], '.b')
-        plt.plot(np.ones((4,)) * i_shooting, q_joints_integrated[ii*4: (ii + 1)*4, i_shooting], '.b')
-        plt.scatter(np.ones((3,)) * i_shooting, q_roots_socp[ii*3:(ii+1)*3, i_shooting], color='r', facecolors=None)
-        plt.scatter(np.ones((4,)) * i_shooting, q_joints_socp[ii*4:(ii+1)*4, i_shooting], color='r', facecolors=None)
-plt.savefig("tempo_socp_0.png")
-plt.show()
+# plt.figure()
+# for i_shooting in range(5):
+#     for ii in range(nb_random):
+#         # plt.plot(np.ones((3,)) * i_shooting, integrated_sol_socp["q_roots"][i_shooting][3 * ii: 3 * (ii + 1), 0],
+#         #          '.b')
+#         # plt.plot(np.ones((4,)) * i_shooting,
+#         #          integrated_sol_socp["q_joints"][i_shooting][ii*4: (ii + 1)*4, 0], '.b')
+#         plt.plot(np.ones((3,)) * i_shooting, q_roots_integrated[3 * ii: 3 * (ii + 1), i_shooting], '.b')
+#         plt.plot(np.ones((4,)) * i_shooting, q_joints_integrated[ii*4: (ii + 1)*4, i_shooting], '.b')
+#         plt.scatter(np.ones((3,)) * i_shooting, q_roots_socp[ii*3:(ii+1)*3, i_shooting], color='r', facecolors=None)
+#         plt.scatter(np.ones((4,)) * i_shooting, q_joints_socp[ii*4:(ii+1)*4, i_shooting], color='r', facecolors=None)
+# plt.savefig("tempo_socp_0.png")
+# plt.show()
 
 ############
 
