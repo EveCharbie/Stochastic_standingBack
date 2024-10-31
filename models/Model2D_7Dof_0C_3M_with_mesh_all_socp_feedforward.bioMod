@@ -52,6 +52,35 @@ segment	Head_1
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_1
+	parent Head_1
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_1
+	parent Eyes_1
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_1
+	parent Eyes_1
+	position 0 -1 0
+endmarker
+
 segment	Arm_1
 	parent	Thorax_1
 	RTinMatrix	1
@@ -249,6 +278,35 @@ segment	Head_2
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_2
+	parent Head_2
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_2
+	parent Eyes_2
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_2
+	parent Eyes_2
+	position 0 -1 0
+endmarker
 
 segment	Arm_2
 	parent	Thorax_2
@@ -451,6 +509,35 @@ segment	Head_3
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_3
+	parent Head_3
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_3
+	parent Eyes_3
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_3
+	parent Eyes_3
+	position 0 -1 0
+endmarker
+
 segment	Arm_3
 	parent	Thorax_3
 	RTinMatrix	1
@@ -649,6 +736,35 @@ segment	Head_4
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_4
+	parent Head_4
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_4
+	parent Eyes_4
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_4
+	parent Eyes_4
+	position 0 -1 0
+endmarker
 
 segment	Arm_4
 	parent	Thorax_4
@@ -849,6 +965,35 @@ segment	Head_5
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_5
+	parent Head_5
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_5
+	parent Eyes_5
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_5
+	parent Eyes_5
+	position 0 -1 0
+endmarker
 
 segment	Arm_5
 	parent	Thorax_5
@@ -1051,6 +1196,35 @@ segment	Head_6
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_6
+	parent Head_6
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_6
+	parent Eyes_6
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_6
+	parent Eyes_6
+	position 0 -1 0
+endmarker
+
 segment	Arm_6
 	parent	Thorax_6
 	RTinMatrix	1
@@ -1249,6 +1423,35 @@ segment	Head_7
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_7
+	parent Head_7
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_7
+	parent Eyes_7
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_7
+	parent Eyes_7
+	position 0 -1 0
+endmarker
 
 segment	Arm_7
 	parent	Thorax_7
@@ -1452,6 +1655,35 @@ segment	Head_8
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_8
+	parent Head_8
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_8
+	parent Eyes_8
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_8
+	parent Eyes_8
+	position 0 -1 0
+endmarker
+
 segment	Arm_8
 	parent	Thorax_8
 	RTinMatrix	1
@@ -1652,6 +1884,35 @@ segment	Head_9
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_9
+	parent Head_9
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_9
+	parent Eyes_9
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_9
+	parent Eyes_9
+	position 0 -1 0
+endmarker
 
 segment	Arm_9
 	parent	Thorax_9
@@ -1854,6 +2115,35 @@ segment	Head_10
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_10
+	parent Head_10
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_10
+	parent Eyes_10
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_10
+	parent Eyes_10
+	position 0 -1 0
+endmarker
+
 segment	Arm_10
 	parent	Thorax_10
 	RTinMatrix	1
@@ -2053,6 +2343,35 @@ segment	Head_11
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_11
+	parent Head_11
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_11
+	parent Eyes_11
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_11
+	parent Eyes_11
+	position 0 -1 0
+endmarker
 
 segment	Arm_11
 	parent	Thorax_11
@@ -2255,6 +2574,35 @@ segment	Head_12
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_12
+	parent Head_12
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_12
+	parent Eyes_12
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_12
+	parent Eyes_12
+	position 0 -1 0
+endmarker
+
 segment	Arm_12
 	parent	Thorax_12
 	RTinMatrix	1
@@ -2454,6 +2802,35 @@ segment	Head_13
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
+
+segment Eyes_13
+	parent Head_13
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_13
+	parent Eyes_13
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_13
+	parent Eyes_13
+	position 0 -1 0
+endmarker
 
 segment	Arm_13
 	parent	Thorax_13
@@ -2655,6 +3032,35 @@ segment	Head_14
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_14
+	parent Head_14
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_14
+	parent Eyes_14
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_14
+	parent Eyes_14
+	position 0 -1 0
+endmarker
+
 segment	Arm_14
 	parent	Thorax_14
 	RTinMatrix	1
@@ -2855,6 +3261,35 @@ segment	Head_15
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_15
+	parent Head_15
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_15
+	parent Eyes_15
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_15
+	parent Eyes_15
+	position 0 -1 0
+endmarker
+
 segment	Arm_15
 	parent	Thorax_15
 	RTinMatrix	1
@@ -3000,11 +3435,13 @@ marker	Foot_Toe_15
 	position	0.00000000000   -0.0300000000   -0.15000000000
 endmarker
 
+
+
 //////////////////////////////////////////////////////////////////////////////////// mean
 
 
 segment	Pelvis_mean
-	RT -0.1 0 0	xyz 0.2 0 0.8
+	RT -0.1 0 0	xyz 0.5 0 0.8
 	translations yz
 	rotations	 x
 	rangesQ
@@ -3055,6 +3492,36 @@ segment	Head_mean
 	meshfile mesh/head.stl
 	meshcolor 0.643 0.412 0.945
 endsegment
+
+segment Eyes_mean
+	parent Head_mean
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshcolor 0.643 0.412 0.945
+	meshscale 0.01 1 0.01
+endsegment
+
+marker eyes_vect_start_mean
+	parent Eyes_mean
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_mean
+	parent Eyes_mean
+	position 0 -1 0
+endmarker
 
 segment	Arm_mean
 	parent	Thorax_mean

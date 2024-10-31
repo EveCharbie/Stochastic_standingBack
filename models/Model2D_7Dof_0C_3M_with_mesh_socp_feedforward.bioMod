@@ -55,6 +55,26 @@ segment	Head
 	meshcolor 0.643 0.412 0.945
 endsegment
 
+segment Eyes
+	parent Head
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshcolor 0.643 0.412 0.945
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm
 	parent	Thorax
 	RTinMatrix	1
@@ -204,5 +224,15 @@ endmarker
 marker	Foot_Toe
 	parent	Foot
 	position	0.00000000000   -0.0300000000   -0.15000000000
+endmarker
+
+marker eyes_vect_start
+	parent Eyes
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end
+	parent Eyes
+	position 0 -1 0
 endmarker
 

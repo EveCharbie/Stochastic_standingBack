@@ -661,7 +661,7 @@ segment	Thorax_feedforward
 	meshcolor 0.643 0.412 0.945
 endsegment
 
-segment	Head_feedforward
+segment Head_feedforward
 	parent	Thorax_feedforward
 	rotations	 x
 	rangesQ
@@ -678,6 +678,36 @@ segment	Head_feedforward
 	meshfile mesh/head.stl
 	meshcolor 0.643 0.412 0.945
 endsegment
+
+segment Eyes_feedforward
+	parent Head_feedforward
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	rotations x
+	rangesQ
+		-30*3.14/180 3.14/8
+	rangesQdot	
+		-100 100
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+	meshcolor 0.643 0.412 0.945
+endsegment
+
+marker eyes_vect_start_feedforward
+	parent Eyes_feedforward
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_feedforward
+	parent Eyes_feedforward
+	position 0 -1 0
+endmarker
 
 segment	Arm_feedforward
 	parent	Thorax_feedforward
