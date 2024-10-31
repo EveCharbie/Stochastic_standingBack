@@ -16,9 +16,9 @@ from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
-RUN_SOCP = True
+RUN_SOCP = False
 RUN_SOCP_VARIABLE = False
-RUN_SOCP_FEEDFORWARD = False
+RUN_SOCP_FEEDFORWARD = True
 RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
@@ -275,7 +275,7 @@ if RUN_SOCP_VARIABLE:
         k_last = None
         ref_last = None
 
-    motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE(
+    motor_noise_numerical, sensory_noise_numerical, socp, noised_states = prepare_socp_VARIABLE(
         biorbd_model_path=biorbd_model_path,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -403,7 +403,7 @@ if RUN_SOCP_FEEDFORWARD:
         (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
     )
 
-    motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_FEEDFORWARD(
+    motor_noise_numerical, sensory_noise_numerical, socp, noised_states = prepare_socp_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
         time_last=time_last,
         n_shooting=n_shooting,
@@ -531,7 +531,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     tau_joints_last = np.vstack(
         (tau_joints_last[0, :], np.ones((1, tau_joints_last.shape[1])) * 0.01, tau_joints_last[1:, :])
     )
-    motor_noise_numerical, sensory_noise_numerical, socp = prepare_socp_VARIABLE_FEEDFORWARD(
+    motor_noise_numerical, sensory_noise_numerical, socp, noised_states = prepare_socp_VARIABLE_FEEDFORWARD(
         biorbd_model_path=biorbd_model_path_vision,
         time_last=time_last,
         n_shooting=n_shooting,

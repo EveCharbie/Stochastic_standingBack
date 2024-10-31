@@ -376,7 +376,7 @@ def prepare_socp_FEEDFORWARD(
     dynamics.add(
         custom_configure,
         dynamic_function=custom_dynamics,
-        phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
+        phase_dynamics=PhaseDynamics.ONE_PER_NODE,
         numerical_data_timeseries={
             "motor_noise_numerical": motor_noise_numerical,
             "sensory_noise_numerical": sensory_noise_numerical,
@@ -575,7 +575,7 @@ def prepare_socp_FEEDFORWARD(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
-        n_threads=32,
+        n_threads=1,
     )
     return motor_noise_numerical, sensory_noise_numerical, ocp, noised_states
 
