@@ -290,18 +290,6 @@ def ref_equals_mean_sensory(controller: PenaltyController) -> cas.MX:
     return mean_ref_cx
 
 
-def final_time(controller: PenaltyController) -> cas.MX:
-    t = controller.states["t"].mx
-    tf = controller.phases_dt.mx * controller.ns
-
-    out_cx = controller.mx_to_cx(
-        "time",
-        t - tf,
-        controller.states["t"],
-        controller.phases_dt,
-    )
-    return out_cx
-
 def DMS_CoM_over_toes(controller: PenaltyController) -> cas.MX:
 
     nb_root = controller.model.nb_root

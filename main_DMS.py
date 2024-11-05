@@ -63,7 +63,7 @@ wPqdot_std = 0.003 * 5
 
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -419,8 +419,8 @@ if RUN_SOCP_FEEDFORWARD:
         nb_random=nb_random,
     )
 
-    # socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
@@ -547,8 +547,8 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         ref_ff_last=ref_ff_last,
         nb_random=nb_random,
     )
-    # socp.add_plot_penalty()
-    # socp.add_plot_ipopt_outputs()
+    socp.add_plot_penalty()
+    socp.add_plot_ipopt_outputs()
 
     save_path = save_path.replace(".", "p")
 
