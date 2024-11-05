@@ -16,6 +16,7 @@ from utils import (
     ref_equals_mean_sensory,
     DMS_sensory_reference_no_eyes,
     DMS_ff_sensory_input,
+    final_time,
 )
 
 sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
@@ -67,6 +68,7 @@ def custom_dynamics(
     fb_ref = DynamicsFunctions.get(nlp.controls["ref"], controls)
     ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
     tf = nlp.tf_mx
+    t = DynamicsFunctions.get(nlp.states["t"], states)
     motor_noise = None
     sensory_noise = None
     for i in range(nb_random):
@@ -120,7 +122,7 @@ def custom_dynamics(
         # Feedforward
         tau_this_time += k_ff @ (
             ff_ref
-            - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time, qdot_this_time)
+            - DMS_ff_sensory_input(nlp.model, tf, t, q_this_time, qdot_this_time)
             + sensory_noise[nlp.model.n_feedbacks :, i]
         )
 
@@ -131,7 +133,8 @@ def custom_dynamics(
         ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
 
     dxdt[nb_q * nb_random : (nb_q + nb_root) * nb_random] = ddq_roots
-    dxdt[(nb_q + nb_root) * nb_random :] = ddq_joints
+    dxdt[(nb_q + nb_root) * nb_random : (nb_q + nb_q) * nb_random] = ddq_joints
+    dxdt[-1] = 1
 
     return DynamicsEvaluation(dxdt=dxdt, defects=None)
 
@@ -209,6 +212,16 @@ def custom_configure(ocp, nlp, numerical_data_timeseries):
         as_states=False,
         as_controls=False,
         as_states_dot=True,
+    )
+
+    ConfigureProblem.configure_new_variable(
+        "t",
+        "t",
+        ocp,
+        nlp,
+        as_states=True,
+        as_controls=False,
+        as_states_dot=False,
     )
 
     # Controls
@@ -370,13 +383,14 @@ def prepare_socp_FEEDFORWARD(
     constraints.add(toe_marker_on_floor, node=Node.END)
     constraints.add(DMS_CoM_over_toes, node=Node.END)
     constraints.add(ref_equals_mean_sensory, node=Node.ALL_SHOOTING)
+    constraints.add(final_time, node=Node.END)
 
     # Dynamics
     dynamics = DynamicsList()
     dynamics.add(
         custom_configure,
         dynamic_function=custom_dynamics,
-        phase_dynamics=PhaseDynamics.ONE_PER_NODE,
+        phase_dynamics=PhaseDynamics.SHARED_DURING_THE_PHASE,
         numerical_data_timeseries={
             "motor_noise_numerical": motor_noise_numerical,
             "sensory_noise_numerical": sensory_noise_numerical,
@@ -451,6 +465,12 @@ def prepare_socp_FEEDFORWARD(
         max_bound=qdot_joints_max,
         interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
     )
+    x_bounds.add(
+        "t",
+        min_bound=np.array([[0, 0, 0]]),
+        max_bound=np.array([[0, time_last+0.3, time_last+0.3]]),
+        interpolation=InterpolationType.CONSTANT_WITH_FIRST_AND_LAST_DIFFERENT,
+    )
 
     u_bounds = BoundsList()
     tau_min = np.ones((n_joints, 3)) * -500
@@ -488,6 +508,7 @@ def prepare_socp_FEEDFORWARD(
         qdot_joints_init = np.ones((n_joints * nb_random,)) * 0.01
         x_init.add("qdot_roots", initial_guess=qdot_roots_init, interpolation=InterpolationType.CONSTANT)
         x_init.add("qdot_joints", initial_guess=qdot_joints_init, interpolation=InterpolationType.CONSTANT)
+        x_init("t", initial_guess=np.array([[0, time_last]]), interpolation=InterpolationType.LINEAR)
     else:
         q_roots_init = q_roots_last
         q_joints_init = q_joints_last
@@ -502,6 +523,7 @@ def prepare_socp_FEEDFORWARD(
         x_init.add("q_joints", initial_guess=q_joints_init, interpolation=InterpolationType.EACH_FRAME)
         x_init.add("qdot_roots", initial_guess=qdot_roots_init, interpolation=InterpolationType.EACH_FRAME)
         x_init.add("qdot_joints", initial_guess=qdot_joints_init, interpolation=InterpolationType.EACH_FRAME)
+        x_init.add("t", initial_guess=np.array([[0, time_last]]), interpolation=InterpolationType.LINEAR)
 
     u_init = InitialGuessList()
     if tau_joints_last is None:
@@ -575,7 +597,7 @@ def prepare_socp_FEEDFORWARD(
         objective_functions=objective_functions,
         constraints=constraints,
         ode_solver=OdeSolver.RK4(),
-        n_threads=1,
+        n_threads=32,
     )
     return motor_noise_numerical, sensory_noise_numerical, ocp, noised_states
 
