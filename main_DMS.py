@@ -6,7 +6,7 @@ from datetime import datetime
 import casadi as cas
 import numpy as np
 
-# sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
+sys.path.append("/home/charbie/Documents/Programmation/BiorbdOptim")
 from bioptim import Solver, SolutionMerge
 
 from DMS_deterministic import prepare_ocp
@@ -18,8 +18,8 @@ from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 RUN_OCP = False
 RUN_SOCP = False
 RUN_SOCP_VARIABLE = False
-RUN_SOCP_FEEDFORWARD = True
-RUN_SOCP_VARIABLE_FEEDFORWARD = False
+RUN_SOCP_FEEDFORWARD = False
+RUN_SOCP_VARIABLE_FEEDFORWARD = True
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
@@ -63,7 +63,7 @@ wPqdot_std = 0.003 * 5
 
 
 # Solver parameters
-solver = Solver.IPOPT(show_online_optim=True, show_options=dict(show_bounds=True))
+solver = Solver.IPOPT(show_online_optim=False, show_options=dict(show_bounds=True))
 solver.set_linear_solver("ma97")
 solver.set_bound_frac(1e-8)
 solver.set_bound_push(1e-8)
@@ -547,24 +547,24 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         ref_ff_last=ref_ff_last,
         nb_random=nb_random,
     )
-    socp.add_plot_penalty()
-    socp.add_plot_ipopt_outputs()
+    # socp.add_plot_penalty()
+    # socp.add_plot_ipopt_outputs()
 
     save_path = save_path.replace(".", "p")
 
-    date_time = datetime.now().strftime("%d-%m-%H-%M-%S")
-    path_to_temporary_results = f"temporary_results_{date_time}"
-    if path_to_temporary_results not in os.listdir("results/"):
-        os.mkdir("results/" + path_to_temporary_results)
-    nb_iter_save = 10
+    # date_time = datetime.now().strftime("%d-%m-%H-%M-%S")
+    # path_to_temporary_results = f"temporary_results_{date_time}"
+    # if path_to_temporary_results not in os.listdir("results/"):
+    #     os.mkdir("results/" + path_to_temporary_results)
+    # nb_iter_save = 10
     # sol_last.ocp.save_intermediary_ipopt_iterations(
     #     "results/" + path_to_temporary_results, "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD", nb_iter_save
     # )
-    socp.save_intermediary_ipopt_iterations(
-        "results/" + path_to_temporary_results,
-        "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD",
-        nb_iter_save,
-    )
+    # socp.save_intermediary_ipopt_iterations(
+    #     "results/" + path_to_temporary_results,
+    #     "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_VARIABLE_FEEDFORWARD",
+    #     nb_iter_save,
+    # )
 
     solver.set_tol(tol)
     sol_socp = socp.solve(solver)
