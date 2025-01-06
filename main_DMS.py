@@ -16,14 +16,16 @@ from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
-RUN_SOCP = False
-RUN_SOCP_VARIABLE = False
-RUN_SOCP_FEEDFORWARD = False
+RUN_SOCP = True
+RUN_SOCP_VARIABLE = True
+RUN_SOCP_FEEDFORWARD = True
 RUN_SOCP_VARIABLE_FEEDFORWARD = True
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
-nb_random = 15
+nb_random = 5
+if not os.path.exists(f"results/{nb_random}random"):
+    os.makedirs(f"results/{nb_random}random")
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -132,7 +134,7 @@ print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
 print_tol = "{:1.1e}".format(tol).replace(".", "p")
-save_path = f"results/{model_name}_socp_DMS_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
+save_path = f"results/{nb_random}random/{model_name}_socp_DMS_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 sensory_noise_magnitude = cas.DM(
