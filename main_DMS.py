@@ -16,10 +16,10 @@ from DMS_SOCP_FEEDFORWARD import prepare_socp_FEEDFORWARD
 from DMS_SOCP_VARIABLE_FEEDFORWARD import prepare_socp_VARIABLE_FEEDFORWARD
 
 RUN_OCP = False
-RUN_SOCP = True
-RUN_SOCP_VARIABLE = True
+RUN_SOCP = False
+RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = True
-RUN_SOCP_VARIABLE_FEEDFORWARD = True
+RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
@@ -127,6 +127,9 @@ if RUN_OCP:
     # b = bioviz.Viz(model_path=biorbd_model_path_with_mesh)
     # b.load_movement(np.vstack((q_roots_sol, q_joints_sol)))
     # b.exec()
+else:
+    save_path = save_path.replace(".", "p")
+    save_path = save_path.replace("ppkl", f"_DVG_1e-8.pkl")
 
 
 # --- Run the SOCP --- #
