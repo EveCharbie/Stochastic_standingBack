@@ -4,12 +4,12 @@ import numpy as np
 
 
 def box_plot(position, data, color, ax, box_width=0.1):
-    ax.plot(np.array([position - box_width, position - box_width]), np.array([np.min(data), np.max(data)]), color=color)
-    ax.plot(np.array([position - 1.5*box_width, position - 0.5*box_width]), np.array([np.min(data), np.min(data)]), color=color)
-    ax.plot(np.array([position - 1.5*box_width, position - 0.5*box_width]), np.array([np.max(data), np.max(data)]), color=color)
+    ax.plot(np.array([position, position]), np.array([np.min(data), np.max(data)]), color=color)
+    ax.plot(np.array([position - box_width, position + box_width]), np.array([np.min(data), np.min(data)]), color=color)
+    ax.plot(np.array([position - box_width, position + box_width]), np.array([np.max(data), np.max(data)]), color=color)
     ax.plot(position - box_width, np.mean(data), "s", color=color)
     ax.add_patch(
-        Rectangle((position - 1.5*box_width, np.mean(data) - np.std(data)), box_width, 2 * np.std(data), color=color, alpha=0.3)
+        Rectangle((position - box_width, np.mean(data) - np.std(data)), box_width, 2 * np.std(data), color=color, alpha=0.3)
     )
 
 def get_q_qdot_from_data(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints):
@@ -33,4 +33,9 @@ def get_q_qdot_from_data(n_shooting, nb_random, q_roots, q_joints, qdot_roots, q
                 )
             )
     return q, qdot
-    
+
+def define_q_mean(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints):
+    q, qdot = get_q_qdot_from_data(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints)
+    q_mean = np.mean(q, axis=2)
+    qdot_mean = np.mean(qdot, axis=2)
+    return q, qdot, q_mean, qdot_mean

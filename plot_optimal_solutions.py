@@ -22,7 +22,7 @@ from utils import (
     vestibular_noise,
     DMS_fb_noised_sensory_input_VARIABLE,
 )
-from plot_utils import box_plot, get_q_qdot_from_data
+from plot_utils import box_plot, get_q_qdot_from_data, define_q_mean
 from plot_reintegrate import (
     noisy_integrate_ocp,
     noisy_integrate_socp,
@@ -30,8 +30,6 @@ from plot_reintegrate import (
     noisy_integrate_socp_feedforward,
     noisy_integrate_socp_plus
 )
-
-# TODO: used the saved integration instead of recomputing each time !
     
 def plot_CoM(states_integrated, model, n_shooting, save_path, nb_random=30):
     nx = states_integrated.shape[0]
@@ -1426,24 +1424,154 @@ def plot_comparison_nb_random(q_ocp_integrated,
 
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
     position_all_random = np.random.random((q_socp_integrated.shape[2], 1)) * 0.1
-    ax.plot(position_all_random, q_ocp_integrated[2, -1, :], 'o', color=OCP_color)
-    box_plot(1, q_ocp_integrated[2, -1, :], OCP_color, ax)
-    plot_distribution(q_socp_integrated, 10, SOCP_color, "DMS", ax)
-    plot_distribution(q_socp_variable_integrated, 20, SOCP_VARIABLE_color, "VARIABLE_DMS", ax)
-    plot_distribution(q_socp_feedforward_integrated, 30, SOCP_FEEDFORWARD_color, "FEEDFORWARD_DMS", ax)
-    plot_distribution(q_socp_plus_integrated, 40, SOCP_plus_color, "VARIABLE_FEEDFORWARD_DMS", ax)
+    ax.plot(position_all_random - 3, q_ocp_integrated[2, -1, :], 'o', color=OCP_color)
+    box_plot(-2, q_ocp_integrated[2, -1, :], OCP_color, ax)
+    plot_distribution(q_socp_integrated, 0, SOCP_color, "DMS", ax)
+    plot_distribution(q_socp_variable_integrated, 10, SOCP_VARIABLE_color, "VARIABLE_DMS", ax)
+    plot_distribution(q_socp_feedforward_integrated, 20, SOCP_FEEDFORWARD_color, "FEEDFORWARD_DMS", ax)
+    plot_distribution(q_socp_plus_integrated, 30, SOCP_plus_color, "VARIABLE_FEEDFORWARD_DMS", ax)
     ax.set_ylabel("Final somersault angle [rad]")
-    ax.set_xticks([0, 10, 20, 30, 40])
+    ax.set_xticks([-2, 0, 10, 20, 30])
     ax.set_xticklabels(["OCP", "SOCP", "SOCPV", "SOCPA", "SOCP+"])
     plt.savefig("graphs/comparison_nb_random.png")
     # plt.show()
     return
 
-def define_q_mean(n_q, n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints):
-    q, qdot = get_q_qdot_from_data(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints)
-    q_mean = np.mean(q, axis=2)
-    qdot_mean = np.mean(qdot, axis=2)
-    return q, qdot, q_mean, qdot_mean
+
+def plot_comparison_reintegration(
+    q_ocp_nominal,
+    q_socp_nominal,
+    q_socp_variable_nominal,
+    q_socp_feedforward_nominal,
+    q_socp_plus_nominal,
+    q_all_socp,
+    q_all_socp_variable,
+    q_all_socp_feedforward,
+    q_all_socp_plus,
+    q_ocp_integrated,
+    q_socp_integrated,
+    q_socp_variable_integrated,
+    q_socp_feedforward_integrated,
+    q_socp_plus_integrated,
+    time_vector,
+    OCP_color,
+    SOCP_color,
+    SOCP_VARIABLE_color,
+    SOCP_FEEDFORWARD_color,
+    SOCP_plus_color,
+    nb_random,
+    nb_reintegrations,
+):
+
+    n_q = q_socp_plus_nominal.shape[0]
+    fig, axs = plt.subplots(n_q, 5, figsize=(15, 10))
+    for i_dof in range(n_q):
+        # Reintegrated
+        for i_random in range(nb_random * nb_reintegrations):
+            if i_dof < 4:
+                axs[i_dof, 0].plot(
+                    time_vector, q_ocp_integrated[i_dof, :, i_random], color=OCP_color, alpha=0.2, linewidth=0.5
+                )
+                axs[i_dof, 1].plot(
+                    time_vector, q_socp_integrated[i_dof, :, i_random], color=SOCP_color, alpha=0.2, linewidth=0.5
+                )
+                axs[i_dof, 2].plot(
+                    time_vector, q_socp_variable_integrated[i_dof, :, i_random], color=SOCP_VARIABLE_color, alpha=0.2, linewidth=0.5
+                )
+            elif i_dof > 4:
+                axs[i_dof, 0].plot(
+                    time_vector, q_ocp_integrated[i_dof - 1, :, i_random], color=OCP_color, alpha=0.2, linewidth=0.5
+                )
+                axs[i_dof, 1].plot(
+                    time_vector, q_socp_integrated[i_dof - 1, :, i_random], color=SOCP_color, alpha=0.2, linewidth=0.5
+                )
+                axs[i_dof, 2].plot(
+                    time_vector, q_socp_variable_integrated[i_dof - 1, :, i_random], color=SOCP_VARIABLE_color, alpha=0.2, linewidth=0.5
+                )
+            axs[i_dof, 3].plot(
+                time_vector,
+                q_socp_feedforward_integrated[i_dof, :, i_random],
+                color=SOCP_FEEDFORWARD_color,
+                alpha=0.2,
+                linewidth=0.5,
+            )
+            axs[i_dof, 4].plot(
+                time_vector,
+                q_socp_plus_integrated[i_dof, :, i_random],
+                color=SOCP_plus_color,
+                alpha=0.2,
+                linewidth=0.5,
+            )
+
+        for random # TODO: .......... !
+
+            # Optimzation variables
+            for i_random in range(nb_random):
+                if i_dof < 4:
+                    axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof, :, i_random], color="#6C165C", linewidth=0.5)
+                    axs[i_dof, 2].plot(time_vector, q_all_socp_variable[i_dof, :, i_random], color="#D15C02", linewidth=0.5)
+                elif i_dof > 4:
+                    axs[i_dof, 1].plot(time_vector, q_all_socp[i_dof - 1, :, i_random], color="#6C165C", linewidth=0.5)
+                    axs[i_dof, 2].plot(time_vector, q_all_socp_variable[i_dof - 1, :, i_random], color="#D15C02", linewidth=0.5)
+                axs[i_dof, 3].plot(time_vector, q_all_socp_feedforward[i_dof, :, i_random], color="#400191", linewidth=0.5)
+                axs[i_dof, 4].plot(time_vector, q_all_socp_plus[i_dof, :, i_random], color="#016C93", linewidth=0.5)
+
+            # Nominal
+            if i_dof < 4:
+                axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof, :], color="k", linewidth=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof, :], color="k", linewidth=0.5)
+                axs[i_dof, 2].plot(time_vector, q_socp_variable_nominal[i_dof, :], color="k", linewidth=0.5)
+            elif i_dof > 4:
+                axs[i_dof, 0].plot(time_vector, q_ocp_nominal[i_dof - 1, :], color="k", linewidth=0.5)
+                axs[i_dof, 1].plot(time_vector, q_socp_nominal[i_dof - 1, :], color="k", linewidth=0.5)
+                axs[i_dof, 2].plot(time_vector, q_socp_variable_nominal[i_dof - 1, :], color="k", linewidth=0.5)
+            axs[i_dof, 3].plot(time_vector, q_socp_feedforward_nominal[i_dof, :], color="k", linewidth=0.5)
+            axs[i_dof, 4].plot(time_vector, q_socp_plus_nominal[i_dof, :], color="k", linewidth=0.5)
+
+            # Box plot of the distribution of the last frame
+            if i_dof < 4:
+                box_plot(time_vector[-1] + 0.2, q_ocp_integrated[i_dof, -1, :], OCP_color, axs[i_dof, 0])
+                box_plot(time_vector[-1] + 0.2, q_socp_integrated[i_dof, -1, :], SOCP_color, axs[i_dof, 1])
+                box_plot(time_vector[-1] + 0.2, q_socp_variable_integrated[i_dof, -1, :], SOCP_VARIABLE_color, axs[i_dof, 2])
+                box_plot(time_vector[-1] + 0.2, q_socp_feedforward_integrated[i_dof, -1, :], SOCP_FEEDFORWARD_color, axs[i_dof, 3])
+                box_plot(time_vector[-1] + 0.2, q_socp_plus_integrated[i_dof, -1, :], SOCP_plus_color, axs[i_dof, 4])
+            elif i_dof > 4:
+                box_plot(time_vector[-1] + 0.2, q_ocp_integrated[i_dof - 1, -1, :], OCP_color, axs[i_dof, 0])
+                box_plot(time_vector[-1] + 0.2, q_socp_integrated[i_dof - 1, -1, :], SOCP_color, axs[i_dof, 1])
+                box_plot(time_vector[-1] + 0.2, q_socp_variable_integrated[i_dof - 1, -1, :], SOCP_VARIABLE_color, axs[i_dof, 2])
+                box_plot(time_vector[-1] + 0.2, q_socp_feedforward_integrated[i_dof - 1, -1, :], SOCP_FEEDFORWARD_color, axs[i_dof, 3])
+                box_plot(time_vector[-1] + 0.2, q_socp_plus_integrated[i_dof, -1, :], SOCP_plus_color, axs[i_dof, 4])
+            box_plot(time_vector[-1] + 0.2, q_socp_feedforward_integrated[i_dof, -1, :], SOCP_FEEDFORWARD_color, axs[i_dof, 3])
+            box_plot(time_vector[-1] + 0.2, q_socp_plus_integrated[i_dof, -1, :], SOCP_plus_color, axs[i_dof, 4])
+
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="OCP")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP VARIABLE nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP FEEDFORWARD nominal")
+    axs[0, 0].plot(0, 0, color="k", linewidth=0.5, label="SOCP+ nominal")
+    axs[0, 0].plot(0, 0, color=OCP_color, linewidth=0.5, label="OCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_color, linewidth=0.5, label="SOCP reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_VARIABLE_color, linewidth=0.5, label="SOCP VARIABLE reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_FEEDFORWARD_color, linewidth=0.5, label="SOCP FEEDFORWARD reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color=SOCP_plus_color, linewidth=0.5, label="SOCP+ reintegrated", alpha=0.5)
+    axs[0, 0].plot(0, 0, color="#6C165C", linewidth=0.5, label=f"SOCP {nb_random} models")
+    axs[0, 0].plot(0, 0, color="#D15C02", linewidth=0.5, label=f"SOCP VARIABLE {nb_random} models")
+    axs[0, 0].plot(0, 0, color="#400191", linewidth=0.5, label=f"SOCP FEEDFORWARD {nb_random} models")
+    axs[0, 0].plot(0, 0, color="#016C93", linewidth=0.5, label=f"SOCP+ {nb_random} models")
+    fig.subplots_adjust(right=0.8)
+    # axs[0, 0].legend(bbox_to_anchor=(3.35, 1), loc="upper left")
+
+    for i_axs_2 in range(3):
+        for i_axs in range(n_q-1):
+            axs[i_axs, i_axs_2].get_xaxis().set_visible(False)
+        axs[-1, i_axs_2].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0], ["0%", "20%", "40%", "60%", "80%", "100%"])
+
+    plt.subplots_adjust(bottom=0.05, top=0.95, right=0.95, left=0.05)
+    plt.suptitle("Comparison of solutions with different number of episodes")
+    plt.savefig(f"graphs/comparison_reintegration_nb_random.png")
+    # plt.show()
+    return
+
 
 FLAG_GENERATE_VIDEOS = False
 model_name = "Model2D_7Dof_0C_3M"
@@ -1563,38 +1691,53 @@ qdot_ocp = np.vstack((qdot_roots_ocp, qdot_joints_ocp))
 #     print("Generating OCP_one : ", ocp_path_to_results)
 #     bioviz_animate(biorbd_model_path_with_mesh_ocp, np.vstack((q_roots_ocp, q_joints_ocp)), "OCP_one")
 
-q_ocp_integrated, qdot_ocp_integrated, q_all_ocp, joint_frictions_ocp, motor_noises_ocp = noisy_integrate_ocp(
-    n_shooting=n_shooting,
-    nb_random=nb_random,
-    nb_reintegrations=nb_reintegrations,
-    q_roots_ocp = q_roots_ocp,
-    q_joints_ocp = q_joints_ocp,
-    motor_noise_magnitude=motor_noise_magnitude,
-    tau_joints_ocp=tau_joints_ocp,
-    time_vector_ocp=time_vector_ocp,
-    ocp=ocp,
-    forward_dynamics_func=forward_dynamics_func,
-)
-
 ocp_out_path_to_results = ocp_path_to_results.replace(".pkl", "_integrated.pkl")
-with open(ocp_out_path_to_results, "wb") as file:
-    data = {
-        "q_integrated": q_ocp_integrated,
-        "time_vector": time_vector_ocp,
-        "q_nominal": cas.vertcat(q_roots_ocp, q_joints_ocp),
-    }
-    pickle.dump(data, file)
+if not os.path.exists(ocp_out_path_to_results):
+    q_ocp_integrated, qdot_ocp_integrated, q_all_ocp, joint_frictions_ocp, motor_noises_ocp = noisy_integrate_ocp(
+        n_shooting=n_shooting,
+        nb_random=nb_random,
+        nb_reintegrations=nb_reintegrations,
+        q_roots_ocp = q_roots_ocp,
+        q_joints_ocp = q_joints_ocp,
+        motor_noise_magnitude=motor_noise_magnitude,
+        tau_joints_ocp=tau_joints_ocp,
+        time_vector_ocp=time_vector_ocp,
+        ocp=ocp,
+        forward_dynamics_func=forward_dynamics_func,
+    )
 
+    joint_friction_ocp = np.zeros((n_q - 3, n_shooting))
+    for i_shooting in range(n_shooting):
+        joint_friction_ocp[:, i_shooting] = np.reshape(
+            ocp.nlp[0].model.friction_coefficients @ qdot_joints_ocp[:, i_shooting], (-1,)
+        )
+
+    with open(ocp_out_path_to_results, "wb") as file:
+        data = {
+            "q_ocp_integrated": q_ocp_integrated,
+            "qdot_ocp_integrated": qdot_ocp_integrated,
+            "q_all_ocp": q_all_ocp,
+            "joint_frictions_ocp": joint_frictions_ocp,
+            "motor_noises_ocp": motor_noises_ocp,
+            "time_vector_ocp": time_vector_ocp,
+            "q_nominal_ocp": cas.vertcat(q_roots_ocp, q_joints_ocp),
+            "q_mean_ocp_integrated": np.mean(q_ocp_integrated, axis=2),
+        }
+        pickle.dump(data, file)
+else:
+    with open(ocp_out_path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_ocp_integrated = data["q_ocp_integrated"]
+        qdot_ocp_integrated = data["qdot_ocp_integrated"]
+        q_all_ocp = data["q_all_ocp"]
+        joint_frictions_ocp = data["joint_frictions_ocp"]
+        motor_noises_ocp = data["motor_noises_ocp"]
+        time_vector_ocp = data["time_vector_ocp"]
+        q_mean_ocp_integrated = data["q_mean_ocp_integrated"]
 
 # if FLAG_GENERATE_VIDEOS:
 #     print("Generating OCP_all : ", ocp_path_to_results)
 #     bioviz_animate(biorbd_model_path_with_mesh_all, q_all_ocp, "OCP_all")
-
-joint_friction_ocp = np.zeros((n_q - 3, n_shooting))
-for i_shooting in range(n_shooting):
-    joint_friction_ocp[:, i_shooting] = np.reshape(
-        ocp.nlp[0].model.friction_coefficients @ qdot_joints_ocp[:, i_shooting], (-1,)
-    )
 
 
 # SOCP
@@ -1634,6 +1777,9 @@ with open(socp_path_to_results, "rb") as file:
     motor_noise_numerical_socp = data["motor_noise_numerical"]
     sensory_noise_numerical_socp = data["sensory_noise_numerical"]
 
+socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl")
+
+
 DMS_sensory_reference_func = cas.Function(
     "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference(socp.nlp[0].model, n_root, Q, Qdot)]
 )
@@ -1642,42 +1788,56 @@ forward_dynamics_func = cas.Function("forward_dynamics", [Q, Qdot, Tau], [socp.n
 
 time_vector_socp = np.linspace(0, float(time_socp), n_shooting + 1)
 
-q_socp, qdot_socp, q_mean_socp, qdot_mean_socp = define_q_mean(n_q, n_shooting, nb_random, q_roots_socp, q_joints_socp, qdot_roots_socp, qdot_joints_socp)
+q_socp, qdot_socp, q_mean_socp, qdot_mean_socp = define_q_mean(n_shooting, nb_random, q_roots_socp, q_joints_socp, qdot_roots_socp, qdot_joints_socp)
 
-q_socp_integrated, qdot_socp_integrated, q_all_socp, joint_frictions_socp, motor_noises_socp, feedbacks_socp = (
-    noisy_integrate_socp(
-        socp,
-        motor_noise_magnitude,
-        sensory_noise_magnitude,
-        n_shooting,
-        nb_random,
-        nb_reintegrations,
-        q_socp,
-        tau_joints_socp,
-        k_socp,
-        ref_socp,
-        time_vector_socp,
-        q_mean_socp,
-        DMS_sensory_reference_func,
-        forward_dynamics_func,
+if not os.path.exists(socp_out_path_to_results):
+    q_socp_integrated, qdot_socp_integrated, q_all_socp, joint_frictions_socp, motor_noises_socp, feedbacks_socp = (
+        noisy_integrate_socp(
+            socp,
+            motor_noise_magnitude,
+            sensory_noise_magnitude,
+            n_shooting,
+            nb_random,
+            nb_reintegrations,
+            q_socp,
+            tau_joints_socp,
+            k_socp,
+            ref_socp,
+            time_vector_socp,
+            q_mean_socp,
+            DMS_sensory_reference_func,
+            forward_dynamics_func,
+        )
     )
-)
 
-q_mean_socp = np.mean(q_socp, axis=2)
+    with open(socp_out_path_to_results, "wb") as file:
+        data = {
+            "q_socp_integrated": q_socp_integrated,
+            "qdot_socp_integrated": qdot_socp_integrated,
+            "q_all_socp": q_all_socp,
+            "joint_frictions_socp": joint_frictions_socp,
+            "motor_noises_socp": motor_noises_socp,
+            "feedbacks_socp": feedbacks_socp,
+            "time_vector_socp": time_vector_socp,
+            "q_mean_integrated": np.mean(q_socp_integrated, axis=2),
+            "q_mean_socp": np.mean(q_socp, axis=2),
+        }
+        pickle.dump(data, file)
+else:
+    with open(socp_out_path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_socp_integrated = data["q_socp_integrated"]
+        qdot_socp_integrated = data["qdot_socp_integrated"]
+        q_all_socp = data["q_all_socp"]
+        joint_frictions_socp = data["joint_frictions_socp"]
+        motor_noises_socp = data["motor_noises_socp"]
+        feedbacks_socp = data["feedbacks_socp"]
+        time_vector_socp = data["time_vector_socp"]
+        q_mean_socp = data["q_mean_socp"]
+
 # if FLAG_GENERATE_VIDEOS:
 #     print("Generating SOCP_one : ", socp_path_to_results)
 #     bioviz_animate(biorbd_model_path_with_mesh_socp, q_mean_socp, "SOCP_one")
-
-socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl")
-with open(socp_out_path_to_results, "wb") as file:
-    data = {
-        "q_integrated": q_socp_integrated,
-        "qdot_integrated": qdot_socp_integrated,
-        "time_vector": time_vector_socp,
-        "q_mean_integrated": np.mean(q_socp_integrated, axis=2),
-        "q_mean": q_mean_socp,
-    }
-    pickle.dump(data, file)
 
 # if FLAG_GENERATE_VIDEOS:
 #     print("Generating SOCP_all : ", socp_path_to_results)
@@ -1730,6 +1890,8 @@ with open(socp_variable_path_to_results, "rb") as file:
     motor_noise_numerical_socp_variable = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_variable = data["sensory_noise_numerical"]
 
+socp_variable_out_path_to_results = socp_variable_path_to_results.replace(".pkl", "_integrated.pkl")
+
 DMS_fb_noised_sensory_input_VARIABLE_func = cas.Function(
     "DMS_fb_noised_sensory_input_VARIABLE",
     [Q, Qdot, SensoryNoise],
@@ -1737,43 +1899,59 @@ DMS_fb_noised_sensory_input_VARIABLE_func = cas.Function(
 )
 time_vector_socp_variable = np.linspace(0, float(time_socp_variable), n_shooting + 1)
 
-q_socp_variable, qdot_socp_variable, q_mean_socp_variable, qdot_mean_socp_variable = define_q_mean(n_q, n_shooting, nb_random, q_roots_socp_variable, q_joints_socp_variable,
+q_socp_variable, qdot_socp_variable, q_mean_socp_variable, qdot_mean_socp_variable = define_q_mean(n_shooting, nb_random, q_roots_socp_variable, q_joints_socp_variable,
                                                qdot_roots_socp_variable, qdot_joints_socp_variable)
 
-q_socp_variable_integrated, qdot_socp_variable_integrated, q_all_socp_variable, joint_frictions_socp_variable, motor_noises_socp_variable, feedbacks_socp_variable = (
-    noisy_integrate_socp_variable(
-        socp_variable,
-        motor_noise_magnitude,
-        sensory_noise_magnitude,
-        n_shooting,
-        nb_random,
-        nb_reintegrations,
-        q_socp_variable,
-        tau_joints_socp_variable,
-        k_socp_variable,
-        ref_socp_variable,
-        time_vector_socp_variable,
-        q_mean_socp_variable,
-        DMS_fb_noised_sensory_input_VARIABLE_func,
-        forward_dynamics_func,
+if not os.path.exists(socp_variable_out_path_to_results):
+    q_socp_variable_integrated, qdot_socp_variable_integrated, q_all_socp_variable, joint_frictions_socp_variable, motor_noises_socp_variable, feedbacks_socp_variable = (
+        noisy_integrate_socp_variable(
+            socp_variable,
+            motor_noise_magnitude,
+            sensory_noise_magnitude,
+            n_shooting,
+            nb_random,
+            nb_reintegrations,
+            q_socp_variable,
+            tau_joints_socp_variable,
+            k_socp_variable,
+            ref_socp_variable,
+            time_vector_socp_variable,
+            q_mean_socp_variable,
+            DMS_fb_noised_sensory_input_VARIABLE_func,
+            forward_dynamics_func,
+        )
     )
-)
 
-q_mean_socp_variable = np.mean(q_socp_variable, axis=2)
+    with open(socp_variable_out_path_to_results, "wb") as file:
+        data = {
+            "q_socp_variable_integrated": q_socp_variable_integrated,
+            "qdot_socp_variable_integrated": qdot_socp_variable_integrated,
+            "q_all_socp_variable": q_all_socp_variable,
+            "joint_frictions_socp_variable": joint_frictions_socp_variable,
+            "motor_noises_socp_variable": motor_noises_socp_variable,
+            "feedbacks_socp_variable": feedbacks_socp_variable,
+            "time_vector_socp_variable": time_vector_socp_variable,
+            "q_mean_socp_variable_integrated": np.mean(q_socp_variable_integrated, axis=2),
+            "q_mean_socp_variable": np.mean(q_socp_variable, axis=2),
+        }
+        pickle.dump(data, file)
+else:
+    with open(socp_variable_out_path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_socp_variable_integrated = data["q_socp_variable_integrated"]
+        qdot_socp_variable_integrated = data["qdot_socp_variable_integrated"]
+        q_all_socp_variable = data["q_all_socp_variable"]
+        joint_frictions_socp_variable = data["joint_frictions_socp_variable"]
+        motor_noises_socp_variable = data["motor_noises_socp_variable"]
+        feedbacks_socp_variable = data["feedbacks_socp_variable"]
+        time_vector_socp_variable = data["time_vector_socp_variable"]
+        q_mean_socp_variable_integrated = data["q_mean_socp_variable_integrated"]
+        q_mean_socp_variable = data["q_mean_socp_variable"]
+
 # if FLAG_GENERATE_VIDEOS:
 #     print("Generating SOCP_VARIABLE_one : ", socp_variable_path_to_results)
 #     bioviz_animate(biorbd_model_path_with_mesh_socp_variable, q_mean_socp_variable, "SOCP_VARIABLE_one")
 
-socp_variable_out_path_to_results = socp_variable_path_to_results.replace(".pkl", "_integrated.pkl")
-with open(socp_variable_out_path_to_results, "wb") as file:
-    data = {
-        "q_integrated": q_socp_variable_integrated,
-        "qdot_integrated": qdot_socp_variable_integrated,
-        "time_vector": time_vector_socp_variable,
-        "q_mean_integrated": np.mean(q_socp_variable_integrated, axis=2),
-        "q_mean": q_mean_socp_variable,
-    }
-    pickle.dump(data, file)
 
 # if FLAG_GENERATE_VIDEOS:
 #     print("Generating SOCP_VARIABLE_all : ", socp_variable_path_to_results)
@@ -1854,6 +2032,8 @@ with open(socp_feedforward_path_to_results, "rb") as file:
     motor_noise_numerical_socp_feedforward = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_feedforward = data["sensory_noise_numerical"]
 
+socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(".pkl", "_integrated.pkl")
+
 DMS_ff_sensory_input_func = cas.Function(
     "DMS_fb_noised_sensory_input_no_eyes",
     [tf_sym, time_sym, Q_8, Qdot_8],
@@ -1870,50 +2050,69 @@ forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [
 
 time_vector_socp_feedforward = np.linspace(0, float(time_socp_feedforward), n_shooting + 1)
 
-q_socp_feedforward, qdot_socp_feedforward, q_mean_socp_feedforward, qdot_mean_socp_feedforward = define_q_mean(n_q, n_shooting, nb_random, q_roots_socp_feedforward, q_joints_socp_feedforward, qdot_roots_socp_feedforward, qdot_joints_socp_feedforward)
+q_socp_feedforward, qdot_socp_feedforward, q_mean_socp_feedforward, qdot_mean_socp_feedforward = define_q_mean(n_shooting, nb_random, q_roots_socp_feedforward, q_joints_socp_feedforward, qdot_roots_socp_feedforward, qdot_joints_socp_feedforward)
 
-(
-    q_socp_feedforward_integrated,
-    qdot_socp_feedforward_integrated,
-    q_all_socp_feedforward,
-    joint_frictions_socp_feedforward,
-    motor_noises_socp_feedforward,
-    feedbacks_socp_feedforward,
-    feedforwards_socp_feedforward,
-) = noisy_integrate_socp_feedforward(
-    socp_feedforward,
-    motor_noise_magnitude,
-    sensory_noise_magnitude,
-    n_shooting,
-    nb_random,
-    nb_reintegrations,
-    q_socp_feedforward,
-    tau_joints_socp_feedforward,
-    k_socp_feedforward,
-    ref_fb_socp_feedforward,
-    ref_ff_socp_feedforward,
-    time_vector_socp_feedforward,
-    q_mean_socp_feedforward,
-    DMS_sensory_reference_no_eyes_func,
-    DMS_ff_sensory_input_func,
-    forward_dynamics_func,
-)
+if not os.path.exists(socp_feedforward_out_path_to_results):
+    (
+        q_socp_feedforward_integrated,
+        qdot_socp_feedforward_integrated,
+        q_all_socp_feedforward,
+        joint_frictions_socp_feedforward,
+        motor_noises_socp_feedforward,
+        feedbacks_socp_feedforward,
+        feedforwards_socp_feedforward,
+    ) = noisy_integrate_socp_feedforward(
+        socp_feedforward,
+        motor_noise_magnitude,
+        sensory_noise_magnitude,
+        n_shooting,
+        nb_random,
+        nb_reintegrations,
+        q_socp_feedforward,
+        tau_joints_socp_feedforward,
+        k_socp_feedforward,
+        ref_fb_socp_feedforward,
+        ref_ff_socp_feedforward,
+        time_vector_socp_feedforward,
+        q_mean_socp_feedforward,
+        DMS_sensory_reference_no_eyes_func,
+        DMS_ff_sensory_input_func,
+        forward_dynamics_func,
+    )
 
-q_mean_socp_feedforward = np.mean(q_socp_feedforward, axis=2)
+    with open(socp_feedforward_out_path_to_results, "wb") as file:
+        data = {
+            "q_socp_feedforward_integrated": q_socp_feedforward_integrated,
+            "qdot_socp_feedforward_integrated": qdot_socp_feedforward_integrated,
+            "q_all_socp_feedforward": q_all_socp_feedforward,
+            "joint_frictions_socp_feedforward": joint_frictions_socp_feedforward,
+            "motor_noises_socp_feedforward": motor_noises_socp_feedforward,
+            "feedbacks_socp_feedforward": feedbacks_socp_feedforward,
+            "feedforwards_socp_feedforward": feedforwards_socp_feedforward,
+            "time_vector_socp_feedforward": time_vector_socp_feedforward,
+            "q_mean_socp_feedforward_integrated": np.mean(q_socp_feedforward_integrated, axis=2),
+            "q_mean_socp_feedforward": np.mean(q_socp_feedforward, axis=2),
+        }
+        pickle.dump(data, file)
+
+else:
+    with open(socp_feedforward_out_path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_socp_feedforward_integrated = data["q_socp_feedforward_integrated"]
+        qdot_socp_feedforward_integrated = data["qdot_socp_feedforward_integrated"]
+        q_all_socp_feedforward = data["q_all_socp_feedforward"]
+        joint_frictions_socp_feedforward = data["joint_frictions_socp_feedforward"]
+        motor_noises_socp_feedforward = data["motor_noises_socp_feedforward"]
+        feedbacks_socp_feedforward = data["feedbacks_socp_feedforward"]
+        feedforwards_socp_feedforward = data["feedforwards_socp_feedforward"]
+        time_vector_socp_feedforward = data["time_vector_socp_feedforward"]
+        q_mean_socp_feedforward_integrated = data["q_mean_socp_feedforward_integrated"]
+        q_mean_socp_feedforward = data["q_mean_socp_feedforward"]
+
+
 if FLAG_GENERATE_VIDEOS:
     print("Generating SOCP_FEEDFORWARD_one : ", socp_feedforward_path_to_results)
     bioviz_animate(biorbd_model_path_with_mesh_socp_feedforward, q_mean_socp_feedforward, "SOCP_FEEDFORWARD_one")
-
-socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(".pkl", "_integrated.pkl")
-with open(socp_feedforward_out_path_to_results, "wb") as file:
-    data = {
-        "q_integrated": q_socp_feedforward_integrated,
-        "qdot_integrated": qdot_socp_feedforward_integrated,
-        "time_vector": time_vector_socp_feedforward,
-        "q_mean_integrated": np.mean(q_socp_feedforward_integrated, axis=2),
-        "q_mean": q_mean_socp_feedforward,
-    }
-    pickle.dump(data, file)
 
 if FLAG_GENERATE_VIDEOS:
     print("Generating SOCP_FEEDFORWARD_all : ", socp_feedforward_path_to_results)
@@ -1989,6 +2188,7 @@ with open(socp_plus_path_to_results, "rb") as file:
     motor_noise_numerical_socp_plus = data["motor_noise_numerical"]
     sensory_noise_numerical_socp_plus = data["sensory_noise_numerical"]
 
+socp_plus_out_path_to_results = socp_plus_path_to_results.replace(".pkl", "_integrated.pkl")
 
 DMS_sensory_reference_no_eyes_func = cas.Function(
     "DMS_fb_sensory_reference", [Q_8, Qdot_8], [DMS_sensory_reference_no_eyes(socp_plus.nlp[0].model, n_root, Q_8, Qdot_8)]
@@ -2007,53 +2207,72 @@ forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [
 
 time_vector_socp_plus = np.linspace(0, float(time_socp_plus), n_shooting + 1)
 
-q_socp_plus, qdot_socp_plus, q_mean_socp_plus, qdot_mean_socp_plus = define_q_mean(n_q, n_shooting, nb_random, q_roots_socp_plus, q_joints_socp_plus, qdot_roots_socp_plus, qdot_joints_socp_plus)
+q_socp_plus, qdot_socp_plus, q_mean_socp_plus, qdot_mean_socp_plus = define_q_mean(n_shooting, nb_random, q_roots_socp_plus, q_joints_socp_plus, qdot_roots_socp_plus, qdot_joints_socp_plus)
 
-(
-    q_socp_plus_integrated,
-    qdot_socp_plus_integrated,
-    q_all_socp_plus,
-    joint_frictions_socp_plus,
-    motor_noises_socp_plus,
-    feedbacks_socp_plus,
-    feedforwards_socp_plus,
-) = noisy_integrate_socp_plus(
-    socp_plus,
-    motor_noise_magnitude,
-    sensory_noise_magnitude,
-    n_shooting,
-    nb_random,
-    nb_reintegrations,
-    q_socp_plus,
-    tau_joints_socp_plus,
-    k_socp_plus,
-    ref_fb_socp_plus,
-    ref_ff_socp_plus,
-    time_vector_socp_plus,
-    q_mean_socp_plus,
-    DMS_fb_noised_sensory_input_VARIABLE_no_eyes_func,
-    DMS_ff_noised_sensory_input_func,
-    forward_dynamics_func,
-)
+if not os.path.exists(socp_plus_out_path_to_results):
+    (
+        q_socp_plus_integrated,
+        qdot_socp_plus_integrated,
+        q_all_socp_plus,
+        joint_frictions_socp_plus,
+        motor_noises_socp_plus,
+        feedbacks_socp_plus,
+        feedforwards_socp_plus,
+    ) = noisy_integrate_socp_plus(
+        socp_plus,
+        motor_noise_magnitude,
+        sensory_noise_magnitude,
+        n_shooting,
+        nb_random,
+        nb_reintegrations,
+        q_socp_plus,
+        tau_joints_socp_plus,
+        k_socp_plus,
+        ref_fb_socp_plus,
+        ref_ff_socp_plus,
+        time_vector_socp_plus,
+        q_mean_socp_plus,
+        DMS_fb_noised_sensory_input_VARIABLE_no_eyes_func,
+        DMS_ff_noised_sensory_input_func,
+        forward_dynamics_func,
+    )
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_plus_one : ", socp_plus_path_to_results)
-    bioviz_animate(biorbd_model_path_vision_with_mesh, q_mean_socp_plus, "SOCP_plus_one")
+    with open(socp_plus_out_path_to_results, "wb") as file:
+        data = {
+            "q_socp_plus_integrated": q_socp_plus_integrated,
+            "qdot_socp_plus_integrated": qdot_socp_plus_integrated,
+            "q_all_socp_plus": q_all_socp_plus,
+            "joint_frictions_socp_plus": joint_frictions_socp_plus,
+            "motor_noises_socp_plus": motor_noises_socp_plus,
+            "feedbacks_socp_plus": feedbacks_socp_plus,
+            "feedforwards_socp_plus": feedforwards_socp_plus,
+            "time_vector_socp_plus": time_vector_socp_plus,
+            "q_mean_socp_plus_integrated": np.mean(q_socp_plus_integrated, axis=2),
+            "q_mean_socp_plus": np.mean(q_socp_plus, axis=2),
+        }
+        pickle.dump(data, file)
 
-socp_plus_out_path_to_results = socp_plus_path_to_results.replace(".pkl", "_integrated.pkl")
-with open(socp_plus_out_path_to_results, "wb") as file:
-    data = {
-        "q_integrated": q_socp_plus_integrated,
-        "qdot_integrated": qdot_socp_plus_integrated,
-        "time_vector": time_vector_socp_plus,
-        "q_mean_integrated": np.mean(q_socp_plus_integrated, axis=2),
-        "q_mean": q_mean_socp_plus,
-    }
-    pickle.dump(data, file)
+else:
+    with open(socp_plus_out_path_to_results, "rb") as file:
+        data = pickle.load(file)
+        q_socp_plus_integrated = data["q_socp_plus_integrated"]
+        qdot_socp_plus_integrated = data["qdot_socp_plus_integrated"]
+        q_all_socp_plus = data["q_all_socp_plus"]
+        joint_frictions_socp_plus = data["joint_frictions_socp_plus"]
+        motor_noises_socp_plus = data["motor_noises_socp_plus"]
+        feedbacks_socp_plus = data["feedbacks_socp_plus"]
+        feedforwards_socp_plus = data["feedforwards_socp_plus"]
+        time_vector_socp_plus = data["time_vector_socp_plus"]
+        q_mean_socp_plus_integrated = data["q_mean_socp_plus_integrated"]
+        q_mean_socp_plus = data["q_mean_socp_plus"]
 
-if FLAG_GENERATE_VIDEOS:
-    print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
-    bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_plus_one : ", socp_plus_path_to_results)
+#     bioviz_animate(biorbd_model_path_vision_with_mesh, q_mean_socp_plus, "SOCP_plus_one")
+
+# if FLAG_GENERATE_VIDEOS:
+#     print("Generating SOCP_plus_all : ", socp_plus_path_to_results)
+#     bioviz_animate(biorbd_model_path_vision_with_mesh_all, q_all_socp_plus, "SOCP_plus_all")
 
 
 # Comparison ----------------------------------------------------------------------------------------------------------
