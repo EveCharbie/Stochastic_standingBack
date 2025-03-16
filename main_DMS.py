@@ -23,9 +23,10 @@ RUN_SOCP_VARIABLE_FEEDFORWARD = False
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
-nb_random = 5
-if not os.path.exists(f"results/{nb_random}random"):
-    os.makedirs(f"results/{nb_random}random")
+seed = 0 ##########################
+nb_random = 15
+if not os.path.exists(f"results/{nb_random}random-seed{seed}"):
+    os.makedirs(f"results/{nb_random}random-seed{seed}")
 
 model_name = "Model2D_7Dof_0C_3M"
 biorbd_model_path = f"models/{model_name}.bioMod"
@@ -137,7 +138,7 @@ print_motor_noise_std = "{:1.1e}".format(motor_noise_std)
 print_wPq_std = "{:1.1e}".format(wPq_std)
 print_wPqdot_std = "{:1.1e}".format(wPqdot_std)
 print_tol = "{:1.1e}".format(tol).replace(".", "p")
-save_path = f"results/{nb_random}random/{model_name}_socp_DMS_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
+save_path = f"results/{nb_random}random-seed{seed}/{model_name}_socp_DMS_{nb_random}random_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 sensory_noise_magnitude = cas.DM(
@@ -175,6 +176,7 @@ if RUN_SOCP:
         k_last=k_last,
         ref_last=ref_last,
         nb_random=nb_random,
+        seed=seed,
     )
     socp.add_plot_penalty()
     socp.add_plot_ipopt_outputs()
@@ -218,9 +220,9 @@ if RUN_SOCP:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -239,7 +241,7 @@ if RUN_SOCP:
 
 # --- Run the SOCP+ (variable noise) --- #
 if RUN_SOCP_VARIABLE:
-    save_path = save_path.replace(".pkl", "_VARIABLE.pkl")
+    save_path = f"results/{nb_random}random-seed{seed}/{model_name}_socp_DMS_VARIABLE_{nb_random}random_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
     motor_noise_magnitude = cas.DM(
         np.array(
@@ -294,6 +296,7 @@ if RUN_SOCP_VARIABLE:
         k_last=None,
         ref_last=None,
         nb_random=nb_random,
+        seed=seed,
     )
 
     socp.add_plot_penalty()
@@ -330,9 +333,9 @@ if RUN_SOCP_VARIABLE:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -353,7 +356,7 @@ if RUN_SOCP_VARIABLE:
 n_q += 1
 
 if RUN_SOCP_FEEDFORWARD:
-    save_path = save_path.replace(".pkl", "_FEEDFORWARD.pkl")
+    save_path = f"results/{nb_random}random-seed{seed}/{model_name}_socp_DMS_FEEDFORWARD_{nb_random}random_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
     motor_noise_magnitude = cas.DM(
         np.array(
@@ -422,6 +425,7 @@ if RUN_SOCP_FEEDFORWARD:
         k_last=None,
         ref_last=None,
         nb_random=nb_random,
+        seed=seed,
     )
 
     socp.add_plot_penalty()
@@ -459,9 +463,9 @@ if RUN_SOCP_FEEDFORWARD:
 
     save_path = save_path.replace(".", "p")
     if sol_socp.status != 0:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
@@ -479,10 +483,10 @@ if RUN_SOCP_FEEDFORWARD:
 
 
 # --- Run the SOCP+ (variable noise & feedforward) --- #
-save_path = save_path.replace(".pkl", "_VARIABLE_FEEDFORWARD.pkl")
 n_q += 1
 
 if RUN_SOCP_VARIABLE_FEEDFORWARD:
+    save_path = f"results/{nb_random}random-seed{seed}/{model_name}_socp_DMS_VARIABLE_FEEDFORWARD_{nb_random}random_{print_motor_noise_std}_{print_wPq_std}_{print_wPqdot_std}.pkl"
 
     motor_noise_magnitude = cas.DM(
         np.array(
@@ -551,6 +555,7 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
         ref_last=ref_last,
         ref_ff_last=ref_ff_last,
         nb_random=nb_random,
+        seed=seed,
     )
     # socp.add_plot_penalty()
     # socp.add_plot_ipopt_outputs()
@@ -602,9 +607,9 @@ if RUN_SOCP_VARIABLE_FEEDFORWARD:
     }
 
     if sol_socp.status != 0:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_DVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_DVG_{print_tol}.pkl")
     else:
-        save_path = save_path.replace("ppkl", f"_DMS_{nb_random}random_CVG_{print_tol}.pkl")
+        save_path = save_path.replace("ppkl", f"_CVG_{print_tol}.pkl")
 
     # --- Save the results --- #
     with open(save_path, "wb") as file:
