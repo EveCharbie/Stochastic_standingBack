@@ -19,12 +19,12 @@ RUN_OCP = False
 RUN_SOCP = False
 RUN_SOCP_VARIABLE = False
 RUN_SOCP_FEEDFORWARD = True
-RUN_SOCP_VARIABLE_FEEDFORWARD = False
+RUN_SOCP_VARIABLE_FEEDFORWARD = True
 print(RUN_OCP, RUN_SOCP, RUN_SOCP_VARIABLE, RUN_SOCP_FEEDFORWARD, RUN_SOCP_VARIABLE_FEEDFORWARD)
 print(datetime.now().strftime("%d-%m %H:%M:%S"))
 
 seed = 0 ##########################
-nb_random = 15
+nb_random = 20
 if not os.path.exists(f"results/{nb_random}random-seed{seed}"):
     os.makedirs(f"results/{nb_random}random-seed{seed}")
 

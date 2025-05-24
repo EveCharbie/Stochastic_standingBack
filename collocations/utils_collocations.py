@@ -53,11 +53,11 @@ def reach_landing_position_consistantly(controller: PenaltyController) -> cas.MX
 
     nb_q = controller.model.nb_q
 
-    Q_root = controller.states["q_roots"].mx
-    Q_joints = controller.states["q_joints"].mx
-    Qdot_root = controller.states["qdot_roots"].mx
-    Qdot_joints = controller.states["qdot_joints"].mx
-    cov_sym = controller.algebraic_states["cov"].mx
+    Q_root = controller.states["q_roots"].cx
+    Q_joints = controller.states["q_joints"].cx
+    Qdot_root = controller.states["qdot_roots"].cx
+    Qdot_joints = controller.states["qdot_joints"].cx
+    cov_sym = controller.algebraic_states["cov"].cx
     cov_matrix = StochasticBioModel.reshape_to_matrix(cov_sym, controller.model.matrix_shape_cov)
 
     # What should we use as a reference?
@@ -251,7 +251,7 @@ def SOCP_VARIABLE_FEEDFORWARD_compute_torques_from_noise_and_feedback(
     n_root = nlp.model.nb_root
     nb_joints = nb_q - n_root
 
-    tf = nlp.tf_mx
+    tf = nlp.tf
     q_roots = DynamicsFunctions.get(nlp.states["q_roots"], states)
     q_joints = DynamicsFunctions.get(nlp.states["q_joints"], states)
     qdot_roots = DynamicsFunctions.get(nlp.states["qdot_roots"], states)
@@ -373,7 +373,7 @@ def SOCP_VARIABLE_FEEDFORWARD_sensory_reference(
     q_joints = states[nlp.states["q_joints"].index]
     qdot_roots = states[nlp.states["qdot_roots"].index]
     qdot_joints = states[nlp.states["qdot_joints"].index]
-    tf_mx = nlp.tf_mx
+    tf_mx = nlp.tf
     return SOCP_VARIABLE_FEEDFORWARD_sensory_input_function(
-        nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf_mx, time
+        nlp.model, q_roots, q_joints, qdot_roots, qdot_joints, tf, time
     )

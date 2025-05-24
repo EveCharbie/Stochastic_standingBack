@@ -66,7 +66,7 @@ def custom_dynamics(
     k_matrix = StochasticBioModel.reshape_to_matrix(k, nlp.model.matrix_shape_k)
     fb_ref = DynamicsFunctions.get(nlp.controls["ref"], controls)
     ff_ref = DynamicsFunctions.get(nlp.parameters["final_somersault"], parameters)
-    tf = nlp.tf_mx
+    tf = nlp.tf
     motor_noise = None
     sensory_noise = None
     for i in range(nb_random):
@@ -115,20 +115,20 @@ def custom_dynamics(
         # Feedback
         tau_this_time += k_fb @ (
             fb_ref
-            - DMS_sensory_reference_no_eyes(nlp.model, nb_root, q_this_time, qdot_this_time)
+            - DMS_sensory_reference_no_eyes(nlp.model, nb_root, q_this_time, qdot_this_time, ff_ref)
             + sensory_noise[: nlp.model.n_feedbacks, i]
         )
 
         # Feedforward
         tau_this_time += k_ff @ (
             ff_ref
-            - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time, qdot_this_time)
+            - DMS_ff_sensory_input(nlp.model, tf, time, q_this_time, qdot_this_time, parameters)
             + sensory_noise[nlp.model.n_feedbacks :, i]
         )
 
         tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
-        ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
+        ddq = nlp.model.forward_dynamics()(q_this_time, qdot_this_time, tau_this_time, [], parameters)
         ddq_roots = cas.vertcat(ddq_roots, ddq[:nb_root])
         ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
 
@@ -533,8 +533,9 @@ def prepare_socp_FEEDFORWARD(
 
     q_sym = cas.MX.sym("q", n_q, 1)
     qdot_sym = cas.MX.sym("qdot", n_q, 1)
+    param = cas.MX.sym("ff_ref", 1, 1)
     ref_fun = cas.Function(
-        "ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym)]
+        "ref_func", [q_sym, qdot_sym, param], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym, param)]
     )
 
     if ref_last is not None:
@@ -559,7 +560,7 @@ def prepare_socp_FEEDFORWARD(
                 )
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
-            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
+            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean, parameter_init["final_somersault"].init), (n_ref,))
 
     u_bounds.add(
         "ref",

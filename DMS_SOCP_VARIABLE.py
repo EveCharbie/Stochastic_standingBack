@@ -113,11 +113,12 @@ def custom_dynamics(
                 qdot_this_time[:nb_root],
                 qdot_this_time[nb_root:],
                 sensory_noise[:, i],
+                [],
             )
         )
         tau_this_time = cas.vertcat(cas.MX.zeros(nb_root), tau_this_time)
 
-        ddq = nlp.model.forward_dynamics(q_this_time, qdot_this_time, tau_this_time)
+        ddq = nlp.model.forward_dynamics()(q_this_time, qdot_this_time, tau_this_time, [], parameters)
         ddq_roots = cas.vertcat(ddq_roots, ddq[:nb_root])
         ddq_joints = cas.vertcat(ddq_joints, ddq[nb_root:])
 
@@ -494,7 +495,7 @@ def prepare_socp_VARIABLE(
     q_sym = cas.MX.sym("q", n_q, 1)
     qdot_sym = cas.MX.sym("qdot", n_q, 1)
     ref_fun = cas.Function(
-        "ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym)]
+        "ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym, [])]
     )
 
     if ref_last is not None:

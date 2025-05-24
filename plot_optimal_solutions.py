@@ -2173,7 +2173,7 @@ socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(
 DMS_ff_sensory_input_func = cas.Function(
     "DMS_fb_noised_sensory_input_no_eyes",
     [tf_sym, time_sym, Q_8, Qdot_8],
-    [DMS_ff_sensory_input(socp_feedforward.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8)],
+    [DMS_ff_sensory_input(socp_feedforward.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8, ff_ref_sym)],
 )
 
 DMS_sensory_reference_no_eyes_func = cas.Function(
