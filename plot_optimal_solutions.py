@@ -1226,12 +1226,12 @@ def plot_gains(
     vestibular_noise_fcn_variable = cas.Function(
         "vestibular_noise_variable",
         [Q, Qdot, vestibular_noise_sym],
-        [vestibular_noise(socp_variable.nlp[0].model, Q, Qdot, vestibular_noise_sym)],
+        [vestibular_noise(socp_variable.nlp[0].model, Q, Qdot, vestibular_noise_sym, [])],
     )
     vestibular_noise_fcn_plus = cas.Function(
         "vestibular_noise_plus",
         [Q_8, Qdot_8, vestibular_noise_sym],
-        [vestibular_noise(socp_plus.nlp[0].model, Q_8, Qdot_8, vestibular_noise_sym)],
+        [vestibular_noise(socp_plus.nlp[0].model, Q_8, Qdot_8, vestibular_noise_sym, [])],
     )
 
     visual_acuity = np.zeros((n_shooting, 1))
@@ -1359,7 +1359,7 @@ def plot_comparison_nb_random(q_ocp_integrated,
         base_file_name = "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02"
         for i_random, current_random in enumerate(nb_randoms):
             position_random = np.random.random((current_random, 1)) * 0.1
-            file_name = f"results/{current_random}random/{base_file_name}_{current_file_name}_{current_random}random_CVG_1p0e-06.pkl"
+            file_name = f"results/{current_random}random-seed0/{base_file_name}_{current_file_name}_{current_random}random_CVG_1p0e-06.pkl"
             if not os.path.exists(file_name):
                 if not os.path.exists(file_name.replace("CVG", "DVG")):
                     raise RuntimeError(f"The results file {file_name} is missing")
@@ -1405,7 +1405,7 @@ def plot_comparison_kinematics_nb_random(
     time_vector_ocp,
 ):
     n_q = 8
-    nb_randoms = [5, 10, 15]
+    nb_randoms = [5, 10, 15, 20]
     colors_random = ["tab:red", "tab:green", "tab:blue"]
 
     fig, axs = plt.subplots(n_q-2, 5, figsize=(15, 10))
@@ -1741,7 +1741,7 @@ dt = 0.05
 final_time = 0.8
 n_shooting = int(final_time / dt)
 tol = 1e-6
-nb_random = 15
+nb_random = 20
 nb_reintegrations = 3  # TODO: change to 100
 
 motor_noise_std = 0.05 * 10
@@ -1750,7 +1750,7 @@ wPqdot_std = 0.003 * 5
 motor_noise_magnitude = cas.DM(np.array([motor_noise_std**2 / dt for _ in range(n_q - n_root)]))  # All DoFs except root
 
 # ------------- result paths ------------- #
-result_folder = f"{nb_random}random"
+result_folder = f"{nb_random}random-seed0"
 ocp_path_to_results = f"results/deterministic/{model_name}_ocp_DMS_CVG_1e-8.pkl"
 socp_path_to_results = (
     f"results/{result_folder}/Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02_DMS_{nb_random}random_CVG_1p0e-06.pkl"
@@ -1798,7 +1798,6 @@ sensory_noise_8_sym = cas.MX.sym("sensory_noise", 2 * n_joints + 3, nb_random)
 
 # ------------------------------------- #
 
-
 # OCP
 with open(ocp_path_to_results, "rb") as file:
     data = pickle.load(file)
@@ -1811,7 +1810,7 @@ with open(ocp_path_to_results, "rb") as file:
 
 ocp = prepare_ocp(biorbd_model_path=biorbd_model_path, time_last=final_time, n_shooting=n_shooting)
 
-forward_dynamics_func = cas.Function("forward_dynamics", [Q, Qdot, Tau], [ocp.nlp[0].model.forward_dynamics(Q, Qdot, cas.vertcat(cas.MX.zeros(3), Tau))])
+forward_dynamics_func = cas.Function("forward_dynamics", [Q, Qdot, Tau], [ocp.nlp[0].model.forward_dynamics()(Q, Qdot, cas.vertcat(cas.MX.zeros(3), Tau), cas.MX.zeros(), cas.MX.zeros())])
 
 time_vector_ocp = np.linspace(0, float(time_ocp), n_shooting + 1)
 
@@ -1917,10 +1916,10 @@ socp_out_path_to_results = socp_path_to_results.replace(".pkl", "_integrated.pkl
 
 
 DMS_sensory_reference_func = cas.Function(
-    "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference(socp.nlp[0].model, n_root, Q, Qdot)]
+    "DMS_sensory_reference", [Q, Qdot], [DMS_sensory_reference(socp.nlp[0].model, n_root, Q, Qdot, cas.MX.zeros())]
 )
 
-forward_dynamics_func = cas.Function("forward_dynamics", [Q, Qdot, Tau], [socp.nlp[0].model.forward_dynamics(Q, Qdot, cas.vertcat(cas.MX.zeros(3), Tau))])
+forward_dynamics_func = cas.Function("forward_dynamics", [Q, Qdot, Tau], [socp.nlp[0].model.forward_dynamics()(Q, Qdot, cas.vertcat(cas.MX.zeros(3), Tau), cas.MX.zeros(), cas.MX.zeros())])
 
 time_vector_socp = np.linspace(0, float(time_socp), n_shooting + 1)
 
@@ -2031,7 +2030,7 @@ socp_variable_out_path_to_results = socp_variable_path_to_results.replace(".pkl"
 DMS_fb_noised_sensory_input_VARIABLE_func = cas.Function(
     "DMS_fb_noised_sensory_input_VARIABLE",
     [Q, Qdot, SensoryNoise],
-    [DMS_fb_noised_sensory_input_VARIABLE(socp_variable.nlp[0].model, Q[:n_root], Q[n_root:], Qdot[:n_root], Qdot[n_root:], SensoryNoise)],
+    [DMS_fb_noised_sensory_input_VARIABLE(socp_variable.nlp[0].model, Q[:n_root], Q[n_root:], Qdot[:n_root], Qdot[n_root:], SensoryNoise, cas.MX.zeros())],
 )
 time_vector_socp_variable = np.linspace(0, float(time_socp_variable), n_shooting + 1)
 
@@ -2173,16 +2172,16 @@ socp_feedforward_out_path_to_results = socp_feedforward_path_to_results.replace(
 DMS_ff_sensory_input_func = cas.Function(
     "DMS_fb_noised_sensory_input_no_eyes",
     [tf_sym, time_sym, Q_8, Qdot_8],
-    [DMS_ff_sensory_input(socp_feedforward.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8, ff_ref_sym)],
+    [DMS_ff_sensory_input(socp_feedforward.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8, cas.MX.zeros())],
 )
 
 DMS_sensory_reference_no_eyes_func = cas.Function(
     "DMS_sensory_reference_no_eyes",
     [Q_8, Qdot_8],
-    [DMS_sensory_reference_no_eyes(socp_feedforward.nlp[0].model, n_root, Q_8, Qdot_8)]
+    [DMS_sensory_reference_no_eyes(socp_feedforward.nlp[0].model, n_root, Q_8, Qdot_8, cas.MX.zeros())]
 )
 
-forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [socp_feedforward.nlp[0].model.forward_dynamics(Q_8, Qdot_8, cas.vertcat(cas.MX.zeros(3), Tau_8))])
+forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [socp_feedforward.nlp[0].model.forward_dynamics()(Q_8, Qdot_8, cas.vertcat(cas.MX.zeros(3), Tau_8), cas.MX.zeros(), cas.MX.zeros())])
 
 time_vector_socp_feedforward = np.linspace(0, float(time_socp_feedforward), n_shooting + 1)
 
@@ -2327,19 +2326,19 @@ with open(socp_plus_path_to_results, "rb") as file:
 socp_plus_out_path_to_results = socp_plus_path_to_results.replace(".pkl", "_integrated.pkl")
 
 DMS_sensory_reference_no_eyes_func = cas.Function(
-    "DMS_fb_sensory_reference", [Q_8, Qdot_8], [DMS_sensory_reference_no_eyes(socp_plus.nlp[0].model, n_root, Q_8, Qdot_8)]
+    "DMS_fb_sensory_reference", [Q_8, Qdot_8, ff_ref_sym], [DMS_sensory_reference_no_eyes(socp_plus.nlp[0].model, n_root, Q_8, Qdot_8, ff_ref_sym)]
 )
 DMS_ff_noised_sensory_input_func = cas.Function(
-    "DMS_ff_sensory_reference", [tf_sym, time_sym, Q_8, Qdot_8, FF_SensoryNoise], [DMS_ff_noised_sensory_input(socp_plus.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8, FF_SensoryNoise)]
+    "DMS_ff_sensory_reference", [tf_sym, time_sym, Q_8, Qdot_8, FF_SensoryNoise, ff_ref_sym], [DMS_ff_noised_sensory_input(socp_plus.nlp[0].model, tf_sym, time_sym, Q_8, Qdot_8, FF_SensoryNoise, ff_ref_sym)]
 )
 
 DMS_fb_noised_sensory_input_VARIABLE_no_eyes_func = cas.Function(
     "DMS_fb_noised_sensory_input_VARIABLE_no_eyes",
-    [Q_8, Qdot_8, SensoryNoise_8],
-    [DMS_fb_noised_sensory_input_VARIABLE_no_eyes(socp_plus.nlp[0].model, Q_8[:n_root], Q_8[n_root:], Qdot_8[:n_root], Qdot_8[n_root:], SensoryNoise_8)],
+    [Q_8, Qdot_8, SensoryNoise_8, ff_ref_sym],
+    [DMS_fb_noised_sensory_input_VARIABLE_no_eyes(socp_plus.nlp[0].model, Q_8[:n_root], Q_8[n_root:], Qdot_8[:n_root], Qdot_8[n_root:], SensoryNoise_8, ff_ref_sym)],
 )
 
-forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [socp_plus.nlp[0].model.forward_dynamics(Q_8, Qdot_8, cas.vertcat(cas.MX.zeros(3), Tau_8))])
+forward_dynamics_func = cas.Function("forward_dynamics", [Q_8, Qdot_8, Tau_8], [socp_plus.nlp[0].model.forward_dynamics()(Q_8, Qdot_8, cas.vertcat(cas.MX.zeros(3), Tau_8), cas.MX.zeros(), cas.MX.zeros())])
 
 time_vector_socp_plus = np.linspace(0, float(time_socp_plus), n_shooting + 1)
 

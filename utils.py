@@ -532,8 +532,8 @@ def minimize_nominal_and_feedback_efforts_VARIABLE_FEEDFORWARD(controller: Penal
 def visual_noise(model, q, sensory_noise):
     floor_normal_vector = cas.MX.zeros(3, 1)
     floor_normal_vector[2] = 1
-    eyes_vect_start = model.marker(model.marker_index("eyes_vect_start"))(q)
-    eyes_vect_end = model.marker(model.marker_index("eyes_vect_end"))(q)
+    eyes_vect_start = model.marker(model.marker_index("eyes_vect_start"))(q, cas.MX.zeros())
+    eyes_vect_end = model.marker(model.marker_index("eyes_vect_end"))(q, cas.MX.zeros())
     gaze_vector = eyes_vect_end - eyes_vect_start
     angle = cas.acos(
         cas.dot(gaze_vector, floor_normal_vector) / (cas.norm_fro(gaze_vector) * cas.norm_fro(floor_normal_vector))
@@ -549,9 +549,9 @@ def visual_noise(model, q, sensory_noise):
     )
     return noise_on_where_you_look
 
-def vestibular_noise(controller, q, qdot, sensory_noise):
-    head_idx = controller.model.segment_index("Head")
-    head_velocity = controller.model.segment_angular_velocity(head_idx)(q, qdot, controller.parameters.cx)[0]
+def vestibular_noise(model, q, qdot, sensory_noise, parameters):
+    head_idx = model.segment_index("Head")
+    head_velocity = model.segment_angular_velocity(head_idx)(q, qdot, parameters)[0]
     vestibular_noise = gaussian_function(
         x=head_velocity,
         sigma=10,
@@ -561,15 +561,15 @@ def vestibular_noise(controller, q, qdot, sensory_noise):
     )
     return vestibular_noise
 
-def DMS_ff_noised_sensory_input(controller, tf, time, q_this_time, qdot_this_time, sensory_noise):
+def DMS_ff_noised_sensory_input(model, tf, time, q_this_time, qdot_this_time, sensory_noise, parameters):
 
     time_to_contact = tf - time
-    time_to_contact_noise = visual_noise(controller, q_this_time, sensory_noise)
+    time_to_contact_noise = visual_noise(model, q_this_time, sensory_noise)
     noised_time_to_contact = time_to_contact + time_to_contact_noise
 
-    somersault_velocity = controller.model.body_rotation_rate()(q_this_time, qdot_this_time, controller.parameters.ca)[0]
-    head_idx = controller.model.segment_index("Head")
-    head_angular_velocity = controller.model.segment_angular_velocity(head_idx)(q_this_time, qdot_this_time, controller.parameters.cx)[0]
+    somersault_velocity = model.body_rotation_rate()(q_this_time, qdot_this_time, parameters)[0]
+    head_idx = model.segment_index("Head")
+    head_angular_velocity = model.segment_angular_velocity(head_idx)(q_this_time, qdot_this_time, parameters)[0]
     somersault_velocity_noise = gaussian_function(
         x=head_angular_velocity,
         sigma=10,

@@ -1258,12 +1258,12 @@ def noisy_integrate_socp_plus(
 
             # Feedback
             tau_this_time += k_matrix_fb @ (
-                    ref_fb - DMS_fb_noised_sensory_input_VARIABLE_no_eyes_func(q_this_time, qdot_this_time, sensory_noise[:, i])
+                    ref_fb - DMS_fb_noised_sensory_input_VARIABLE_no_eyes_func(q_this_time, qdot_this_time, sensory_noise[:, i], [])
             )
 
             # Feedforwards
             tau_this_time += k_matrix_ff @ (
-                    ref_ff - DMS_ff_noised_sensory_input_func(tf, current_time, q_this_time, qdot_this_time, sensory_noise[-1, i])
+                    ref_ff - DMS_ff_noised_sensory_input_func(tf, current_time, q_this_time, qdot_this_time, sensory_noise[-1, i], [])
             )
 
             ddq = forward_dynamics_func(q_this_time, qdot_this_time, tau_this_time)
@@ -1526,8 +1526,9 @@ def noisy_integrate_socp_plus(
                                         qdot_joints_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random],
                                     )
                                 ),
-                                sensory_noise_numerical[:, i_random, i_shooting]
-                            )
+                                sensory_noise_numerical[:, i_random, i_shooting],
+                                [],
+                            ),
                         ),
                         (-1, ),
                     )
@@ -1558,7 +1559,8 @@ def noisy_integrate_socp_plus(
                                         qdot_joints_integrated_socp_plus[:, i_shooting, i_reintegration * nb_random + i_random],
                                     )
                                 ),
-                                sensory_noise_numerical[-1, i_random, i_shooting]
+                                sensory_noise_numerical[-1, i_random, i_shooting],
+                                [],
                             )
                         ),
                         (-1, ),
