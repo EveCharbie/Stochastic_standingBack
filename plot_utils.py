@@ -42,16 +42,16 @@ def define_q_mean(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joi
     return q, qdot, q_mean, qdot_mean
 
 def get_optimization_q_each_random(n_shooting):
-    nb_randoms = [5, 10, 15]
+    nb_randoms = [5, 10, 15, 20]
     base_file_name = "Model2D_7Dof_0C_3M_socp_DMS_5p0e-01_5p0e-03_1p5e-02"
     file_names = ["DMS", "VARIABLE_DMS", "FEEDFORWARD_DMS", "VARIABLE_FEEDFORWARD_DMS"]
-    q_socp, qdot_socp, time_vector_socp = {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}
-    q_socp_variable, qdot_socp_variable, time_vector_socp_variable = {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}
-    q_socp_feedforward, qdot_socp_feedforward, time_vector_socp_feedforward = {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}
-    q_socp_plus, qdot_socp_plus, time_vector_socp_plus = {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}, {"5random": None, "10random": None, "15random": None}
+    q_socp, qdot_socp, time_vector_socp = {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}
+    q_socp_variable, qdot_socp_variable, time_vector_socp_variable = {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}
+    q_socp_feedforward, qdot_socp_feedforward, time_vector_socp_feedforward = {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}
+    q_socp_plus, qdot_socp_plus, time_vector_socp_plus = {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}, {f"{random}random": None for random in nb_randoms}
     for current_name in file_names:
         for i_random, current_random in enumerate(nb_randoms):
-            file_name = f"results/{current_random}random/{base_file_name}_{current_name}_{current_random}random_CVG_1p0e-06.pkl"
+            file_name = f"results/{current_random}random-seed0/{base_file_name}_{current_name}_{current_random}random_CVG_1p0e-06.pkl"
             if not os.path.exists(file_name):
                 if not os.path.exists(file_name.replace("CVG", "DVG")):
                     raise RuntimeError(f"The results file {file_name} is missing")

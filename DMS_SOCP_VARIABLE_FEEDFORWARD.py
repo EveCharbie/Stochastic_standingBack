@@ -132,7 +132,7 @@ def custom_dynamics(
         tau_this_time += k_ff @ (
             ff_ref
             - DMS_ff_noised_sensory_input(
-                nlp.model, tf, time, q_this_time, qdot_this_time, sensory_noise[nlp.model.n_feedbacks :, i]
+                nlp.model, tf, time, q_this_time, qdot_this_time, sensory_noise[nlp.model.n_feedbacks :, i], ff_ref,
             )
         )
 
@@ -548,7 +548,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
     qdot_sym = cas.MX.sym("qdot", n_q, 1)
     param = cas.MX.sym("ff_ref", 1, 1)
     ref_fun = cas.Function(
-        "ref_func", [q_sym, qdot_sym], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym, param)]
+        "ref_func", [q_sym, qdot_sym, param], [bio_model.sensory_reference(bio_model, n_root, q_sym, qdot_sym, param)]
     )
 
     if ref_last is not None:
@@ -573,7 +573,7 @@ def prepare_socp_VARIABLE_FEEDFORWARD(
                 )
             q_mean = np.hstack((np.mean(q_roots_this_time, axis=0), np.mean(q_joints_this_time, axis=0)))
             qdot_mean = np.hstack((np.mean(qdot_roots_this_time, axis=0), np.mean(qdot_joints_this_time, axis=0)))
-            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean), (n_ref,))
+            ref_init[:, i] = np.reshape(ref_fun(q_mean, qdot_mean, 2*np.pi), (n_ref,))
 
     u_bounds.add(
         "ref",
