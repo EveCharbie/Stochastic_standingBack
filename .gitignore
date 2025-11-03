@@ -165,8 +165,6 @@ results/
 
 videos/
 
-*.png
-
 .idea/inspectionProfiles/
 
 .idea/
@@ -176,3 +174,13 @@ videos/
 to_be_removed/
 
 models/cachette/
+
+*.aux
+
+*.out
+
+*.pdf
+
+*.gz
+
+graphs/

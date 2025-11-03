@@ -1,0 +1,741 @@
+% Template for PLoS
+% Version 3.5 March 2018
+%
+% % % % % % % % % % % % % % % % % % % % % %
+%
+% -- IMPORTANT NOTE
+%
+% This template contains comments intended 
+% to minimize problems and delays during our production 
+% process. Please follow the template instructions
+% whenever possible.
+%
+% % % % % % % % % % % % % % % % % % % % % % % 
+%
+% Once your paper is accepted for publication, 
+% PLEASE REMOVE ALL TRACKED CHANGES in this file 
+% and leave only the final text of your manuscript. 
+% PLOS recommends the use of latexdiff to track changes during review, as this will help to maintain a clean tex file.
+% Visit https://www.ctan.org/pkg/latexdiff?lang=en for info or contact us at latex@plos.org.
+%
+%
+% There are no restrictions on package use within the LaTeX files except that 
+% no packages listed in the template may be deleted.
+%
+% Please do not include colors or graphics in the text.
+%
+% The manuscript LaTeX source should be contained within a single file (do not use \input, \externaldocument, or similar commands).
+%
+% % % % % % % % % % % % % % % % % % % % % % %
+%
+% -- FIGURES AND TABLES
+%
+% Please include tables/figure captions directly after the paragraph where they are first cited in the text.
+%
+% DO NOT INCLUDE GRAPHICS IN YOUR MANUSCRIPT
+% - Figures should be uploaded separately from your manuscript file. 
+% - Figures generated using LaTeX should be extracted and removed from the PDF before submission. 
+% - Figures containing multiple panels/subfigures must be combined into one image file before submission.
+% For figure citations, please use "Fig" instead of "Figure".
+% See http://journals.plos.org/plosone/s/figures for PLOS figure guidelines.
+%
+% Tables should be cell-based and may not contain:
+% - spacing/line breaks within cells to alter layout or alignment
+% - do not nest tabular environments (no tabular environments within tabular environments)
+% - no graphics or colored text (cell background color/shading OK)
+% See http://journals.plos.org/plosone/s/tables for table guidelines.
+%
+% For tables that exceed the width of the text column, use the adjustwidth environment as illustrated in the example table in text below.
+%
+% % % % % % % % % % % % % % % % % % % % % % % %
+%
+% -- EQUATIONS, MATH SYMBOLS, SUBSCRIPTS, AND SUPERSCRIPTS
+%
+% IMPORTANT
+% Below are a few tips to help format your equations and other special characters according to our specifications. For more tips to help reduce the possibility of formatting errors during conversion, please see our LaTeX guidelines at http://journals.plos.org/plosone/s/latex
+%
+% For inline equations, please be sure to include all portions of an equation in the math environment.  For example, x$^2$ is incorrect; this should be formatted as $x^2$ (or $\mathrm{x}^2$ if the romanized font is desired).
+%
+% Do not include text that is not math in the math environment. For example, CO2 should be written as CO\textsubscript{2} instead of CO$_2$.
+%
+% Please add line breaks to long display equations when possible in order to fit size of the column. 
+%
+% For inline equations, please do not include punctuation (commas, etc) within the math environment unless this is part of the equation.
+%
+% When adding superscript or subscripts outside of brackets/braces, please group using {}.  For example, change "[U(D,E,\gamma)]^2" to "{[U(D,E,\gamma)]}^2". 
+%
+% Do not use \cal for caligraphic font.  Instead, use \mathcal{}
+%
+% % % % % % % % % % % % % % % % % % % % % % % % 
+%
+% Please contact latex@plos.org with any questions.
+%
+% % % % % % % % % % % % % % % % % % % % % % % %
+
+\documentclass[10pt,letterpaper]{article}
+\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}
+
+% amsmath and amssymb packages, useful for mathematical formulas and symbols
+\usepackage{amsmath,amssymb}
+
+% Use adjustwidth environment to exceed column width (see example table in text)
+\usepackage{changepage}
+
+% Use Unicode characters when possible
+\usepackage[utf8x]{inputenc}
+
+% textcomp package and marvosym package for additional characters
+\usepackage{textcomp,marvosym}
+
+% cite package, to clean up citations in the main text. Do not remove.
+\usepackage{cite}
+
+% Use nameref to cite supporting information files (see Supporting Information section for more info)
+\usepackage{nameref,hyperref}
+
+% line numbers
+\usepackage[right]{lineno}
+
+% ligatures disabled
+\usepackage{microtype}
+\DisableLigatures[f]{encoding = *, family = * }
+
+% color can be used to apply background shading to table cells only
+\usepackage[table]{xcolor}
+
+% array package and thick rules for tables
+\usepackage{array}
+
+% create "+" rule type for thick vertical lines
+\newcolumntype{+}{!{\vrule width 2pt}}
+
+
+%My packages
+\usepackage[center]{caption}
+\captionsetup[figure]{font=small,labelfont=small}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{enumerate}
+\usepackage{gensymb}
+\usepackage{nicefrac}
+\usepackage{siunitx}
+\usepackage{soul}
+
+
+% create \thickcline for thick horizontal lines of variable length
+\newlength\savedwidth
+\newcommand\thickcline[1]{%
+  \noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+  \cline{#1}%
+  \noalign{\vskip\arrayrulewidth}%
+  \noalign{\global\arrayrulewidth\savedwidth}%
+}
+
+% \thickhline command for thick horizontal lines that span the table
+\newcommand\thickhline{\noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+\hline
+\noalign{\global\arrayrulewidth\savedwidth}}
+
+
+% Remove comment for double spacing
+%\usepackage{setspace} 
+%\doublespacing
+
+% Text layout
+\raggedright
+\setlength{\parindent}{0.5cm}
+\textwidth 5.25in 
+\textheight 8.75in
+
+% Bold the 'Figure #' in the caption and separate it from the title/caption with a period
+% Captions will be left justified
+\usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
+\renewcommand{\figurename}{Fig}
+
+% Use the PLoS provided BiBTeX style
+\bibliographystyle{plos2015}
+
+% Remove brackets from numbering in List of References
+\makeatletter
+\renewcommand{\@biblabel}[1]{\quad#1.}
+\makeatother
+
+
+
+% Header and Footer with logo
+\usepackage{lastpage,fancyhdr,graphicx}
+\usepackage{epstopdf}
+%\pagestyle{myheadings}
+\pagestyle{fancy}
+\fancyhf{}
+%\setlength{\headheight}{27.023pt}
+%\lhead{\includegraphics[width=2.0in]{PLOS-submission.eps}}
+\rfoot{\thepage/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrule}{\hrule height 2pt \vspace{2mm}}
+\fancyheadoffset[L]{2.25in}
+\fancyfootoffset[L]{2.25in}
+\lfoot{\today}
+
+%% Include all macros below
+
+\newcommand{\lorem}{{\bf LOREM}}
+\newcommand{\ipsum}{{\bf IPSUM}}
+
+
+%% My commands
+\definecolor{OCP_color}{HTML}{5DC962}
+\definecolor{SOCP_color}{HTML}{AC2594}
+\definecolor{SOCP_VARIABLE_color}{HTML}{F18F01}
+\definecolor{SOCP_FEEDFORWARD_color}{HTML}{A469F1}
+\definecolor{SOCP_plus_color}{HTML}{06b0f0}
+
+\newcommand{\comEC}[1]{~\linebreak\noindent\colorbox{green}{\parbox{\dimexpr\columnwidth-1\fboxsep}{[EC: #1]}}}
+
+
+
+%% END MACROS SECTION
+
+
+\begin{document}
+\vspace*{0.2in}
+
+% Title must be 250 characters or less.
+\begin{flushleft}
+{\Large
+\textbf\newline{\textbf{Acrobatic agility unlocked: Replicating complex sensorimotor strategies using stochastic optimal control.}} % Please use "sentence case" for title and headings (capitalize only the first word in a title (or heading), the first word in a subtitle (or subheading), and any proper nouns).
+}
+\newline
+% Insert author names, affiliations and corresponding author email (do not include titles, positions, or degrees).
+\\
+Eve Charbonneau (ORCID: 0000-0002-9215-3885)\textsuperscript{1, *},
+Friedl De Groote (ORCID: 0000-0002-4255-8673)\textsuperscript{2},  % friedl.degroote@kuleuven.be
+Mickaël Begon (ORCID: 0000-0002-4107-9160)\textsuperscript{1,3},
+\\
+\bigskip
+\textbf{*} Corresponding author: eve.charbonneau.1@umontreal.ca
+\\
+\textbf{1} Université de Montréal, Montréal, Québec, Canada 
+\\
+\textbf{2} KU Leuven, Leuven, Vlams-Broabant, Belgium
+\\
+\textbf{3} Centre de recherche Azrieli de l'hôpital Sainte-Justine, Montréal, Québec, Canada
+\\
+\bigskip
+
+% Insert additional author notes using the symbols described below. Insert symbol callouts after author names as necessary.
+% 
+% Remove or comment out the author notes below if they aren't used.
+%
+% Primary Equal Contribution Note
+% \Yinyang These authors contributed equally to this work.
+
+% Additional Equal Contribution Note
+% Also use this double-dagger symbol for special authorship notes, such as senior authorship.
+% \ddag These authors also contributed equally to this work.
+
+% Current address notes
+% \textcurrency Current Address: Dept/Program/Center, Institution Name, City, State, Country % change symbol to "\textcurrency a" if more than one current address note
+% \textcurrency b Insert second current address 
+% \textcurrency c Insert third current address
+
+% Deceased author note
+% \dag Deceased
+
+% Group/Consortium Author Note
+% \textpilcrow Membership list can be found in the Acknowledgments section.
+
+% Use the asterisk to denote corresponding authorship and provide email address in note below.
+% * correspondingauthor@institute.edu
+
+\end{flushleft}
+% Please keep the abstract below 300 words
+\section*{Abstract}
+Optimal control theory has long been used to model human movement, producing kinematics that closely resemble human motion. 
+However, motor strategies generated through such deterministic optimal control neglect human motor variability and the perception-action coupling needed to execute complex real-life movements. 
+To overcome these limitations, optimal feedback control theory can be used to incorporate Gaussian motor noise, state variability, and feedback loops driven by sensory noise. 
+While these stochastic optimal control implementations reproduce key features of human movements such as co-contraction, realistic responses to perturbations, and task-dependent feedback modulations, they assume constant sensory noise and lack prospective adaptations based on sensory information required for complex motions like aerial acrobatics. 
+This study proposes an advanced stochastic optimal control framework (SOCP+) that includes state-dependent sensory noise (such as vestibular acuity varying with head velocity) and prospective adaptations to the motor plan (such as moment of inertia modulations based on current somersault angular velocity). 
+Using a full-body, torque-driven skeletal model, we generated motor policies for a backward somersault minimizing landing variability and joint efforts. 
+The techniques generated through our SOCP+ implementation were compared with deterministic optimal control and standard stochastic optimal control. 
+The SOCP+ was the only implementation replicating sensory acquisition strategies used by gymnasts: reducing head rotational velocity to increase vestibular acuity and fixating the gaze on the floor to prepare for landing. 
+Our SOCP+ implementation offers new insights into the control of complex human movements and holds promise for applications beyond aerial acrobatics.
+
+
+% Please keep the Author Summary between 150 and 200 words
+% Use first person. PLOS ONE authors please skip this step. 
+% Author Summary not valid for PLOS ONE submissions.   
+\section*{Author summary}
+Understanding how humans perform complex movements is a central question in fields like sports science, rehabilitation, and human-robot interactions. 
+While computer simulations helped advance our knowledge, their realism of generated movements reduces as the movement complexity increases. 
+We hypothesized that this limitation could be addressed by considering more complex perception-action mechanisms involved in the generation of robust movements.
+In this study, we introduced an innovative framework that better replicates human movements by considering that 1) human sensory capacities depend on the human-environment configuration, and 2) human adapt their movements in anticipation for expected future events.
+We tested this framework on a backflip, while considering that 1) vestibular capacities are influenced by the head velocity, and 2) athletes modify their movements to achieve a successful landing.
+Unlike earlier frameworks, ours replicates key sensorimotor strategies used by gymnasts: reducing head rotation velocity to facilitate spatial orientation and looking at the floor to prepare for landing.
+These findings demonstrate how intertwining sensory acquisition and movement generation results in sensorimotor strategies that enhance movement precision. 
+Beyond gymnastics, this research advances our understanding of motor control by highlighting how sensory information guides precise yet adaptable movements.
+\linenumbers
+
+
+\section*{Acknowledgements}\label{sec:acknowledgements}
+This work was supported by Mitacs Globalink IT33527.
+
+
+\section{Introduction}\label{sec:intro}
+
+% Human movement synthesis is important for what if scenarios
+Predictive simulations, based on optimal control theory, have been used for decades by biomechanists wishing to test hypothetical cases (\textit{i.e.}, \textit{what-if} scenarios).
+It is a quick, cheap, safe, and powerful tool allowing to predict how human move or should move to minimize performance criteria.
+To improve the reliability of the movements synthesized through predictive simulations, efforts have been dedicated to creating more physiological human models and crafting cost functions generating movements matching more closely experimental kinematics \cite{febrer2023predictive}.
+It helped synthesize realistic human movements for simple tasks like walking \cite{ezati2019review}.
+However, for more complex tasks, motor strategies arising from optimal control are sometimes not suitable because they are not robust motor variability.  
+For example, Hiley \& Yeadon \cite{hiley2016investigating} showed that the technique used by athletes to perform giant circles before a double layout somersault dismount on high bars matched more closely the predictive simulations when maximizing success (\textit{i.e.}, robust technique) rather than minimizing joint torques.
+Thus, to synthesize realistic movements, predictive simulations should consider human movement variability to generate techniques that are less affected by execution variations.
+
+
+One way humans deal with motor variability is through motor corrections based on sensory information.
+Leveraging optimal feedback control \cite{todorov2004optimality}, these motor corrections have been recently included in predictive simulations of human movements by modeling motor noises and noisy sensory feedbacks in a stochastic optimal control approach \cite{van2022approximate}. 
+It helped explain more complex motor control phenomenon.
+For example, it revealed that muscle co-contraction is an optimal strategy to deal with uncertainty \cite{van2022approximate, berret2024co}, putting an end to a long lasting debate in biomechanics.
+However, even with these improvements, current stochastic predictive simulations still falls short of modelling sensory acquisition strategies because they consider that sensory noise is constant throughout the movement.
+Although sensory noise is hard to measure experimentally, there is still evidence that our senses sensitivity depends on the state of our body: hearing acuity decreases as the distance between the ear and the sound source increases, vestibular \cite{mallery2010human} and visual \cite{demer1993dynamic} acuity decreases as the head velocity increases, spatial orientation acuity decreases as the angle between the body and vertical increases \cite{kaptein2004interpretation}, etc. 
+% (from 2.26$^\circ/s$ at 20$^\circ/s$ head rotational velocity to 5.16$^\circ/s$ at 150$^\circ/s$ head rotational velocity \cite{mallery2010human} and visual acuity 
+Thus, some human movements exhibit sensory acquisition behavior aiming to increase sensory acuity, allowing for more appropriate motor corrections.
+The backward somersault (acrobatic movement where a rotation is completed around the mediolateral axis) is an example of movement where athletes exhibit sensorimotor strategies: \textit{i)} shortly after take-off, they slow down their head rotation velocity, increasing visual and vestibular acuity (\textit{i.e.}, \textit{spotting}) \cite{davlin2004gymnasts}, and \textit{ii)} before landing, they reorient their head and eyes to look at the ground to make prospective corrections, leading to a balanced landing \cite{bardy1998body}.
+These sensory acquisition strategies have an impact on the kinematics chosen to complete the task showing a perception-action coupling. 
+Therefore, to synthesize relevant sensorimotor strategies for complex tasks, predictive simulations should consider state-dependant sensory noise.
+Moreover, studying complex movements such as the backward somersault where acute coordination and precise treatment of the sensory information is needed to succeed might help increase our understanding of the integration of sensory information into human motor control which is subtle and complex to measure.
+
+
+To overcome unexpected internal or external disturbances, humans typically use sensory information to make corrections to the original motor plan (open-loop control) . % Indeed, as the motor plan (open-loop control) is assembled before the onset of the movement, it can unfold unexpectedly if perturbed by internal or external disturbances.
+This information can be used either directly (direct sensory feedback control) by comparing it with a predefined sensory reference to generate an error signal \cite{ghez2000organization} or in anticipation (anticipatory sensory feedback control) by using it to estimate the future state of the body through an internal forward model \cite{desmurget2000forward} and comparing this prediction with the desired state to generate an error signal.
+Both error signals can be modulated and/or filtered before being combined with the original motor plan \cite{desmurget2000forward}.
+Both direct and anticipatory feedback control are thought to be used by athletes during the backward somersault. Proprioceptive information would be used to estimate the current athlete's state, allowing for direct feedback control.
+Visual information would be used to estimate the remaining time before ground contact \cite{bardy1998body} and vestibular information would be used to estimate the athlete's rotational velocity.
+Combining the two information would allowing for anticipatory sensory feedback control.
+These two types of feedback help athletes land with more balance through inertia modifications increasing/decreasing the somersault rotation velocity.
+To the authors knowledge, only direct feedback control has been considered in predictive simulations of human movements \cite{van2022approximate, berret2024co}, and control of robots during acrobatics \cite{khosravi1987control, park2012backflips}, leaving aside anticipatory sensory feedback control.
+Since there is evidence that anticipatory sensory feedback control is used by athletes during the backward somersault, it will be introduced in the predictive simulation presented in this study.
+
+
+Another shortcoming of the current implementations of stochastic optimal control is that they consider constant motor noise.
+However, it was shown that motor noise is signal-dependant \cite{jones2002sources}.
+Considering constant motor noise might have negligible impact on the optimal sensorimotor strategies generated for slow reaching movements or balance control previously studied \cite{van2022approximate, berret2024co}.
+However, during rapid movements with large muscle contractions such as the backward somersault the amplitude modulation of the motor noise might influence the sensorimotor control strategy choices.
+
+
+The primary aim of this study was to generate an optimal sensorimotor strategy for the backward somersault.
+A digital athlete subject to a nonlinear dynamics corrupted by motor noise was considered. 
+To cope with motor noise, the digital athlete could use noisy vestibular, visual and proprioceptive information to make instantaneous and anticipatory corrections.
+An optimal acrobatic strategy was obtained by solving a discretized version of a stochastic optimal control problem.
+Multiple deterministic simulations were run simultaneously with the same motor command, but with different signal-dependant motor noise and state-dependant sensory noise values sampled from a Gaussian distribution.
+The optimal motor command incorporated three time-varying components: open-loop joint torque actuation, direct feedback gains, and anticipatory feedback gains.
+
+
+The optimal technique generated through our advanced stochastic optimal control (SOCP+) implementation was compared with the ones generated through deterministic optimal control (OCP) and traditional stochastic optimal control (SOCP).
+The SOCP+ implementation was the only one enabling the emergence of the two sensory acquisition strategies used by athletes, confirming its relevance for the generation of sensorimotor strategies of complex movements.
+We then demonstrate that our SOCP+ implementation predicts contributions from open-loop, direct feedback and anticipatory feedback control, with a stronger reliance on sensory information when the sensory noise is reduced.
+\comEC{TODO: Make the intro selling arguments stronger. More "WE"}
+ 
+ 
+\section{Results}\label{sec:results}
+
+\subsection{Discretized stochastic optimal control framework}
+Five different implementations of the problem were solved to generate optimal techniques for the aerial phase of a backward somersault:
+\begin{itemize}
+	\item[] \textbf{\textcolor{OCP_color}{OCP :}} A deterministic optimal control problem
+	\item[] \textbf{\textcolor{SOCP_color}{SOCP :}} A traditional stochastic optimal control problem
+	\item[] \textbf{\textcolor{SOCP_VARIABLE_color}{SOCPV :}} A stochastic optimal control problem with the addition of state-dependent sensory noise and signal-dependent motor noise
+	\item[] \textbf{\textcolor{SOCP_FEEDFORWARD_color}{SOCPA :}} A stochastic optimal control problem with the addition of anticipatory feedback control
+	\item[] \textbf{\textcolor{SOCP_plus_color}{SOCP+ :}} A stochastic optimal control problem with the addition of both state-dependent sensory noise and signal-dependent motor noise and anticipatory feedback control
+\end{itemize}
+
+All implementations (see Sec.~\ref{sec:methods} for details) considered a rigid planar free-floating based digital athlete composed of 5 segments (Fig.~\ref{fig:model}): trunk, head, arms, upper-legs, and lower-legs.
+The digital athlete was torque actuated and governed by the non-linear multibody dynamics equations.
+The optimal policies were computed using a composite cost function, where the main objective was to minimize landing condition variability.
+There were other terms to minimizing the expected efforts and the expected efforts rate of change.
+Finally, regularization terms were added to encourage a realistic motion: minimizing the duration of the movement, the direct feedback gains, and the direct feedback gains rate of change.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/model.png}
+\caption{The five-segments digital athlete used for the predictive simulations. It is composed of three unactuated degrees of freedom (blue): forward translation, upward translations, and somersault rotation and five actuated degrees of freedom (purple): ankle, knee, hip, shoulder, neck and eye rotations. Note that the eye rotation was only used in the SOCPA and SOCP+ simulations.}
+\label{fig:model}
+\end{figure}
+
+
+\subsection{Optimal techniques}
+An optimal solution was reached for each formulation and each number of episodes.
+For each stochastic formulation, the optimization problem was solved for 5, 10, 15, and 20 episodes to assess the sensitivity of the optimal solutions to the number of episodes.
+
+------
+The number of episodes influenced the optimal solution reached.
+Indeed, statistical parametric mapping (SPM1D~\ref{pataky2012one}) highlighted a significant difference between optimal kinematics generated with different number of episodes for the most part of the movement (Fig.~\ref{fig:comparison_kinematics_nb_random}).
+
+% \begin{figure}[H]
+% \centering
+% \includegraphics[width=1.5\textwidth, angle=-90]{figures/comparison_kinematics_nb_random.png}
+% \caption{Optimal kinematics for the backward somersault generated with 5 (red), 10 (green), and 15 (blue) episodes. The bold lines represent the mean kinematics and the shaded lines the kinematics from each episode. \hl{The timings when the kinematics is significantly different are highlighted with bars under the graphs.}}
+% \label{fig:comparison_kinematics_nb_random}
+% \end{figure}
+
+
+
+
+
+
+
+
+- Q
+- tau
+- K
+- Landing variability
+
+
+\section{Discussion}\label{sec:discussion}
+
+- sensitivity to the 
+
+
+- Each strategies (sensorymotor)
+- Robustness of the approach (number of episodes)
+- Future research + implication for optim-biomech community
+
+\subsection{Number of episodes}
+% \hl{... autre étude à lire}
+As the number of episodes increased, the optimal solutions converged to a stable optimal kinematics, showing that the method used gets more reliable as the number of episodes increases.
+
+\section{Materials and methods}\label{sec:methods}
+
+\comEC{Fix the vectors being bold everywhere !}
+
+\subsection{Athlete modeling}
+The digital athlete's inertial characteristics were set to match those of a national male trampolinist.  % À vérifier que c'est vraiment Émile
+The digital athletes' generalized coordinates ($q$) were composed of unactuated and actuated DoFs.
+The ankle, knee, hip, shoulder and neck joints were dampened by joint friction $- v\dot{q}$.
+No torque was applied on each of the unactuated DoFs.
+Whereas the torque applied on each actuated DoF ($\tau_{\text{total}}$) was composed of different components depending on the implementation considered (see Sec.~\ref{subsec:OCP}-\ref{subsec:SOCP_plus}).
+It's movements were governed by the rigidbody dynamics:
+
+\begin{equation}
+F : \ddot{q} = M(q)^{-1} (\tau_{\text{total}} - N(q, \dot{q}) - v\dot{q}_{\text{joints}}) \label{eq:dynamics}
+\end{equation}
+
+\noindent where $q$, $\dot{q}$ and $\ddot{q}$ are the generalized joint coordinates, velocities and accelerations, respectively. $\tau_{\text{total}}$ are the torques applied on each joint, $M$ is the mass matrix, $N$ is the non-linear effect vector comprising Coriolis, centrifugal, and gravity effects, and $v$ are the friction coefficient set to $0.1~sNm$ for the ankle, knee, hip, shoulder and neck joints and to $0~sNm$ for the unactuated DoFs and the eyes.
+
+
+\subsection{Stochastic discretization of the optimal control problem}
+To simplify transcription of the stochastic optimal control problems, motor and sensory noises were sampled $n_{\text{episode}}$ as in \cite{koelewijn2020solution}.
+Analogically, it could be seen as if $n_{\text{episode}}$ optimal control problems were solved simultaneously with different noise values, but with the same voluntary motor command ($\tau_{\text{voluntary}}$).
+The constant part of the motor and sensory noises ($w_{\circ}$) were sampled from a Gaussian distribution with a standard deviation of $5$ for the motor noise, $0.0005$ for the joint angle proprioception, vestibular and visual sensory inputs, and $0.0045$ for the joint velocity proprioception inputs. 
+\comEC{voir si un écart type de 1 partout ferait plus de sens ?}
+
+
+The optimization problems were implemented in Bioptim \cite{michaud2022bioptim} using the automatic differentiation provided by CasADi \cite{Andersson2019}, and solved using IPOPT \cite{wachter2006implementation} and the linear solver MA97 \cite{hogg2011hsl_ma97} with a tolerance of \num{1e-6}.
+Each stochastic optimal control problem was warm-started with the optimal generalized coordinates, velocities and torques from the OCP implementation.
+Each of the optimal control problem implementations are detailed in the following sections.
+To simplify interpretation, each optimization variable is presented colored.
+
+
+\subsection{Deterministic optimal control problem (\textcolor{OCP_color}{OCP})}\label{subsec:OCP}
+This deterministic implementation did not consider any motor or sensory noise and was composed of only a single episode (Fig.~\ref{fig:ocp}).
+The torques applied to the joints were only composed of the voluntary motor command ($\textcolor{OCP_color}{\tau_{\text{voluntary}}}$).
+
+% \begin{equation}
+% \tau_{\text{total}} = \textcolor{OCP_color}{\tau_{\text{voluntary}}}
+% \end{equation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/ocp.png}
+\label{fig:ocp}
+\caption{A schematic and mathematical representation of the torques applied to the joints in the \textcolor{OCP_color}{OCP} formulation.}
+\end{figure}
+
+
+\subsection{Stochastic optimal control problem (\textcolor{SOCP_color}{SOCP})}\label{subsec:SOCP}
+This basic stochastic implementation was composed of multiple episodes (Fig.~\ref{fig:socp}). 
+For each episode, motor and sensory noises were directly sampled from a Gaussian distribution.
+The torques applied to the joints were composed of the voluntary motor command ($\textcolor{SOCP_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), and motor noise ($\tau_{\text{noise}}$).
+The direct feedback corrections were based on proprioceptive (joint positions and velocities) and vestibular (body spatial orientation) information. 
+The direct feedback corrections applied to the joint torques ($\tau_{\text{dfb}}$) were a linear combination (feedback gain matrix: $\textcolor{SOCP_color}{K_{\text{dfb}}}$) of the differences between the current noised sensory information and a sensory reference ($\textcolor{SOCP_color}{\text{ref}_{\text{dfb}}}$).
+The sensory reference was constrained to represent the mean sensory information across all episodes.
+The sensory information was corrupted by random noise ($w_{\text{proprioception}}$ and $w_{\text{vestibular}}$).
+
+% \begin{equation}
+% \tau_{\text{total}} = \textcolor{SOCP_color}{\tau_{\text{voluntary}}} + \tau_{\text{dfb}}(\textcolor{SOCP_color}{K_{\text{dfb}}}, \textcolor{SOCP_color}{q_n}, \textcolor{SOCP_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}) + \tau_{\text{noise}}(w_{\text{motor}})
+% \end{equation}
+
+% \begin{equation}
+% \tau_{\text{dfb}} = \textcolor{SOCP_color}{K_{\text{dfb}}} (\textcolor{SOCP_color}{\text{ref}_{\text{dfb}}} - S_{\text{dfb}}^{\text{SOCP}}(\textcolor{SOCP_color}{q_n}, \textcolor{SOCP_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}))
+% \end{equation}
+% \begin{equation}
+% S_{\text{dfb}}^{\text{SOCP}} = 
+% \begin{bmatrix}
+% \textcolor{SOCP_color}{{q_n}_{\text{joints}}} \\
+% \textcolor{SOCP_color}{\mathop{\dot{q}_n}_{\text{joints}}} \\
+% \textcolor{SOCP_color}{{q_n}_{\text{somersault}}}
+% \end{bmatrix} + 
+% \begin{bmatrix}
+% w_{\text{proprio}} \\
+% w_{\text{proprio}} \\
+% w_{\text{vestibular}}
+% \end{bmatrix}
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{noise}} = w_{\text{motor}}
+% \end{equation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/socp.png}
+\caption{A schematic and mathematics representation of the torques applied to the joints in the \textcolor{SOCP_color}{SOCP} formulation. The $._n$ indices relate to the $n^{th}$ episode.}
+\label{fig:socp}
+\end{figure}
+
+
+\subsection{Stochastic optimal control problem with variable noises (\textcolor{SOCP_VARIABLE_color}{SOCPV})}\label{subsec:SOCPV}
+This improved stochastic implementation considered signal-dependent motor noise and state-dependent sensory noise (Fig.~\ref{fig:socp_variable}).
+The torques applied to the joints were composed of the voluntary motor command ($\textcolor{SOCP_VARIABLE_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), and motor noise ($\tau_{\text{noise}}$).
+The direct feedback corrections were the same as the \textcolor{SOCP_color}{SOCP} implementation.
+However the vestibular information was corrupted by state-dependant random noise ($c_s$) such that the reliability of the vestibular information increased as the head angular velocity in the global reference frame ($H$) decreased.
+The motor perturbation was corrupted by signal-dependent random noise ($c_motor$) such that the precision of the joint torques decreased as the voluntary motor command increased.
+
+
+% \begin{equation}
+% \tau_{\text{total}} = \textcolor{SOCP_VARIABLE_color}{\tau_{\text{voluntary}}} + \tau_{\text{dfb}}(\textcolor{SOCP_VARIABLE_color}{K_{\text{dfb}}}, \textcolor{SOCP_VARIABLE_color}{q_n}, \textcolor{SOCP_VARIABLE_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}) + \tau_{\text{noise}}(\textcolor{SOCP_VARIABLE_color}{\tau_{\text{voluntary}}}, w_{\text{motor}})
+% \end{equation}
+
+% \begin{equation}
+% \tau_{\text{dfb}} = \textcolor{SOCP_VARIABLE_color}{K_{\text{dfb}}} (\textcolor{SOCP_VARIABLE_color}{\text{ref}_{\text{dfb}}} - S_{\text{dfb}}^{\text{SOCPV}}(\textcolor{SOCP_VARIABLE_color}{q_n}, \textcolor{SOCP_VARIABLE_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}))
+% \end{equation}
+% \begin{equation}
+% S_{\text{dfb}}^{\text{SOCPV}} =
+% \begin{bmatrix}
+% \textcolor{SOCP_VARIABLE_color}{{q_n}_{\text{joints}}} \\
+% \textcolor{SOCP_VARIABLE_color}{\mathop{\dot{q}_n}_{\text{joints}}} \\
+% \textcolor{SOCP_VARIABLE_color}{{q_n}_{\text{somersault}}}
+% \end{bmatrix} +
+% \begin{bmatrix}
+% w_{\text{proprio}} \\
+% w_{\text{proprio}} \\
+% \frac{-1}{\sqrt{2 \pi}} e^{(-0.5 (\frac{H(\textcolor{SOCP_VARIABLE_color}{q_n}, \textcolor{SOCP_VARIABLE_color}{\dot{q}_n})}{10})^2)}
+% + \frac{w_{\text{vestibular}}}{\sqrt{2 \pi}}
+% \end{bmatrix}
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{noise}} = \frac{-10}{\sqrt{2 \pi}} e^{(-0.5 (\frac{\textcolor{SOCP_VARIABLE_color}{\tau_{\text{voluntary}}}}{1000})^2)} + w_{\text{motor}} + \frac{10~w_{\text{motor}}}{\sqrt{2 \pi}}
+% \end{equation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/socp_variable.png}
+\caption{A schematic and mathematics representation of the torques applied to the joints in the \textcolor{SOCP_VARIABLE_color}{SOCPV} formulation.}
+\label{fig:socp_variable}
+\end{figure}
+
+
+\subsection{Stochastic optimal control problem with anticipatory feedback (\textcolor{SOCP_FEEDFORWARD_color}{SOCPA})}\label{subsec:SOCPA}
+This improved stochastic implementation considered random motor and sensory noises directly sampled from a Gaussian distribution (Fig.~\ref{fig:socp_feedforward}).
+The torques applied to the joints were composed of the voluntary motor command ($\textcolor{SOCP_FEEDFORWARD_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), anticipatory feedback corrections ($\tau_{\text{afb}}$), and motor noise ($\tau_{\text{noise}}$).
+The direct feedback corrections were the same as the \textcolor{SOCP_color}{SOCP} implementation.
+The anticipatory feedback corrections were based on visual (time remaining until landing: $\textcolor{SOCP_FEEDFORWARD_color}{T} - t_i$) and vestibular (body spatial orientation: $\textcolor{SOCP_FEEDFORWARD_color}{{q_n}_\text{somersault}}$ and somersault velocity: $\dot{\theta}$) information. 
+A simple forward model used these sensory information to estimate the body orientation at landing.
+The anticipatory feedback corrections applied to the joint torques ($\tau_{\text{afb}}$) were proportional (feedback gain vector: $\textcolor{SOCP_FEEDFORWARD_color}{K_{\text{afb}}}$) to the difference between the current noised sensory information and a sensory reference ($2\pi$: a full somersault rotation at landing).
+The sensory information was corrupted by random noise ($w_{\text{vestibular/visual}}$).
+
+
+% \begin{eqnarray}
+% \tau_{\text{total}} = \textcolor{SOCP_FEEDFORWARD_color}{\tau_{\text{voluntary}}} + \tau_{\text{dfb}}(\textcolor{SOCP_FEEDFORWARD_color}{K_{\text{dfb}}}, \textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}) + \nonumber\\
+% \tau_{\text{afb}}(\textcolor{SOCP_FEEDFORWARD_color}{K_{\text{afb}}}, \textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}, w_{\text{vestibular/visual}}) + \tau_{\text{noise}}(w_{\text{motor}})
+% \end{eqnarray}
+
+% \begin{equation}
+% \tau_{\text{dfb}} = \textcolor{SOCP_FEEDFORWARD_color}{K_{\text{dfb}}} (\textcolor{SOCP_FEEDFORWARD_color}{\text{ref}_{\text{dfb}}} - S_{\text{dfb}}^{\text{SOCPA}}(\textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}))
+% \end{equation}
+% \begin{equation}
+% S_{\text{dfb}}^{\text{SOCPA}} = 
+% \begin{bmatrix}
+% \textcolor{SOCP_FEEDFORWARD_color}{{q_n}_{\text{joints}}} \\
+% \textcolor{SOCP_FEEDFORWARD_color}{\mathop{\dot{q}_n}_{\text{joints}}} \\
+% \textcolor{SOCP_FEEDFORWARD_color}{{q_n}_{\text{somersault}}}
+% \end{bmatrix} + 
+% \begin{bmatrix}
+% w_{\text{proprio}} \\
+% w_{\text{proprio}} \\
+% w_{\text{vestibular}}
+% \end{bmatrix}
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{afb}} = \textcolor{SOCP_FEEDFORWARD_color}{K_{\text{afb}}} (\text{ref}_{\text{afb}} - S_{\text{afb}}^{\text{SOCPA}}(\textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular/visual}})
+% \end{equation}
+% \begin{equation}
+% S_{\text{afb}}^{\text{SOCPA}} = \textcolor{SOCP_FEEDFORWARD_color}{{q_n}_{\text{somersault}}} + \dot{\theta}(\textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}) \centerdot T_{\text{remaining}}(\textcolor{SOCP_FEEDFORWARD_color}{T}) + w_{\text{vestibular/visual}}
+% \end{equation}
+% \begin{equation}
+% \text{ref}_{\text{afb}} = 2\pi
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{noise}} = w_{\text{motor}}
+% \end{equation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/socp_feedforward.png}
+\caption{A schematic and mathematics representation of the torques applied to the joints in the \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} formulation. The index ${.}_i$ relates to the $i^{th}$ shooting node.}
+\label{fig:socp_feedforward}
+\end{figure}
+
+
+\subsection{Stochastic optimal control problem with anticipatory feedback and variable noises (\textcolor{SOCP_plus_color}{SOCP+})}\label{subsec:SOCP_plus}
+This advanced stochastic implementation considered signal-dependent motor noise and state-dependent sensory noise (Fig.~\ref{fig:socp_plus}).
+The torques applied to the joints were composed of the voluntary motor command ($\textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), anticipatory feedback corrections ($\tau_{\text{afb}}$), and motor noise ($\tau_{\text{noise}}$).
+The direct feedback corrections were the same as the \textcolor{SOCP_color}{SOCP} implementation and the anticipatory feedback corrections were the same as the \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} implementation.
+However the vestibular information was corrupted by state-dependent random noise (${c_s}_{\text{vestibular}}$) such that the corruption of the rotation rate information increased as the head angular velocity in the global reference frame ($H$) increased.
+And the visual information was corrupted by state-dependent random noise (${c_s}_{\text{visual}}$) such that the corruption of the remaining time until landing information increased when the landing area was not visible (large $\measuredangle_{\text{gaze}}^{\text{floor}}$).
+The motor perturbation was corrupted by signal-dependent random noise ($c_{motor}$) such that the precision of the joint torques decreased as the voluntary motor command increased.
+
+% \begin{eqnarray}
+% \tau_{\text{total}} = \textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}} + \tau_{\text{dfb}}(\textcolor{SOCP_plus_color}{K_{\text{dfb}}}, \textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}) + \nonumber \\
+% \tau_{\text{afb}}(\textcolor{SOCP_plus_color}{K_{\text{afb}}}, \textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{vestibular/visual}}) + \tau_{\text{noise}}(\textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}}, w_{\text{motor}})
+% \end{eqnarray}
+
+% \begin{equation}
+% \tau_{\text{dfb}} = \textcolor{SOCP_plus_color}{K_{\text{dfb}}} (\textcolor{SOCP_plus_color}{\text{ref}_{\text{dfb}}} - S_{\text{dfb}}^{\text{SOCP+}}(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}))
+% \end{equation}
+% \begin{equation}
+% S_{\text{dfb}}^{\text{SOCP+}} =
+% \begin{bmatrix}
+% \textcolor{SOCP_plus_color}{{q_n}_{\text{joints}}} \\
+% \textcolor{SOCP_plus_color}{\mathop{\dot{q}_n}_{\text{joints}}} \\
+% \textcolor{SOCP_plus_color}{{q_n}_{\text{somersault}}}
+% \end{bmatrix} +
+% \begin{bmatrix}
+% w_{\text{proprio}} \\
+% w_{\text{proprio}} \\
+% \frac{-1}{\sqrt{2 \pi}} e^{(-0.5 (\frac{H(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n})}{10})^2)}
+% + \frac{w_{\text{vestibular}}}{\sqrt{2 \pi}}
+% \end{bmatrix}
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{afb}} = \textcolor{SOCP_plus_color}{K_{\text{afb}}} (\text{ref}_{\text{afb}} - S_{\text{afb}}^{\text{SOCP+}}(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{proprio}}, w_{\text{vestibular}}, w_{\text{visual}})
+% \end{equation}
+% \begin{equation}
+% S_{\text{afb}}^{\text{SOCP+}} = {\tilde{q_n}}_{\text{somersault}}(\textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{vestibular}}) + \tilde{\dot{\theta}}(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}, w_{\text{vestibular}}) \centerdot \tilde{T}_{\text{remaining}}(\textcolor{SOCP_plus_color}{T}, w_{\text{visual}})
+% \end{equation}
+% \begin{equation}
+% {\tilde{q_n}}_{\text{somersault}} = \textcolor{SOCP_plus_color}{{q_n}_{\text{somersault}}} + (\frac{-1}{\sqrt{2\pi}} e^{(-0.5 (\frac{H(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{ \dot{q}_n})}{10})^2)} + \frac{w_{\text{vestibular}}}{\sqrt{2\pi}})
+% \end{equation}
+% \begin{equation}
+% \tilde{\dot{\theta}} = \dot{\theta}(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n}) + (\frac{-1}{\sqrt{2 \pi}} e^{(-0.5 (\frac{H(\textcolor{SOCP_plus_color}{q_n}, \textcolor{SOCP_plus_color}{\dot{q}_n})}{10})^2)}
+% + \frac{w_{\text{vestibular}}}{\sqrt{2 \pi}})
+% \end{equation}
+% \begin{equation}
+% \tilde{T}_{\text{remaining}} = \textcolor{SOCP_plus_color}{T} - \frac{\textcolor{SOCP_plus_color}{T}}{N} i + \frac{5~w_{\text{visual}}~\sin{(0.5 \measuredangle_{\text{gaze}}^{\text{floor}} - \pi / 2)}}{\sqrt{0.1^2 + \sin{(0.5 \measuredangle_{\text{gaze}}^{\text{floor}} - \pi / 2)}^2}} + w_{\text{visual}} + \frac{5~w_{\text{visual}}}{\sqrt{0.1^2 + 1}}
+% \end{equation}
+% \begin{equation}
+% \text{ref}_{\text{afb}} = 2\pi
+% \end{equation}
+% \begin{equation}
+% \tau_{\text{noise}} = \frac{-10}{\sqrt{2 \pi}} e^{(-0.5 (\frac{\textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}}}{1000})^2)} + w_{\text{motor}} + \frac{10~w_{\text{motor}}}{\sqrt{2 \pi}}
+% \end{equation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/socp_plus.png}
+\caption{A schematic and mathematics representation of the torques applied to the joints in the \textcolor{SOCP_plus_color}{SOCP+} formulation. The $\tilde{.}$ symbol represents a corrupted sensory information.}
+\label{fig:socp}
+\end{figure}
+
+
+\subsection{Optimization problem implementation}
+\setcounter{equation}{26}
+The optimization problems were transcribed using direct multiple-shooting.
+The total duration of the movement ($T$) was included to the optimal control problem as an optimization variable.
+The movement time was discretized into 16 time intervals of equal duration.
+Continuity constraints ($g_{DMS}$) were imposed at each time interval transitions to ensure the joint generalized coordinates and velocities are continuous throughout the entire movement.
+%
+\begin{equation}
+g_{\text{DMS}} : 
+\begin{bmatrix}
+q_{j+1} \\ 
+\dot{q}_{i+1}
+\end{bmatrix} 
+= \int_{t_i}^{t_{i+1}}{
+\begin{bmatrix}
+\dot{q}_i \\ 
+F(q_i, \dot{q}_i, \tau_{{\text{total}}_i})
+\end{bmatrix}
+dt}
+\end{equation}
+
+Specific constraints were also added to ensure the digital athlete landed the backward somersault on the floor ($g_1$) with its center of mass over it's feet ($g_2$).
+%
+\begin{eqnarray}
+g_1 : P(q, T)_z = 0 \\
+g_2: P(q, T)_y - CoM(q, T)_y = 0
+\end{eqnarray}
+%
+\noindent where $P$ is the position of the forefoot marker and $CoM$ is the position of the center of mass.
+An initial standing posture with extended body and arms upward, vertical velocity ($2~m/s$) and somersault velocity ($450\degree/s$) were imposed to match real athletes' take-off position and to make sure implementations were comparable.
+For the stochastic version, an additional constraint was added so that the reference ($ref$) sensory input was equal to the mean sensory input ($S$) over all episodes.
+\begin{equation}
+g_3: ref(t_i) - \overline{S}(q, \dot{q}, t_i) = 0
+\end{equation} 
+
+
+The cost function was composed of multiple terms to generate the best acrobatic movement, while ensuring numerical stability.
+The main objective of the stochastic optimal control problems was to minimize landing instability, which is defined as minimizing the variability in center of mass position, center of mass velocity and body angular velocity at landing.
+\begin{eqnarray}
+\phi_1: \num{1e+5}~\sum_{n}^{episodes}{(CoM(q_n, t_i)_y -\overline{CoM(q, t_i)})^2} \\
+\phi_2: \num{1e+5}~\sum_{n}^{episodes}{(\dot{CoM}(q_n, t_i)_y -\overline{\dot{CoM}(q, t_i)})^2} \\
+\phi_3: \num{1e+5}~\sum_{n}^{episodes}{(L(q_n, \dot{q}_n, t_i)/I(q_n, t_i) -\overline{L(q, \dot{q}, t_i)/I(q, t_i)})^2}
+\end{eqnarray}
+\noindent where $n$ is the number of the episode, $L$ is the whole body angular momentum, and $I$ is the whole body inertia.
+An additional term was added to minimize the expected efforts needed to complete the acrobatic.
+\begin{equation}
+\phi_4 = 0.01~\int_{0}^{T}{\tau_{\text{total}}^2~dt}
+\end{equation}
+Another term minimized the expected efforts rate of change to promote a psychophysiological motor command.
+\begin{equation}
+\phi_5 = 0.01~\int_{0}^{T}{{\delta~\tau_{\text{total}}}^2~dt}
+\end{equation}
+Regularization terms were also added to ensure the feedback gains, feedback gains rate of change, and total movement duration stayed within acceptable rages.
+\begin{eqnarray}
+\phi_6 = \num{1e-5}~\int_{0}^{T}{K^2~dt} \\
+\phi_7 = 1~\int_{0}^{T}{\delta ~K^2~dt} \\
+\phi_8 = 0.01~T
+\end{eqnarray}
+The weights of the objective terms were manually fine tuned.
+
+
+The complete approximate stochastic optimal control transcription was as follows:
+\begin{equation}
+\begin{array}{ll@{}ll}
+\underset{q, \dot{q}, \tau_{\text{voluntary}}, \text{ref}, K, T}{\min} & \sum{\phi_i} \\
+\text{~~~~~~~~~s.t.} & g_{\text{DMS}} \\
+            & g_1 = 0 \\
+            & g_2 = 0 \\
+            & g_3 = 0 \\
+            & q \in \mathcal{Q} \\
+            & \dot{q} \in \dot{\mathcal{Q}} \\
+            & \tau_{\text{voluntary}} \in \mathcal{\tau} \\
+            & \text{ref} \in \mathcal{R} \\
+            & K \in \mathcal{K} \\
+            & T \in \mathcal{T} \\
+\end{array}
+\end{equation}
+
+
+\nolinenumbers
+
+\bibliography{biblio}
+
+
+
+\end{document}
+
