@@ -52,35 +52,6 @@ segment	Head_1
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_1
-	parent Head_1
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_1
-	parent Eyes_1
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_1
-	parent Eyes_1
-	position 0 -1 0
-endmarker
-
 segment	Arm_1
 	parent	Thorax_1
 	RTinMatrix	1
@@ -278,35 +249,6 @@ segment	Head_2
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_2
-	parent Head_2
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_2
-	parent Eyes_2
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_2
-	parent Eyes_2
-	position 0 -1 0
-endmarker
 
 segment	Arm_2
 	parent	Thorax_2
@@ -509,35 +451,6 @@ segment	Head_3
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_3
-	parent Head_3
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_3
-	parent Eyes_3
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_3
-	parent Eyes_3
-	position 0 -1 0
-endmarker
-
 segment	Arm_3
 	parent	Thorax_3
 	RTinMatrix	1
@@ -736,35 +649,6 @@ segment	Head_4
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_4
-	parent Head_4
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_4
-	parent Eyes_4
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_4
-	parent Eyes_4
-	position 0 -1 0
-endmarker
 
 segment	Arm_4
 	parent	Thorax_4
@@ -965,35 +849,6 @@ segment	Head_5
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_5
-	parent Head_5
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_5
-	parent Eyes_5
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_5
-	parent Eyes_5
-	position 0 -1 0
-endmarker
 
 segment	Arm_5
 	parent	Thorax_5
@@ -1196,35 +1051,6 @@ segment	Head_6
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_6
-	parent Head_6
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_6
-	parent Eyes_6
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_6
-	parent Eyes_6
-	position 0 -1 0
-endmarker
-
 segment	Arm_6
 	parent	Thorax_6
 	RTinMatrix	1
@@ -1423,35 +1249,6 @@ segment	Head_7
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_7
-	parent Head_7
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_7
-	parent Eyes_7
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_7
-	parent Eyes_7
-	position 0 -1 0
-endmarker
 
 segment	Arm_7
 	parent	Thorax_7
@@ -1655,35 +1452,6 @@ segment	Head_8
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_8
-	parent Head_8
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_8
-	parent Eyes_8
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_8
-	parent Eyes_8
-	position 0 -1 0
-endmarker
-
 segment	Arm_8
 	parent	Thorax_8
 	RTinMatrix	1
@@ -1884,35 +1652,6 @@ segment	Head_9
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_9
-	parent Head_9
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_9
-	parent Eyes_9
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_9
-	parent Eyes_9
-	position 0 -1 0
-endmarker
 
 segment	Arm_9
 	parent	Thorax_9
@@ -2115,35 +1854,6 @@ segment	Head_10
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_10
-	parent Head_10
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_10
-	parent Eyes_10
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_10
-	parent Eyes_10
-	position 0 -1 0
-endmarker
-
 segment	Arm_10
 	parent	Thorax_10
 	RTinMatrix	1
@@ -2343,35 +2053,6 @@ segment	Head_11
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_11
-	parent Head_11
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_11
-	parent Eyes_11
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_11
-	parent Eyes_11
-	position 0 -1 0
-endmarker
 
 segment	Arm_11
 	parent	Thorax_11
@@ -2574,35 +2255,6 @@ segment	Head_12
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_12
-	parent Head_12
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_12
-	parent Eyes_12
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_12
-	parent Eyes_12
-	position 0 -1 0
-endmarker
-
 segment	Arm_12
 	parent	Thorax_12
 	RTinMatrix	1
@@ -2802,35 +2454,6 @@ segment	Head_13
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
 endsegment
-
-segment Eyes_13
-	parent Head_13
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_13
-	parent Eyes_13
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_13
-	parent Eyes_13
-	position 0 -1 0
-endmarker
 
 segment	Arm_13
 	parent	Thorax_13
@@ -3032,35 +2655,6 @@ segment	Head_14
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_14
-	parent Head_14
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_14
-	parent Eyes_14
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_14
-	parent Eyes_14
-	position 0 -1 0
-endmarker
-
 segment	Arm_14
 	parent	Thorax_14
 	RTinMatrix	1
@@ -3261,35 +2855,6 @@ segment	Head_15
 	meshfile mesh/head.stl
 endsegment
 
-segment Eyes_15
-	parent Head_15
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_15
-	parent Eyes_15
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_15
-	parent Eyes_15
-	position 0 -1 0
-endmarker
-
 segment	Arm_15
 	parent	Thorax_15
 	RTinMatrix	1
@@ -3435,1161 +3000,11 @@ marker	Foot_Toe_15
 	position	0.00000000000   -0.0300000000   -0.15000000000
 endmarker
 
-
-
-
-//////////////////////////////////////////////////////////////////////////////////// 16
-
-
-segment	Pelvis_16
-	RT -0.1 0 0	xyz 0 0 0.8
-	translations yz
-	rotations	 x
-	rangesQ
-		-2.5 2.5
-		 -1.0 3.0
-		-3.0 9.0
-	rangesQdot	
-		-100 100
-		-100 100
-		-100 100
-	mass	11.58
-	inertia
-		0.0692	0.0	0.0
-		0.0	0.1254	0.0
-		0.0	0.0	0.1123
-	com	0.0	0.0	0.1044
-	meshfile	mesh/pelvis.stl
-endsegment
-
-segment	Thorax_16
-	parent	Pelvis_16
-	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
-	mass	20.46
-	inertia
-		0.5204	0.0	0.0
-		0.0	0.6185	0.0
-		0.0	0.0	0.2343
-	com	0.0	0.0	0.1767
-	meshfile	mesh/thorax.stl
-endsegment
-
-segment	Head_16
-	parent	Thorax_16
-	rotations	 x
-	rangesQ
-		-70*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
-	mass	5.12
-	inertia
-		0.0881	0.0	0.0
-		0.0	0.0881	0.0
-		0.0	0.0	0.0156
-	com	0.0	0.0	0.0853
-	meshfile mesh/head.stl
-endsegment
-
-segment Eyes_16
-	parent Head_16
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_16
-	parent Eyes_16
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_6
-	parent Eyes_6
-	position 0 -1 0
-endmarker
-
-segment	Arm_16
-	parent	Thorax_16
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	mass	4.72
-	rotations	 x
-	rangesQ	
-		-0.7 3.1
-	rangesQdot	
-		-100 100
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-	meshfile mesh/arm.stl
-endsegment
-
-segment	Forearm_16
-	parent	Arm_16
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-	meshfile mesh/fore_arm.stl
-endsegment
-
-segment	Hand_16
-	parent	Forearm_16
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-	meshfile mesh/hand.stl
-	meshrt -0.5 0 0 xyz 0 0 0
-endsegment
-
-marker	 CENTER_HAND_16
-	parent	Hand_16
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
-
-segment	Thigh_16
-	parent	Pelvis_16
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.0
-		0 0 1 0.0
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-0.4 2.6
-	rangesQdot	
-		-100 100
-	mass	18.98
-	inertia
-		0.3444	0.0	0.0
-		0.0	0.3444	0.0
-		0.0	0.0	0.0674
-	com	0.0	0.0	-0.2017
-	meshfile mesh/thigh.stl
-endsegment
-
-segment	Leg_16
-	parent	Thigh_16
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 1.7e-08
-		0 0 1 -0.462839073
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-2.3 -0.02
-	rangesQdot	
-		-100 100
-	mass	8.36
-	inertia
-		0.1702	0.0	0.0
-		0.0	0.1702	0.0
-		0.0	0.0	0.0122
-	com	0.0	0.0	-0.2026
-	meshfile mesh/leg_left.stl
-endsegment
-
-segment	Foot_16
-	parent	Leg_16
-	RTinMatrix	1
-	RT
-		1.0 0.0 0.0 0.0
-		0.0 6.123233995736766e-17 -1.0 3.36e-07
-		0.0 1.0 6.123233995736766e-17 -0.427480971
-		0 0 0 1
-	mass	2.32
-	inertia
-		0.0178	0.0	0.0
-		0.0	0.0022	0.0
-		0.0	0.0	0.0176
-	com	0.0	0.0	-0.0757
-	meshfile mesh/foot.stl
-endsegment
-
-marker	 BELOW_KNEE_16
-	parent	Leg_16
-	position 0.0 0.07 -0.1575
-	technical 1
-endmarker
-marker	 FOOT_16
-	parent	Foot_16
-	position 0.0 -0.03 -0.12
-	technical 1
-endmarker
-
-marker	Foot_Heel_16
-	parent	Foot_16
-	position	0.00000000000   -0.0300000000    0.05000000000
-endmarker
-
-marker	Foot_Toe_6
-	parent	Foot_6
-	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-
-
-//////////////////////////////////////////////////////////////////////////////////// 17
-
-segment	Pelvis_17
-	RT -0.1 0 0	xyz 0 0 0.8
-	translations yz
-	rotations	 x
-	rangesQ
-		-2.5 2.5
-		 -1.0 3.0
-		-3.0 9.0
-	rangesQdot	
-		-100 100
-		-100 100
-		-100 100
-	mass	11.58
-	inertia
-		0.0692	0.0	0.0
-		0.0	0.1254	0.0
-		0.0	0.0	0.1123
-	com	0.0	0.0	0.1044
-	meshfile	mesh/pelvis.stl
-endsegment
-
-segment	Thorax_17
-	parent	Pelvis_17
-	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
-	mass	20.46
-	inertia
-		0.5204	0.0	0.0
-		0.0	0.6185	0.0
-		0.0	0.0	0.2343
-	com	0.0	0.0	0.1767
-	meshfile	mesh/thorax.stl
-endsegment
-
-segment	Head_17
-	parent	Thorax_17
-	rotations	 x
-	rangesQ
-		-70*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
-	mass	5.12
-	inertia
-		0.0881	0.0	0.0
-		0.0	0.0881	0.0
-		0.0	0.0	0.0156
-	com	0.0	0.0	0.0853
-	meshfile mesh/head.stl
-endsegment
-
-segment Eyes_17
-	parent Head_17
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_17
-	parent Eyes_17
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_17
-	parent Eyes_17
-	position 0 -1 0
-endmarker
-
-segment	Arm_17
-	parent	Thorax_17
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	mass	4.72
-	rotations	 x
-	rangesQ	
-		-0.7 3.1
-	rangesQdot	
-		-100 100
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-	meshfile mesh/arm.stl
-endsegment
-
-segment	Forearm_17
-	parent	Arm_17
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-	meshfile mesh/fore_arm.stl
-endsegment
-
-segment	Hand_17
-	parent	Forearm_17
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-	meshfile mesh/hand.stl
-	meshrt -0.5 0 0 xyz 0 0 0
-endsegment
-
-marker	 CENTER_HAND_17
-	parent	Hand_17
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
-
-segment	Thigh_17
-	parent	Pelvis_17
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.0
-		0 0 1 0.0
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-0.4 2.6
-	rangesQdot	
-		-100 100
-	mass	18.98
-	inertia
-		0.3444	0.0	0.0
-		0.0	0.3444	0.0
-		0.0	0.0	0.0674
-	com	0.0	0.0	-0.2017
-	meshfile mesh/thigh.stl
-endsegment
-
-segment	Leg_17
-	parent	Thigh_17
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 1.7e-08
-		0 0 1 -0.462839073
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-2.3 -0.02
-	rangesQdot	
-		-100 100
-	mass	8.36
-	inertia
-		0.1702	0.0	0.0
-		0.0	0.1702	0.0
-		0.0	0.0	0.0122
-	com	0.0	0.0	-0.2026
-	meshfile mesh/leg_left.stl
-endsegment
-
-segment	Foot_17
-	parent	Leg_17
-	RTinMatrix	1
-	RT
-		1.0 0.0 0.0 0.0
-		0.0 6.123233995736766e-17 -1.0 3.36e-07
-		0.0 1.0 6.123233995736766e-17 -0.427480971
-		0 0 0 1
-	mass	2.32
-	inertia
-		0.0178	0.0	0.0
-		0.0	0.0022	0.0
-		0.0	0.0	0.0176
-	com	0.0	0.0	-0.0757
-	meshfile mesh/foot.stl
-endsegment
-
-marker	 BELOW_KNEE_17
-	parent	Leg_17
-	position 0.0 0.07 -0.1575
-	technical 1
-endmarker
-marker	 FOOT_17
-	parent	Foot_17
-	position 0.0 -0.03 -0.12
-	technical 1
-endmarker
-
-marker	Foot_Heel_17
-	parent	Foot_17
-	position	0.00000000000   -0.0300000000    0.05000000000
-endmarker
-
-marker	Foot_Toe_17
-	parent	Foot_17
-	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////////// 18
-
-
-segment	Pelvis_18
-	RT -0.1 0 0	xyz 0 0 0.8
-	translations yz
-	rotations	 x
-	rangesQ
-		-2.5 2.5
-		 -1.0 3.0
-		-3.0 9.0
-	rangesQdot	
-		-100 100
-		-100 100
-		-100 100
-	mass	11.58
-	inertia
-		0.0692	0.0	0.0
-		0.0	0.1254	0.0
-		0.0	0.0	0.1123
-	com	0.0	0.0	0.1044
-	meshfile	mesh/pelvis.stl
-endsegment
-
-segment	Thorax_18
-	parent	Pelvis_18
-	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
-	mass	20.46
-	inertia
-		0.5204	0.0	0.0
-		0.0	0.6185	0.0
-		0.0	0.0	0.2343
-	com	0.0	0.0	0.1767
-	meshfile	mesh/thorax.stl
-endsegment
-
-segment	Head_18
-	parent	Thorax_18
-	rotations	 x
-	rangesQ
-		-70*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
-	mass	5.12
-	inertia
-		0.0881	0.0	0.0
-		0.0	0.0881	0.0
-		0.0	0.0	0.0156
-	com	0.0	0.0	0.0853
-	meshfile mesh/head.stl
-endsegment
-
-segment Eyes_18
-	parent Head_18
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_18
-	parent Eyes_18
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_18
-	parent Eyes_18
-	position 0 -1 0
-endmarker
-
-segment	Arm_18
-	parent	Thorax_18
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	mass	4.72
-	rotations	 x
-	rangesQ	
-		-0.7 3.1
-	rangesQdot	
-		-100 100
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-	meshfile mesh/arm.stl
-endsegment
-
-segment	Forearm_18
-	parent	Arm_18
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-	meshfile mesh/fore_arm.stl
-endsegment
-
-segment	Hand_18
-	parent	Forearm_18
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-	meshfile mesh/hand.stl
-	meshrt -0.5 0 0 xyz 0 0 0
-endsegment
-
-marker	 CENTER_HAND_18
-	parent	Hand_18
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
-
-segment	Thigh_18
-	parent	Pelvis_18
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.0
-		0 0 1 0.0
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-0.4 2.6
-	rangesQdot	
-		-100 100
-	mass	18.98
-	inertia
-		0.3444	0.0	0.0
-		0.0	0.3444	0.0
-		0.0	0.0	0.0674
-	com	0.0	0.0	-0.2017
-	meshfile mesh/thigh.stl
-endsegment
-
-segment	Leg_18
-	parent	Thigh_18
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 1.7e-08
-		0 0 1 -0.462839073
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-2.3 -0.02
-	rangesQdot	
-		-100 100
-	mass	8.36
-	inertia
-		0.1702	0.0	0.0
-		0.0	0.1702	0.0
-		0.0	0.0	0.0122
-	com	0.0	0.0	-0.2026
-	meshfile mesh/leg_left.stl
-endsegment
-
-segment	Foot_18
-	parent	Leg_18
-	RTinMatrix	1
-	RT
-		1.0 0.0 0.0 0.0
-		0.0 6.123233995736766e-17 -1.0 3.36e-07
-		0.0 1.0 6.123233995736766e-17 -0.427480971
-		0 0 0 1
-	mass	2.32
-	inertia
-		0.0178	0.0	0.0
-		0.0	0.0022	0.0
-		0.0	0.0	0.0176
-	com	0.0	0.0	-0.0757
-	meshfile mesh/foot.stl
-endsegment
-
-marker	 BELOW_KNEE_18
-	parent	Leg_18
-	position 0.0 0.07 -0.1575
-	technical 1
-endmarker
-marker	 FOOT_18
-	parent	Foot_18
-	position 0.0 -0.03 -0.12
-	technical 1
-endmarker
-
-marker	Foot_Heel_18
-	parent	Foot_18
-	position	0.00000000000   -0.0300000000    0.05000000000
-endmarker
-
-marker	Foot_Toe_18
-	parent	Foot_18
-	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////////// 19
-
-
-segment	Pelvis_19
-	RT -0.1 0 0	xyz 0 0 0.8
-	translations yz
-	rotations	 x
-	rangesQ
-		-2.5 2.5
-		 -1.0 3.0
-		-3.0 9.0
-	rangesQdot	
-		-100 100
-		-100 100
-		-100 100
-	mass	11.58
-	inertia
-		0.0692	0.0	0.0
-		0.0	0.1254	0.0
-		0.0	0.0	0.1123
-	com	0.0	0.0	0.1044
-	meshfile	mesh/pelvis.stl
-endsegment
-
-segment	Thorax_19
-	parent	Pelvis_19
-	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
-	mass	20.46
-	inertia
-		0.5204	0.0	0.0
-		0.0	0.6185	0.0
-		0.0	0.0	0.2343
-	com	0.0	0.0	0.1767
-	meshfile	mesh/thorax.stl
-endsegment
-
-segment	Head_19
-	parent	Thorax_19
-	rotations	 x
-	rangesQ
-		-70*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
-	mass	5.12
-	inertia
-		0.0881	0.0	0.0
-		0.0	0.0881	0.0
-		0.0	0.0	0.0156
-	com	0.0	0.0	0.0853
-	meshfile mesh/head.stl
-endsegment
-
-segment Eyes_19
-	parent Head_19
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_19
-	parent Eyes_19
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_19
-	parent Eyes_19
-	position 0 -1 0
-endmarker
-
-segment	Arm_19
-	parent	Thorax_19
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	mass	4.72
-	rotations	 x
-	rangesQ	
-		-0.7 3.1
-	rangesQdot	
-		-100 100
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-	meshfile mesh/arm.stl
-endsegment
-
-segment	Forearm_19
-	parent	Arm_19
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-	meshfile mesh/fore_arm.stl
-endsegment
-
-segment	Hand_19
-	parent	Forearm_19
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-	meshfile mesh/hand.stl
-	meshrt -0.5 0 0 xyz 0 0 0
-endsegment
-
-marker	 CENTER_HAND_19
-	parent	Hand_19
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
-
-segment	Thigh_19
-	parent	Pelvis_19
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.0
-		0 0 1 0.0
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-0.4 2.6
-	rangesQdot	
-		-100 100
-	mass	18.98
-	inertia
-		0.3444	0.0	0.0
-		0.0	0.3444	0.0
-		0.0	0.0	0.0674
-	com	0.0	0.0	-0.2017
-	meshfile mesh/thigh.stl
-endsegment
-
-segment	Leg_19
-	parent	Thigh_19
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 1.7e-08
-		0 0 1 -0.462839073
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-2.3 -0.02
-	rangesQdot	
-		-100 100
-	mass	8.36
-	inertia
-		0.1702	0.0	0.0
-		0.0	0.1702	0.0
-		0.0	0.0	0.0122
-	com	0.0	0.0	-0.2026
-	meshfile mesh/leg_left.stl
-endsegment
-
-segment	Foot_19
-	parent	Leg_19
-	RTinMatrix	1
-	RT
-		1.0 0.0 0.0 0.0
-		0.0 6.123233995736766e-17 -1.0 3.36e-07
-		0.0 1.0 6.123233995736766e-17 -0.427480971
-		0 0 0 1
-	mass	2.32
-	inertia
-		0.0178	0.0	0.0
-		0.0	0.0022	0.0
-		0.0	0.0	0.0176
-	com	0.0	0.0	-0.0757
-	meshfile mesh/foot.stl
-endsegment
-
-marker	 BELOW_KNEE_19
-	parent	Leg_19
-	position 0.0 0.07 -0.1575
-	technical 1
-endmarker
-marker	 FOOT_19
-	parent	Foot_19
-	position 0.0 -0.03 -0.12
-	technical 1
-endmarker
-
-marker	Foot_Heel_19
-	parent	Foot_19
-	position	0.00000000000   -0.0300000000    0.05000000000
-endmarker
-
-marker	Foot_Toe_19
-	parent	Foot_19
-	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////////// 20
-
-
-segment	Pelvis_20
-	RT -0.1 0 0	xyz 0 0 0.8
-	translations yz
-	rotations	 x
-	rangesQ
-		-2.5 2.5
-		 -1.0 3.0
-		-3.0 9.0
-	rangesQdot	
-		-100 100
-		-100 100
-		-100 100
-	mass	11.58
-	inertia
-		0.0692	0.0	0.0
-		0.0	0.1254	0.0
-		0.0	0.0	0.1123
-	com	0.0	0.0	0.1044
-	meshfile	mesh/pelvis.stl
-endsegment
-
-segment	Thorax_20
-	parent	Pelvis_20
-	RT 0 0 0	xyz 0.0 -0.0515404739 0.1813885235
-	mass	20.46
-	inertia
-		0.5204	0.0	0.0
-		0.0	0.6185	0.0
-		0.0	0.0	0.2343
-	com	0.0	0.0	0.1767
-	meshfile	mesh/thorax.stl
-endsegment
-
-segment	Head_20
-	parent	Thorax_20
-	rotations	 x
-	rangesQ
-		-70*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	RT 0 0 0	xyz 0.0 0.0435036145 0.3479414452
-	mass	5.12
-	inertia
-		0.0881	0.0	0.0
-		0.0	0.0881	0.0
-		0.0	0.0	0.0156
-	com	0.0	0.0	0.0853
-	meshfile mesh/head.stl
-endsegment
-
-segment Eyes_20
-	parent Head_20
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_20
-	parent Eyes_20
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_20
-	parent Eyes_20
-	position 0 -1 0
-endmarker
-
-segment	Arm_20
-	parent	Thorax_20
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.023425367
-		0 0  1 0.211508031
-		0 0 0 1
-	mass	4.72
-	rotations	 x
-	rangesQ	
-		-0.7 3.1
-	rangesQdot	
-		-100 100
-	inertia
-		0.03770325476957999	0.0	0.0
-		0.0	0.03770325476957999	0.0
-		0.0	0.0	0.005996554197399041
-	com	0.0	0.0	-0.1427
-	meshfile mesh/arm.stl
-endsegment
-
-segment	Forearm_20
-	parent	Arm_20
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 -0.000261286
-		0 0  1 -0.338601867
-		0 0 0 1
-	mass	2.52
-	inertia
-		0.013022885689772144	0.0	0.0
-		0.0	0.013154165656146893	0.0
-		0.0	0.0	0.0019576149660600886
-	com	0.0	0.0	-0.1264
-	meshfile mesh/fore_arm.stl
-endsegment
-
-segment	Hand_20
-	parent	Forearm_20
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.001217047
-		0 0  1 -0.265871926
-		0 0 0 1
-	mass	1.12
-	inertia
-		0.0027648635147748315	0.0	0.0
-		0.0	0.0031487689115472926	0.0
-		0.0	0.0	0.0006717710781510774
-	com	0.01927061	-0.007717575	-0.051481325
-	meshfile mesh/hand.stl
-	meshrt -0.5 0 0 xyz 0 0 0
-endsegment
-
-marker	 CENTER_HAND_20
-	parent	Hand_20
-	position 0.0 0.025 -0.0655
-	technical 1
-endmarker
-
-segment	Thigh_20
-	parent	Pelvis_20
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 0.0
-		0 0 1 0.0
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-0.4 2.6
-	rangesQdot	
-		-100 100
-	mass	18.98
-	inertia
-		0.3444	0.0	0.0
-		0.0	0.3444	0.0
-		0.0	0.0	0.0674
-	com	0.0	0.0	-0.2017
-	meshfile mesh/thigh.stl
-endsegment
-
-segment	Leg_20
-	parent	Thigh_20
-	RTinMatrix	1
-	RT
-		1  0  0 0.0
-		0 1 0 1.7e-08
-		0 0 1 -0.462839073
-		0 0 0 1
-	rotations	 x
-	rangesQ	
-		-2.3 -0.02
-	rangesQdot	
-		-100 100
-	mass	8.36
-	inertia
-		0.1702	0.0	0.0
-		0.0	0.1702	0.0
-		0.0	0.0	0.0122
-	com	0.0	0.0	-0.2026
-	meshfile mesh/leg_left.stl
-endsegment
-
-segment	Foot_20
-	parent	Leg_20
-	RTinMatrix	1
-	RT
-		1.0 0.0 0.0 0.0
-		0.0 6.123233995736766e-17 -1.0 3.36e-07
-		0.0 1.0 6.123233995736766e-17 -0.427480971
-		0 0 0 1
-	mass	2.32
-	inertia
-		0.0178	0.0	0.0
-		0.0	0.0022	0.0
-		0.0	0.0	0.0176
-	com	0.0	0.0	-0.0757
-	meshfile mesh/foot.stl
-endsegment
-
-marker	 BELOW_KNEE_20
-	parent	Leg_20
-	position 0.0 0.07 -0.1575
-	technical 1
-endmarker
-marker	 FOOT_20
-	parent	Foot_20
-	position 0.0 -0.03 -0.12
-	technical 1
-endmarker
-
-marker	Foot_Heel_20
-	parent	Foot_20
-	position	0.00000000000   -0.0300000000    0.05000000000
-endmarker
-
-marker	Foot_Toe_20
-	parent	Foot_20
-	position	0.00000000000   -0.0300000000   -0.15000000000
-endmarker
-
-
 //////////////////////////////////////////////////////////////////////////////////// mean
 
 
 segment	Pelvis_mean
-	RT -0.1 0 0	xyz 0.5 0 0.8
+	RT -0.1 0 0	xyz 0.2 0 0.8
 	translations yz
 	rotations	 x
 	rangesQ
@@ -4607,7 +3022,7 @@ segment	Pelvis_mean
 		0.0	0.0	0.1123
 	com	0.0	0.0	0.1044
 	meshfile	mesh/pelvis.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Thorax_mean
@@ -4620,7 +3035,7 @@ segment	Thorax_mean
 		0.0	0.0	0.2343
 	com	0.0	0.0	0.1767
 	meshfile	mesh/thorax.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Head_mean
@@ -4638,38 +3053,8 @@ segment	Head_mean
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
-
-segment Eyes_mean
-	parent Head_mean
-	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
-	rotations x
-	rangesQ
-		-30*3.14/180 3.14/8
-	rangesQdot	
-		-100 100
-	com 0.0 0.0 0.0
-	mass 0.015 
-	inertia
-		0.0001 0.0 0.0
-		0.0 0.0001 0.0
-		0.0 0.0 0.0001
-	meshfile mesh/cone.stl
-	meshrt 3.14 0 0 xyz 0 1.5 0
-	meshcolor 0.643 0.412 0.945
-	meshscale 0.01 1 0.01
-endsegment
-
-marker eyes_vect_start_mean
-	parent Eyes_mean
-	position 0 0 0
-endmarker
-
-marker eyes_vect_end_mean
-	parent Eyes_mean
-	position 0 -1 0
-endmarker
 
 segment	Arm_mean
 	parent	Thorax_mean
@@ -4691,7 +3076,7 @@ segment	Arm_mean
 		0.0	0.0	0.005996554197399041
 	com	0.0	0.0	-0.1427
 	meshfile mesh/arm.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Forearm_mean
@@ -4709,7 +3094,7 @@ segment	Forearm_mean
 		0.0	0.0	0.0019576149660600886
 	com	0.0	0.0	-0.1264
 	meshfile mesh/fore_arm.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Hand_mean
@@ -4728,7 +3113,7 @@ segment	Hand_mean
 	com	0.01927061	-0.007717575	-0.051481325
 	meshfile mesh/hand.stl
 	meshrt -0.5 0 0 xyz 0 0 0
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 marker	 CENTER_HAND_mean
@@ -4757,7 +3142,7 @@ segment	Thigh_mean
 		0.0	0.0	0.0674
 	com	0.0	0.0	-0.2017
 	meshfile mesh/thigh.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Leg_mean
@@ -4780,7 +3165,7 @@ segment	Leg_mean
 		0.0	0.0	0.0122
 	com	0.0	0.0	-0.2026
 	meshfile mesh/leg_left.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 segment	Foot_mean
@@ -4798,7 +3183,7 @@ segment	Foot_mean
 		0.0	0.0	0.0176
 	com	0.0	0.0	-0.0757
 	meshfile mesh/foot.stl
-	meshcolor 0.643 0.412 0.945
+	meshcolor 0.945 0.561 0.004
 endsegment
 
 marker	 BELOW_KNEE_mean

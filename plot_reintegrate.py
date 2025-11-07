@@ -319,8 +319,21 @@ def noisy_integrate_socp(
 
         return qdot_roots, qdot_joints, ddq_roots.reshape(-1, ), ddq_joints.reshape(-1, )
 
-    def integrate(time, q_roots, q_joints, qdot_roots, qdot_joints, tau_joints, k, ref, motor_noise, sensory_noise,
-                  nlp, DMS_sensory_reference_func, forward_dynamics_func):
+    def integrate(
+            time,
+            q_roots,
+            q_joints,
+            qdot_roots,
+            qdot_joints,
+            tau_joints,
+            k,
+            ref,
+            motor_noise,
+            sensory_noise,
+            nlp,
+            DMS_sensory_reference_func,
+            forward_dynamics_func,
+    ):
         dt = time / n_shooting
         h = dt / 5
         q_roots_integrated = np.zeros((3 * nb_random, n_shooting + 1))
