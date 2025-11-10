@@ -40,6 +40,6 @@ def bioviz_animate(biorbd_model_path_with_mesh, q, result_folder, name):
     b.set_camera_zoom(0.39)
     b.maximize()
     b.update()
-    b.exec(frame_step=3,
+    b.exec(frame_step=2,
            save_path=f"videos/{result_folder}/kinograms/{name}.png")
 
