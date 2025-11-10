@@ -118,9 +118,9 @@
 
 \author*[1]{\fnm{Charbonneau} \sur{Eve}}\email{eve.charbonneau.1@umontreal.ca}
 
-% \author[2]{\fnm{De Groote} \sur{Friedl}}\email{friedl.degroote@kuleuven.be}
+\author[2]{\fnm{De Groote} \sur{Friedl}}\email{friedl.degroote@kuleuven.be}
 
-% \author[1,3]{\fnm{Begon} \sur{Mickaël}}\email{mickael.begon@umontreal.com}
+\author[1,3]{\fnm{Begon} \sur{Micka\"{e}l}}\email{mickael.begon@umontreal.com}
 
 \affil*[1]{\orgdiv{Faculty of Medicine}, \orgname{Universit\'{e} de Montr\'{e}al}, \orgaddress{\street{2900 \'{E}douard-Montpetit}, \city{Montreal}, \postcode{H3T 1J4}, \state{Quebec}, \country{Canada}}}
 
@@ -136,82 +136,86 @@
 %% Sample for unstructured abstract %%
 %%==================================%%
 
-\abstract{TODO}
-% \abstract{Optimal control theory has long been used to model acrobatic movements, producing kinematics that resemble athletes' motion. 
-% However, motor strategies generated through such deterministic optimal control neglect human motor variability and the perception-action coupling needed to execute complex real-life movements. 
-% Thus, they are only optimal from a motor perspective and fail to reproduce the sensorimotor strategies exhibited by athletes.
-% Indeed, since athletes strongly rely on their senses to achieve high performance, their need for accurate sensory input often impacts their  kinematics. To overcome these limitations, optimal feedback control theory can be used to incorporate motor noise, state variability, and feedback loops  subject to sensory noise. 
-% This study proposes an advanced stochastic optimal control framework that includes state-dependent sensory noise (such as vestibular acuity varying with head velocity) and prospective adaptations to the motor plan (such as moment of inertia modulations based on current somersault angular velocity). 
-% Using a full-body, torque-driven skeletal model, we generated motor policies for a backward somersault minimizing landing variability and joint efforts. 
-% The techniques generated through our stochastic implementation were compared with deterministic optimal control. 
-% The stochastic implementation successfully replicated sensory acquisition strategies used by gymnasts: reducing head rotational velocity to increase vestibular acuity and fixating the gaze on the floor to prepare for landing, behaviors that the deterministic implementation failed to replicate. 
-% Our stochastic optimal control framework opens the possibility to analyze the interaction between the sensory and motor strategies during complex human movements.}
+\abstract{Optimal control theory has long been used to model acrobatic movements, producing kinematics that resemble athletes' motion. 
+However, motor strategies generated through such deterministic optimal control neglect human motor variability and the perception-action coupling needed to execute complex real-life movements. 
+Thus, they are only optimal from a motor perspective and fail to reproduce the sensorimotor strategies exhibited by athletes.
+Indeed, since athletes strongly rely on their senses to achieve high performance, their need for accurate sensory input often impacts their  kinematics. To overcome these limitations, optimal feedback control theory can be used to incorporate motor noise, state variability, and feedback loops  subject to sensory noise. 
+This study proposes an advanced stochastic optimal control framework that includes state-dependent sensory noise (such as vestibular acuity varying with head velocity) and prospective adaptations to the motor plan (such as moment of inertia modulations based on current somersault angular velocity). 
+Using a full-body, torque-driven skeletal model, we generated motor policies for a backward somersault minimizing landing variability and joint efforts. 
+The techniques generated through our stochastic implementation were compared with deterministic optimal control. 
+The stochastic implementation successfully replicated sensory acquisition strategies used by gymnasts: reducing head rotational velocity to increase vestibular acuity and fixating the gaze on the floor to prepare for landing, behaviors that the deterministic implementation failed to replicate. 
+Our stochastic optimal control framework opens the possibility to analyze the interaction between the sensory and motor strategies during complex human movements.}
 
-\keywords{TODO}
-% \keywords{Predictive simulation, Somersault, Robust techniques, Visual feedback, Vestibular feedback}
+\keywords{Predictive simulation, Somersault, Robust techniques, Visual feedback, Vestibular feedback}
 
 \maketitle
 
 \section{Introduction}\label{sec:intro}
 
-% \comEC{TODO}
 % Human movement synthesis is important for what if scenarios
-Predictive simulations, based on optimal control theory, have been used for decades by biomechanists wishing to test hypothetical cases (\textit{i.e.}, \textit{what-if} scenarios).
-It is a quick, cheap, safe, and powerful tool allowing to predict how human move or should move to minimize performance criteria.
+Predictive simulations, based on optimal control theory, have been used for decades by sports biomechanists wishing to test hypothetical cases (\textit{i.e.}, \textit{what-if} scenarios).
+It is a quick, cheap, safe, and powerful tool allowing to predict how human move or should move to maximize/minimize performance criteria.
 To improve the reliability of the movements synthesized through predictive simulations, efforts have been dedicated to creating more physiological human models and crafting cost functions generating movements matching more closely experimental kinematics \cite{febrer2023predictive}.
 It helped synthesize realistic human movements for simple tasks like walking \cite{ezati2019review}.
-However, for more complex tasks, motor strategies arising from optimal control are sometimes not suitable because they are not robust motor variability.  
+However, for more complex tasks, motor strategies arising from optimal control are sometimes not suitable because they are not robust to motor variability.  
 For example, Hiley \& Yeadon \cite{hiley2016investigating} showed that the technique used by athletes to perform giant circles before a double layout somersault dismount on high bars matched more closely the predictive simulations when maximizing success (\textit{i.e.}, robust technique) rather than minimizing joint torques.
 Thus, to synthesize realistic movements, predictive simulations should consider human movement variability to generate techniques that are less affected by execution variations.
 
-
 One way humans deal with motor variability is through motor corrections based on sensory information.
-Leveraging optimal feedback control \cite{todorov2004optimality}, these motor corrections have been recently included in predictive simulations of human movements by modeling motor noises and noisy sensory feedbacks in a stochastic optimal control approach \cite{van2022approximate}. 
-It helped explain more complex motor control phenomenon.
-For example, it revealed that muscle co-contraction is an optimal strategy to deal with uncertainty \cite{van2022approximate, berret2024co}, putting an end to a long lasting debate in biomechanics.
+Leveraging optimal feedback control theory \cite{todorov2004optimality}, these motor corrections have been recently included into biomechanical predictive simulations by modeling motor noises and noisy sensory feedbacks in a stochastic optimal control approach \cite{van2022approximate}. 
+It helped explain more complex motor control phenomenon like how muscle co-contraction can help dealing with uncertainty \cite{van2022approximate, berret2024co}.
 However, even with these improvements, current stochastic predictive simulations still falls short of modelling sensory acquisition strategies because they consider that sensory noise is constant throughout the movement.
 Although sensory noise is hard to measure experimentally, there is still evidence that our senses sensitivity depends on the state of our body: hearing acuity decreases as the distance between the ear and the sound source increases, vestibular \cite{mallery2010human} and visual \cite{demer1993dynamic} acuity decreases as the head velocity increases, spatial orientation acuity decreases as the angle between the body and vertical increases \cite{kaptein2004interpretation}, etc. 
 % (from 2.26$^\circ/s$ at 20$^\circ/s$ head rotational velocity to 5.16$^\circ/s$ at 150$^\circ/s$ head rotational velocity \cite{mallery2010human} and visual acuity 
 Thus, some human movements exhibit sensory acquisition behavior aiming to increase sensory acuity, allowing for more appropriate motor corrections.
 The backward somersault (acrobatic movement where a rotation is completed around the mediolateral axis) is an example of movement where athletes exhibit sensorimotor strategies: \textit{i)} shortly after take-off, they slow down their head rotation velocity, increasing visual and vestibular acuity (\textit{i.e.}, \textit{spotting}) \cite{davlin2004gymnasts}, and \textit{ii)} before landing, they reorient their head and eyes to look at the ground to make prospective corrections, leading to a balanced landing \cite{bardy1998body}.
-These sensory acquisition strategies have an impact on the kinematics chosen to complete the task showing a perception-action coupling. 
+These sensory acquisition strategies are observable through the kinematics showing that there is a perception-action coupling in the acrobatic technique. 
 Therefore, to synthesize relevant sensorimotor strategies for complex tasks, predictive simulations should consider state-dependant sensory noise.
 Moreover, studying complex movements such as the backward somersault where acute coordination and precise treatment of the sensory information is needed to succeed might help increase our understanding of the integration of sensory information into human motor control which is subtle and complex to measure.
 
-
-To overcome unexpected internal or external disturbances, humans typically use sensory information to make corrections to the original motor plan (open-loop control) . % Indeed, as the motor plan (open-loop control) is assembled before the onset of the movement, it can unfold unexpectedly if perturbed by internal or external disturbances.
+The sensory information can be used to overcome unexpected internal or external disturbances by making corrections to the original motor plan (open-loop control).
 This information can be used either directly (direct sensory feedback control) by comparing it with a predefined sensory reference to generate an error signal \cite{ghez2000organization} or in anticipation (anticipatory sensory feedback control) by using it to estimate the future state of the body through an internal forward model \cite{desmurget2000forward} and comparing this prediction with the desired state to generate an error signal.
 Both error signals can be modulated and/or filtered before being combined with the original motor plan \cite{desmurget2000forward}.
-Both direct and anticipatory feedback control are thought to be used by athletes during the backward somersault. Proprioceptive information would be used to estimate the current athlete's state, allowing for direct feedback control.
+Both direct and anticipatory feedback control are thought to be used by athletes during the backward somersault. 
+Proprioceptive information would be used to estimate the current athlete's state, allowing for direct feedback control.
 Visual information would be used to estimate the remaining time before ground contact \cite{bardy1998body} and vestibular information would be used to estimate the athlete's rotational velocity.
 Combining the two information would allowing for anticipatory sensory feedback control.
 These two types of feedback help athletes land with more balance through inertia modifications increasing/decreasing the somersault rotation velocity.
-To the authors knowledge, only direct feedback control has been considered in predictive simulations of human movements \cite{van2022approximate, berret2024co}, and control of robots during acrobatics \cite{khosravi1987control, park2012backflips}, leaving aside anticipatory sensory feedback control.
+To the authors knowledge, only open-loop control and direct sensory feedback control has been considered in predictive simulations of human movements \cite{van2022approximate, berret2024co}, leaving aside anticipatory sensory feedback control.
 Since there is evidence that anticipatory sensory feedback control is used by athletes during the backward somersault, it will be introduced in the predictive simulation presented in this study.
 
+% Another shortcoming of the current implementations of stochastic optimal control is that they consider constant motor noise.
+% However, it was shown that motor noise is signal-dependant \cite{jones2002sources}.
+% Considering constant motor noise might have negligible impact on the optimal sensorimotor strategies generated for slow reaching movements or balance control previously studied \cite{van2022approximate, berret2024co}.
+% However, during rapid movements with large muscle contractions such as the backward somersault the amplitude modulation of the motor noise might influence the sensorimotor control strategy choices.
 
-Another shortcoming of the current implementations of stochastic optimal control is that they consider constant motor noise.
-However, it was shown that motor noise is signal-dependant \cite{jones2002sources}.
-Considering constant motor noise might have negligible impact on the optimal sensorimotor strategies generated for slow reaching movements or balance control previously studied \cite{van2022approximate, berret2024co}.
-However, during rapid movements with large muscle contractions such as the backward somersault the amplitude modulation of the motor noise might influence the sensorimotor control strategy choices.
+Although a few simulation studies investigated the backward somersault in humans \cite{khosravi1987control, leboeuf2012optimal, pettersson2013optimisation, farr2025including}, none of them considered sensory feedback or motor variability.  
+Khosravi & al. \cite{khosravi1987control} used feedback torques to find the control strategy that best fits an athlete's technique.
+However, the feedback torques were used as a computational trick to find an optimal open-loop control strategy and do not represent a sensory feedback. 
+\comEC{Mickael svp confirmer cette dernière phrase, j'ai vraiment du mal à comprendre ce qu'ils ont fait dans cette étude}
+% Park & Park \cite{park2012backflips} used sensory feedbacks to stabilize the robot's motion.
+On the one hand, some studies \cite{khosravi1987control, leboeuf2012optimal} informed the optimization process with athletes' kinematics.
+In this case, it is not surprising that the optimal solutions matched athletes' kinematics, but these studies do not provide insights into why athletes use these acrobatic techniques.
+On the other hand, predictive simulations \cite{pettersson2013optimisation, farr2025including} generated backward somersault techniques only from the task requirements (without providing athletes techniques).
+In this case, the optimal techniques resembled athletes' technique, but the spotting and floor fixation did not appear in the optimal strategies as no sensory feedback was not modeled.
+To better match, and thus better understand, athletes behavior, further predictive simulations of the backward somersault are needed to include sensory feedback and motor variability.
 
 
 The primary aim of this study was to generate an optimal sensorimotor strategy for the backward somersault.
 A digital athlete subject to a nonlinear dynamics corrupted by motor noise was considered. 
-To cope with motor noise, the digital athlete could use noisy vestibular, visual and proprioceptive information to make instantaneous and anticipatory corrections.
+To cope with motor noise, the digital athlete could use noisy vestibular, visual and proprioceptive information to make direct and anticipatory corrections.
 An optimal acrobatic strategy was obtained by solving a discretized version of a stochastic optimal control problem.
-Multiple deterministic simulations were run simultaneously with the same motor command, but with different signal-dependant motor noise and state-dependant sensory noise values sampled from a Gaussian distribution.
-The optimal motor command incorporated three time-varying components: open-loop joint torque actuation, direct feedback gains, and anticipatory feedback gains.
-
-
-The optimal technique generated through our advanced stochastic optimal control (SOCP+) implementation was compared with the ones generated through deterministic optimal control (OCP) and traditional stochastic optimal control (SOCP).
-The SOCP+ implementation was the only one enabling the emergence of the two sensory acquisition strategies used by athletes, confirming its relevance for the generation of sensorimotor strategies of complex movements.
-We then demonstrate that our SOCP+ implementation predicts contributions from open-loop, direct feedback and anticipatory feedback control, with a stronger reliance on sensory information when the sensory noise is reduced.
+The optimal techniques generated through our stochastic optimal control implementations were compared with the one generated through deterministic optimal control.
+The stochastic implementations enabled the emergence of the two sensory acquisition strategies used by athletes, confirming its relevance for the generation of sensorimotor strategies of complex movements.
  
 
 \section{Materials and methods}\label{sec:methods}
 
 \comEC{Fix the vectors being bold everywhere !}
+
+% Multiple deterministic simulations were run simultaneously with the same motor command, but with different signal-dependant motor noise and state-dependant sensory noise values sampled from a Gaussian distribution.
+% The optimal motor command incorporated three time-varying components: open-loop joint torque actuation, direct feedback gains, and anticipatory feedback gains.
+% We then demonstrate that our SOCP+ implementation predicts contributions from open-loop, direct feedback and anticipatory feedback control, with a stronger reliance on sensory information when the sensory noise is reduced.
 
 \subsection{Athlete modeling}
 The digital athlete's inertial characteristics were set to match those of a national male trampolinist.  % A verifier que c'est vraiment Emile
