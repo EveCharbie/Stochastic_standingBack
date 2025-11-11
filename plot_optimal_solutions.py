@@ -4,6 +4,7 @@ import pickle
 import casadi as cas
 import matplotlib.pyplot as plt
 import numpy as np
+import spm1d
 
 from DMS_deterministic import prepare_ocp
 from DMS_SOCP import prepare_socp
@@ -1624,16 +1625,46 @@ def plot_landing_variability(CoM_y_fcn, CoM_y_8_fcn, CoM_y_dot_fcn, CoM_dot_8_fc
     # plt.show()
     return
 
+
+def plot_significant_timing_blocks(dof1, dof2, q1, q2, color1, color2, num_combinaition, ax):
+    significant_timings = []
+
+    t = spm1d.stats.ttest2(q1[dof1, :, :].T,
+                           q2[dof2, :, :].T)
+    ti = t.inference(alpha=0.05, two_tailed=True)
+    if ti.h0reject == True:
+        if ti.clusters != []:
+            significant_timing_list = ti.clusters
+            for k in range(len(significant_timing_list)):
+                significant_timing_1_x, _ = significant_timing_list[k].get_patch_vertices()
+                significant_timings += list(range(int(significant_timing_1_x[1]+1), int(significant_timing_1_x[-2]+2)))
+
+    # Remove duplicates from list and sort
+    significant_timings = list(set(significant_timings))
+    # Find blocks of consecutive indices
+    significant_timings_array = np.array(significant_timings)
+    significant_timings_diff = significant_timings_array[1:] - significant_timings_array[:-1]
+    significant_timings_index = np.hstack((-1, np.where(significant_timings_diff > 1)[0], len(significant_timings_array)-1))
+    timings = []
+    for i in range(len(significant_timings_index)-1):
+        timings += [range(significant_timings_array[significant_timings_index[i]+1], significant_timings_array[significant_timings_index[i+1]])]
+
+    for timing_this_time in timings:
+        start = timing_this_time.start
+        end = timing_this_time.stop if timing_this_time.stop == 17 else timing_this_time.stop + 1
+        ax.fill_between([start/17, end/17],
+                            [-num_combinaition, -num_combinaition],
+                            [-num_combinaition + 0.25, -num_combinaition + 0.25], color=color1, alpha=0.5)
+        ax.fill_between([start/17, end/17],
+                            [-num_combinaition - 0.25, -num_combinaition - 0.25],
+                            [-num_combinaition, -num_combinaition], color=color2, alpha=0.5)
+
+    print(f"There is {(len(significant_timings)/17) * 100}% of the movement with significant difference for DOF {dof1} and {dof2}.")
+    return
+
+
 def plot_kinematics(time_vector_ocp,
-                    time_vector_socp,
-                    time_vector_socp_variable,
-                    time_vector_socp_feedforward,
-                    time_vector_socp_plus,
                     time_vector_ocp_integrated_MS,
-                    time_vector_socp_integrated_MS,
-                    time_vector_socp_variable_integrated_MS,
-                    time_vector_socp_feedforward_integrated_MS,
-                    time_vector_socp_plus_integrated_MS,
                     q_ocp_integrated_MS,
                     q_socp_integrated_MS,
                     q_socp_variable_integrated_MS,
@@ -1653,53 +1684,98 @@ def plot_kinematics(time_vector_ocp,
     normalized_time = np.linspace(0, 1, time_vector_ocp.shape[0])
     normalized_time_MS = np.linspace(0, 1, time_vector_ocp_integrated_MS.shape[0])
 
-    fig, axs = plt.subplots(2, 3, figsize=(15, 10))
-    axs_ordered = axs.ravel()
+    fig1, axs1 = plt.subplots(2, 3, figsize=(10, 4), gridspec_kw={'height_ratios': [5, 2]})
+    fig2, axs2 = plt.subplots(2, 3, figsize=(10, 4), gridspec_kw={'height_ratios': [5, 2]})
+    axs_dof_ordered = [axs1[0, 0], axs1[0, 1], axs1[0, 2], axs2[0, 0], axs2[0, 1], axs2[0, 2]]
+    axs_spm_ordered = [axs1[1, 0], axs1[1, 1], axs1[1, 2], axs2[1, 0], axs2[1, 1], axs2[1, 2]]
     for i_dof, dof in enumerate(range(2, n_q)):
+        dof_ocp = dof
+        dof_socp = dof
+        dof_socp_variable = dof
+        dof_socp_feedforward = dof
+        dof_socp_plus = dof
         if dof < 4:
-            axs_ordered[i_dof].plot(normalized_time, q_ocp[dof, :], '.', color=OCP_color)
-            axs_ordered[i_dof].plot(normalized_time_MS, q_ocp_integrated_MS[dof, :], '-', color=OCP_color)
+            axs_dof_ordered[i_dof].plot(normalized_time, q_ocp[dof, :] * 180 / np.pi, '.', color=OCP_color)
+            axs_dof_ordered[i_dof].plot(normalized_time_MS, q_ocp_integrated_MS[dof, :] * 180 / np.pi, '-', color=OCP_color)
         elif dof > 4:
-            axs_ordered[i_dof].plot(normalized_time, q_ocp[dof - 1, :], '.', color=OCP_color)
-            axs_ordered[i_dof].plot(normalized_time_MS, q_ocp_integrated_MS[dof - 1, :], '-', color=OCP_color)
+            axs_dof_ordered[i_dof].plot(normalized_time, q_ocp[dof - 1, :] * 180 / np.pi, '.', color=OCP_color)
+            axs_dof_ordered[i_dof].plot(normalized_time_MS, q_ocp_integrated_MS[dof - 1, :] * 180 / np.pi, '-', color=OCP_color)
+            dof_ocp = dof - 1
         for i_random in range(nb_random):
             if dof < 4:
-                axs_ordered[i_dof].plot(normalized_time, q_socp[dof, :, i_random], '.', color=SOCP_color, linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time_MS, q_socp_integrated_MS[dof, i_random, :], '-', color=SOCP_color, linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time, q_socp_variable[dof, :, i_random], '.', color=SOCP_VARIABLE_color,
+                axs_dof_ordered[i_dof].plot(normalized_time, q_socp[dof, :, i_random] * 180 / np.pi, '.', color=SOCP_color, linewidth=0.5)
+                axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_integrated_MS[dof, i_random, :] * 180 / np.pi, '-', color=SOCP_color, linewidth=0.5)
+                axs_dof_ordered[i_dof].plot(normalized_time, q_socp_variable[dof, :, i_random] * 180 / np.pi, '.', color=SOCP_VARIABLE_color,
                                 linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time_MS, q_socp_variable_integrated_MS[dof, i_random, :], '-', color=SOCP_VARIABLE_color,
+                axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_variable_integrated_MS[dof, i_random, :] * 180 / np.pi, '-', color=SOCP_VARIABLE_color,
                                 linewidth=0.5)
             elif dof > 4:
-                axs_ordered[i_dof].plot(normalized_time, q_socp[dof - 1, :, i_random], '.', color=SOCP_color, linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time_MS, q_socp_integrated_MS[dof - 1, i_random, :], '-', color=SOCP_color, linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time, q_socp_variable[dof - 1, :, i_random], '.', color=SOCP_VARIABLE_color,
+                axs_dof_ordered[i_dof].plot(normalized_time, q_socp[dof - 1, :, i_random] * 180 / np.pi, '.', color=SOCP_color, linewidth=0.5)
+                axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_integrated_MS[dof - 1, i_random, :] * 180 / np.pi, '-', color=SOCP_color, linewidth=0.5)
+                axs_dof_ordered[i_dof].plot(normalized_time, q_socp_variable[dof - 1, :, i_random] * 180 / np.pi, '.', color=SOCP_VARIABLE_color,
                                 linewidth=0.5)
-                axs_ordered[i_dof].plot(normalized_time_MS, q_socp_variable_integrated_MS[dof - 1, i_random, :], '-', color=SOCP_VARIABLE_color,
+                axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_variable_integrated_MS[dof - 1, i_random, :] * 180 / np.pi, '-', color=SOCP_VARIABLE_color,
                                 linewidth=0.5)
+                dof_socp = dof - 1
+                dof_socp_variable = dof - 1
         for i_random in range(nb_random):
-            axs_ordered[i_dof].plot(normalized_time, q_socp_feedforward[dof, :, i_random], '.', color=SOCP_FEEDFORWARD_color,
+            axs_dof_ordered[i_dof].plot(normalized_time, q_socp_feedforward[dof, :, i_random] * 180 / np.pi, '.', color=SOCP_FEEDFORWARD_color,
                             linewidth=0.5)
-            axs_ordered[i_dof].plot(normalized_time_MS, q_socp_feedforward_integrated_MS[dof, i_random, :], '-', color=SOCP_FEEDFORWARD_color,
+            axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_feedforward_integrated_MS[dof, i_random, :] * 180 / np.pi, '-', color=SOCP_FEEDFORWARD_color,
                             linewidth=0.5)
-            axs_ordered[i_dof].plot(normalized_time, q_socp_plus[dof, :, i_random], '.', color=SOCP_plus_color, linewidth=0.5)
-            axs_ordered[i_dof].plot(normalized_time_MS, q_socp_plus_integrated_MS[dof, i_random, :], '-', color=SOCP_plus_color, linewidth=0.5)
+            axs_dof_ordered[i_dof].plot(normalized_time, q_socp_plus[dof, :, i_random] * 180 / np.pi, '.', color=SOCP_plus_color, linewidth=0.5)
+            axs_dof_ordered[i_dof].plot(normalized_time_MS, q_socp_plus_integrated_MS[dof, i_random, :] * 180 / np.pi, '-', color=SOCP_plus_color, linewidth=0.5)
 
-    axs[0, 0].set_title("Somersault")
-    axs[0, 1].set_title("Head")
-    axs[0, 2].set_title("Eyes")
-    axs[1, 0].set_title("Shoulders")
-    axs[1, 1].set_title("Hips")
-    axs[1, 2].set_title("Knees")
+        q_ocp_with_variance = q_ocp[:, :, np.newaxis] + np.random.normal(7, 17, nb_random) * 0.0000001
 
-    for i_ax in range(3):
-        axs[0, i_ax].get_xaxis().set_visible(False)
-        axs[1, i_ax].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        axs[1, i_ax].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
-        axs[1, i_ax].set_xlabel("Time [s]")
+        num_combinaition = 0
+        plot_significant_timing_blocks(dof_ocp, dof_socp, q_ocp_with_variance, q_socp, OCP_color, SOCP_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_ocp, dof_socp_variable, q_ocp_with_variance, q_socp_variable, OCP_color, SOCP_VARIABLE_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_ocp, dof_socp_feedforward, q_ocp_with_variance, q_socp_feedforward, OCP_color, SOCP_FEEDFORWARD_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_ocp, dof_socp_plus, q_ocp_with_variance, q_socp_plus, OCP_color, SOCP_plus_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp, dof_socp_variable, q_socp, q_socp_variable, SOCP_color, SOCP_VARIABLE_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp, dof_socp_feedforward, q_socp, q_socp_feedforward, SOCP_color, SOCP_FEEDFORWARD_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp, dof_socp_plus, q_socp, q_socp_plus, SOCP_color, SOCP_plus_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp_variable, dof_socp_feedforward, q_socp_variable, q_socp_feedforward, SOCP_VARIABLE_color, SOCP_FEEDFORWARD_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp_variable, dof_socp_plus, q_socp_variable, q_socp_plus, SOCP_VARIABLE_color, SOCP_plus_color, num_combinaition, axs_spm_ordered[i_dof])
+        num_combinaition += 1
+        plot_significant_timing_blocks(dof_socp_feedforward, dof_socp_plus, q_socp_feedforward, q_socp_plus, SOCP_FEEDFORWARD_color, SOCP_plus_color, num_combinaition, axs_spm_ordered[i_dof])
 
-    plt.tight_layout()
-    plt.savefig("graphs/kinematics.png")
+    axs_dof_ordered[0].set_title("Somersault")
+    axs_dof_ordered[1].set_title("Head")
+    axs_dof_ordered[2].set_title("Eyes")
+    axs_dof_ordered[3].set_title("Shoulders")
+    axs_dof_ordered[4].set_title("Hips")
+    axs_dof_ordered[5].set_title("Knees")
+
+    axs_dof_ordered[0].set_ylabel(r"Angle [$^\circ$]")
+    axs_dof_ordered[3].set_ylabel(r"Angle [$^\circ$]")
+
+    for i_ax in range(6):
+        axs_dof_ordered[i_ax].get_xaxis().set_visible(False)
+        axs_spm_ordered[i_ax].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        axs_spm_ordered[i_ax].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
+        axs_spm_ordered[i_ax].set_xlabel("Time [s]")
+        axs_spm_ordered[i_ax].spines['top'].set_visible(False)
+        axs_spm_ordered[i_ax].spines['right'].set_visible(False)
+        axs_spm_ordered[i_ax].spines['left'].set_visible(False)
+        axs_spm_ordered[i_ax].set_ylim(-10, 1)
+        axs_spm_ordered[i_ax].get_yaxis().set_ticks([])
+
+    fig1.tight_layout()
+    fig2.tight_layout()
+    fig1.subplots_adjust(hspace=0.05)
+    fig2.subplots_adjust(hspace=0.05)
+    fig1.savefig("graphs/kinematics1.png")
+    fig2.savefig("graphs/kinematics2.png")
     # plt.show()
     return
 
@@ -2647,31 +2723,25 @@ plot_landing_variability(
     SOCP_FEEDFORWARD_color,
     SOCP_plus_color)
 
-plot_kinematics(time_vector_ocp,
-                time_vector_socp,
-                time_vector_socp_variable,
-                time_vector_socp_feedforward,
-                time_vector_socp_plus,
-                time_vector_ocp_integrated_MS,
-                time_vector_socp_integrated_MS,
-                time_vector_socp_variable_integrated_MS,
-                time_vector_socp_feedforward_integrated_MS,
-                time_vector_socp_plus_integrated_MS,
-                q_ocp_integrated_MS,
-                q_socp_integrated_MS,
-                q_socp_variable_integrated_MS,
-                q_socp_feedforward_integrated_MS,
-                q_socp_plus_integrated_MS,
-                q_ocp,
-                q_socp,
-                q_socp_variable,
-                q_socp_feedforward,
-                q_socp_plus,
-                OCP_color,
-                SOCP_color,
-                SOCP_VARIABLE_color,
-                SOCP_FEEDFORWARD_color,
-                SOCP_plus_color)
+plot_kinematics(
+    time_vector_ocp,
+    time_vector_ocp_integrated_MS,
+    q_ocp_integrated_MS,
+    q_socp_integrated_MS,
+    q_socp_variable_integrated_MS,
+    q_socp_feedforward_integrated_MS,
+    q_socp_plus_integrated_MS,
+    q_ocp,
+    q_socp,
+    q_socp_variable,
+    q_socp_feedforward,
+    q_socp_plus,
+    OCP_color,
+    SOCP_color,
+    SOCP_VARIABLE_color,
+    SOCP_FEEDFORWARD_color,
+    SOCP_plus_color,
+)
 
 plot_comparison_reintegration(
     q_ocp,
