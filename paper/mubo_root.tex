@@ -584,17 +584,28 @@ Notably, the knees were kept extented longer and the initial hip flexion was les
 
 \subsection{Optimal motor strategies}
 
-The motor command differed between the different implementation (Fig.~\ref{controls}).
-The total torque actuation was larger 
+The motor command differed between the different implementation (Fig.~\ref{fig:torques_contributions}~a)).
+The total torque actuation (integral of the total torque) was larger in the deterministic (OCP: -80.11~Nm.s) than in the stochastic (SOCP: -3.51~Nm.s, SOCPV:1.80~ Nm.s, SOCPA: 1.70~Nm.s, SOCP+: -2.22~Nm.s) transcriptions.
+The largest torque contribution came from the for open-loop (98.97\%) for the OCP implementation, from direct feedback (65.15\%) for the SOCP implementation, from direct feedback (58.78\%) for the SOCPV implementation, from open-loop (38.80\%) and anticipatory feedback (38.38\%) for the SOCPA implementation, and from open-loop (39.51\%) and anticipatory feedback (35.75\%) for the SOCP+ implementation (Fig.~\ref{fig:torques_contributions}~b)).
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/controls.png}
-\caption{Each component of the motor command for the backward somersault generated with the OCP (\textcolor{OCP_color}{green}), SOCP (\textcolor{SOCP_color}{pink}), SOCPV (\textcolor{SOCP_VARIABLE_color}{orange}), SOCPA (\textcolor{SOCP_FEEDFORWARD_color}{purple}), and SOCP+ (\textcolor{SOCP_plus_color}{blue}) formulations. The total torque used to actuate the avatar is presented on the last column. For the stochastic implementations, only the mean of the joint friction, direct feedabck, and anticipatory feedback is presented for clarity.}
-\label{fig:controls}
+\includegraphics{figures/torques_contributions.png}
+\caption{a) Each component of the motor command for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. The total torque used to actuate the avatar is presented on the last column. For the stochastic implementations, only the mean of the joint friction, direct feedabck, and anticipatory feedback is presented for clarity. b) The sum of the absolute value of the joint torques integrated for each component of the motor command: Open-loop control (red), joint friction (blue), direct feedback (green), and anticipatory feedback (pink).}
+\label{fig:torques_contributions}
 \end{figure}
 
 \subsection{Optimal sensory acquisition strategies}
+
+TODO ! (Fig.~\ref{fig:sensory_strategies})
+
+
+\begin{figure}[H]
+\centering
+\includegraphics{figures/sensory_strategies.png}
+\caption{a) The feedback gains (k) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. b) The head angular velocity in the global reference frame and the angle between the vertical and the eye orientation of the mean technique for the \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations.}
+\label{fig:sensory_strategies}
+\end{figure}
 
 
 \subsection{Landing variability performance}
