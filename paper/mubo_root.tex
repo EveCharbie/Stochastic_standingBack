@@ -241,6 +241,7 @@ F : \ddot{q} = M(q)^{-1} (\tau_{\text{total}} - N(q, \dot{q}) - v\dot{q}_{\text{
 \subsection{Discretized stochastic optimal control framework}
 To transcribe the stochastic optimal control problems into a solvable deterministic optimal control problem, the motor and sensory noises were sampled from a Gaussian distribution at 20 different instances as in \cite{koelewijn2020solution}.
 Analogically, it could be seen as if 20 optimal control problems were solved simultaneously with different noise values, and thus different state values, but with the same motor command.
+The number of noise samples (20) was chosen based on the analysis in \cite{koelewijn2020solution} showing that the cost function value varied less than 1\% when using 20 or more samples.
 The constant part of the motor and sensory noises ($w_{\circ}$) were sampled from a Gaussian distribution with a standard deviation of $5$ for the joint torque motor noise, $0.0005$ for the joint angle proprioception, $0.0045$ for the joint velocity proprioception inputs, $0.0005$ for the vestibular input, and $0.0005$ for the visual inputs. 
 
 The optimal policies were computed using a composite cost function, where the main objective was to minimize landing condition variability.
@@ -597,8 +598,10 @@ The largest torque contribution came from the for open-loop (98.97\%) for the OC
 
 \subsection{Optimal sensory acquisition strategies}
 
-TODO ! (Fig.~\ref{fig:sensory_strategies})
-
+For all implementations, the feedback gains decreased shortly before landing (Fig.~\ref{fig:sensory_strategies} a)).
+The hip feedback gains were maximal when fully tucked and fully extended during the middle part of the acrobatics.
+When anticipatory feedback was available, its gain on the knees DoF reached the maximal bound (saturated) for the majority of the acrobatics.
+The mean absolute eye orientation was smaller in the SOCP+ (77.56\degree) than in the SOCPV (80.34\degree), especially at the end of the acrobatics, when visual anticipatory feedback is available.
 
 \begin{figure}[H]
 \centering
@@ -609,6 +612,17 @@ TODO ! (Fig.~\ref{fig:sensory_strategies})
 
 
 \subsection{Landing variability performance}
+
+The main performance objective of the task considered in this study was to minimize the landing variability, which was measured as the sum of the variability of the CoM horizontal position, CoM horizontal velocity, and body angular velocity at the end of the movement.
+The SOCP+ formulation allowed to reach the smallest landing variability (OCP: 20.061, SOCP: 1.178, SOCPV: 0.062, SOCPA: 0.034,
+SOCP+: 0.030).
+
+\begin{figure}[H]
+\centering
+\includegraphics{figures/landing_variability.png}
+\caption{The three landing variability components (center of mass horizontal position, center of mass horizontal velocity, and body angular velocity) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. The value for each episode is depicted with a dot, the mean over all episodes is depicted with a square, the standard deviation range is depicted with a box, and the standard deviation is written above the box plot.}
+\label{fig:landing_variability}
+\end{figure}
 
 
 \section{Discussion}\label{sec:discussion}
@@ -627,149 +641,7 @@ and the accuracy of their senses .
 - Future research + implication for optim-biomech community
 
 
-% \section{This is an example for first level head---section head}\label{sec3}
-
-% \subsection{This is an example for second level head---subsection head}\label{subsec2}
-
-% \subsubsection{This is an example for third level head---subsubsection head}\label{subsubsec2}
-
-% Sample body text. 
-
-% \section{Equations}\label{sec4}
-
-% Equations in \LaTeX\ can either be inline or on-a-line by itself (``display equations''). For inline equations use the \verb+$...$+ commands. E.g.: The equation
-% $H\psi = E \psi$ is written via the command \verb+$H \psi = E \psi$+.
-
-% For display equations (with auto generated equation numbers)
-% one can use the equation or align environments:
-% \begin{equation}
-% \|\tilde{X}(k)\|^2 \leq\frac{\sum\limits_{i=1}^{p}\left\|\tilde{Y}_i(k)\right\|^2+\sum\limits_{j=1}^{q}\left\|\tilde{Z}_j(k)\right\|^2 }{p+q}.\label{eq1}
-% \end{equation}
-% where,
-% \begin{align}
-% D_\mu &=  \partial_\mu - ig \frac{\lambda^a}{2} A^a_\mu \nonumber \\
-% F^a_{\mu\nu} &= \partial_\mu A^a_\nu - \partial_\nu A^a_\mu + g f^{abc} A^b_\mu A^a_\nu \label{eq2}
-% \end{align}
-% Notice the use of \verb+\nonumber+ in the align environment at the end
-% of each line, except the last, so as not to produce equation numbers on lines where no equation numbers are required. The \verb+\label{}+ command should only be used at the last line of an align environment where
-% \verb+\nonumber+ is not used.
-% \begin{equation}
-% Y_\infty = \left( \frac{m}{\textrm{GeV}} \right)^{-3}
-%     \left[ 1 + \frac{3 \ln(m/\textrm{GeV})}{15}
-%     + \frac{\ln(c_2/5)}{15} \right]
-% \end{equation}
-% The class file also supports the use of \verb+\mathbb{}+, \verb+\mathscr{}+ and
-% \verb+\mathcal{}+ commands. As such \verb+\mathbb{R}+, \verb+\mathscr{R}+
-% and \verb+\mathcal{R}+ produces $\mathbb{R}$, $\mathscr{R}$ and $\mathcal{R}$
-% respectively (refer Subsubsection~\ref{subsubsec2}).
-
-% \section{Tables}\label{sec5}
-
-% Tables can be inserted via the normal table and tabular environment. To put footnotes inside tables you should use \verb+\footnotetext[]{...}+ tag.
-% The footnote appears just below the table itself (refer Tables~\ref{tab1} and \ref{tab2}). 
-% For the corresponding footnotemark use \verb+\footnotemark[...]+
-
-% \begin{table}[h]
-% \caption{Caption text}\label{tab1}%
-% \begin{tabular}{@{}llll@{}}
-% \toprule
-% Column 1 & Column 2  & Column 3 & Column 4\\
-% \midrule
-% row 1    & data 1   & data 2  & data 3  \\
-% row 2    & data 4   & data 5\footnotemark[1]  & data 6  \\
-% row 3    & data 7   & data 8  & data 9\footnotemark[2]  \\
-% \botrule
-% \end{tabular}
-% \footnotetext{Source: This is an example of table footnote. This is an example of table footnote.}
-% \footnotetext[1]{Example for a first table footnote. This is an example of table footnote.}
-% \footnotetext[2]{Example for a second table footnote. This is an example of table footnote.}
-% \end{table}
-
-% \noindent
-% The input format for the above table is as follows:
-
-% \begin{table}[h]
-% \caption{Example of a lengthy table which is set to full textwidth}\label{tab2}
-% \begin{tabular*}{\textwidth}{@{\extracolsep\fill}lcccccc}
-% \toprule%
-% & \multicolumn{3}{@{}c@{}}{Element 1\footnotemark[1]} & \multicolumn{3}{@{}c@{}}{Element 2\footnotemark[2]} \\\cmidrule{2-4}\cmidrule{5-7}%
-% Project & Energy & $\sigma_{calc}$ & $\sigma_{expt}$ & Energy & $% \sigma_{calc}$ & $\sigma_{expt}$ \\
-% \midrule
-% Element 3  & 990 A & 1168 & $1547\pm12$ & 780 A & 1166 & $1239\pm100$\\
-% Element 4  & 500 A & 961  & $922\pm10$  & 900 A & 1268 & $1092\pm40$\\
-% \botrule
-% \end{tabular*}
-% \footnotetext{Note: This is an example of table footnote. This is an example of table footnote this is an example of table footnote this is an example of~table footnote this is an example of table footnote.}
-% \footnotetext[1]{Example for a first table footnote.}
-% \footnotetext[2]{Example for a second table footnote.}
-% \end{table}
-
-% In case of double column layout, tables which do not fit in single column width should be set to full text width. For this, you need to use \verb+\begin{table*}+ \verb+...+ \verb+\end{table*}+ instead of \verb+\begin{table}+ \verb+...+ \verb+\end{table}+ environment. Lengthy tables which do not fit in textwidth should be set as rotated table. For this, you need to use \verb+\begin{sidewaystable}+ \verb+...+ \verb+\end{sidewaystable}+ instead of \verb+\begin{table*}+ \verb+...+ \verb+\end{table*}+ environment. This environment puts tables rotated to single column width. For tables rotated to double column width, use \verb+\begin{sidewaystable*}+ \verb+...+ \verb+\end{sidewaystable*}+.
-
-% \begin{sidewaystable}
-% \caption{Tables which are too long to fit, should be written using the ``sidewaystable'' environment as shown here}\label{tab3}
-% \begin{tabular*}{\textheight}{@{\extracolsep\fill}lcccccc}
-% \toprule%
-% & \multicolumn{3}{@{}c@{}}{Element 1\footnotemark[1]}& \multicolumn{3}{@{}c@{}}{Element\footnotemark[2]} \\\cmidrule{2-4}\cmidrule{5-7}%
-% Projectile & Energy	& $\sigma_{calc}$ & $\sigma_{expt}$ & Energy & $\sigma_{calc}$ & $\sigma_{expt}$ \\
-% \midrule
-% Element 3 & 990 A & 1168 & $1547\pm12$ & 780 A & 1166 & $1239\pm100$ \\
-% Element 4 & 500 A & 961  & $922\pm10$  & 900 A & 1268 & $1092\pm40$ \\
-% Element 5 & 990 A & 1168 & $1547\pm12$ & 780 A & 1166 & $1239\pm100$ \\
-% Element 6 & 500 A & 961  & $922\pm10$  & 900 A & 1268 & $1092\pm40$ \\
-% \botrule
-% \end{tabular*}
-% \footnotetext{Note: This is an example of table footnote this is an example of table footnote this is an example of table footnote this is an example of~table footnote this is an example of table footnote.}
-% \footnotetext[1]{This is an example of table footnote.}
-% \end{sidewaystable}
-
-% \section{Figures}\label{sec6}
-
-% As per the \LaTeX\ standards you need to use eps images for \LaTeX\ compilation and \verb+pdf/jpg/png+ images for \verb+PDFLaTeX+ compilation. This is one of the major difference between \LaTeX\ and \verb+PDFLaTeX+. Each image should be from a single input .eps/vector image file. Avoid using subfigures. The command for inserting images for \LaTeX\ and \verb+PDFLaTeX+ can be generalized. The package used to insert images in \verb+LaTeX/PDFLaTeX+ is the graphicx package. Figures can be inserted via the normal figure environment as shown in the below example:
-
-% \begin{figure}[h]
-% \centering
-% \includegraphics[width=0.9\textwidth]{fig.eps}
-% \caption{This is a widefig. This is an example of long caption this is an example of long caption  this is an example of long caption this is an example of long caption}\label{fig1}
-% \end{figure}
-
-% In case of double column layout, the above format puts figure captions/images to single column width. To get spanned images, we need to provide \verb+\begin{figure*}+ \verb+...+ \verb+\end{figure*}+.
-
-% For sample purpose, we have included the width of images in the optional argument of \verb+\includegraphics+ tag. Please ignore this. 
-
-% \section{Cross referencing}\label{sec8}
-
-% Environments such as figure, table, equation and align can have a label declared via the \verb+\label{#label}+ command. For figures and table environments use the \verb+\label{}+ command inside or just below the \verb+\caption{}+ command. You can then use the
-% \verb+\ref{#label}+ command to cross-reference them. As an example, consider the label declared for Figure~\ref{fig1} which is
-% \verb+\label{fig1}+. To cross-reference it, use the command 
-% \verb+Figure \ref{fig1}+, for which it comes up as
-% ``Figure~\ref{fig1}''. 
-
-% To reference line numbers in an algorithm, consider the label declared for the line number 2 of Algorithm~\ref{algo1} is \verb+\label{algln2}+. To cross-reference it, use the command \verb+\ref{algln2}+ for which it comes up as line~\ref{algln2} of Algorithm~\ref{algo1}.
-
-% \subsection{Details on reference citations}\label{subsec7}
-
-% Standard \LaTeX\ permits only numerical citations. To support both numerical and author-year citations this template uses \verb+natbib+ \LaTeX\ package. For style guidance please refer to the template user manual.
-
-% Here is an example for \verb+\cite{...}+: \cite{bib1}. Another example for \verb+\citep{...}+: \citep{bib2}. For author-year citation mode, \verb+\cite{...}+ prints Jones et al. (1990) and \verb+\citep{...}+ prints (Jones et al., 1990).
-
-% All cited bib entries are printed at the end of this article: \cite{bib3}, \cite{bib4}, \cite{bib5}, \cite{bib6}, \cite{bib7}, \cite{bib8}, \cite{bib9}, \cite{bib10}, \cite{bib11}, \cite{bib12} and \cite{bib13}.
-
-% \section{Methods}\label{sec11}
- 
-% \section{Discussion}\label{sec12} 
-
-% \section{Conclusion}\label{sec13}
-
 \backmatter
-
-\bmhead{Supplementary information}
-
-If your article has accompanying supplementary file/s please state so here. 
-
-Authors reporting data from electrophoretic gels and blots should supply the full unprocessed scans for key as part of their Supplementary information. This may be requested by the editorial team/s if it is missing.
-
-Please refer to Journal-level guidance for any specific requirements.
 
 \bmhead{Acknowledgements}
 This work was supported by Mitacs Globalink IT33527.
@@ -790,13 +662,13 @@ During the preparation of this work the authors used ChatGPT and Grammarly to en
 After using these tools, the authors reviewed and edited the content as needed and they take full responsibility for the content of the publication.
 
 
-\begin{appendices}
+% \begin{appendices}
 
-\section{Section title of first appendix}\label{secA1}
-TODO
+% \section{Section title of first appendix}\label{secA1}
+% TODO
 % An appendix contains supplementary information that is not an essential part of the text itself but which may be helpful in providing a more comprehensive understanding of the research problem or it is information that is too cumbersome to be included in the body of the paper.
 
-\end{appendices}
+% \end{appendices}
 
 \bibliography{biblio.bib}% common bib file
 %% if required, the content of .bbl file can be included here once bbl is generated
