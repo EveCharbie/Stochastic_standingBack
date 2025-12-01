@@ -560,7 +560,7 @@ The head rotation velocity and eye orientation were analyzed to extract sensory 
 
 \section{Results}\label{sec:results}
 
-\subsection{Optimal kinematics}
+\subsection{Kinematics}
 An optimal solution (Fig.~\ref{fig:kinograms}) was reached for each formulation (\textcolor{OCP_color}{OCP}, \textcolor{SOCP_color}{SOCP}, \textcolor{SOCP_VARIABLE_color}{SOCPV} \textcolor{SOCP_FEEDFORWARD_color}{SOCPA}, \textcolor{SOCP_plus_color}{SOCP+}).
 The duration of the acrobatic was similar across implementations (OCP: 0.405~s, SOCP: 0.403~s, SOCPV: 0.405~s, SOCPA: 0.404~s, SOCP+: 0.403~s). 
 The formulation had an influenced the optimal kinematics found.
@@ -583,7 +583,7 @@ Notably, the knees were kept extented longer and the initial hip flexion was les
 \end{figure}
 
 
-\subsection{Optimal motor strategies}
+\subsection{Motor strategies}
 
 The motor command differed between the different implementation (Fig.~\ref{fig:torques_contributions}~a)).
 The total torque actuation (integral of the total torque) was larger in the deterministic (OCP: -80.11~Nm.s) than in the stochastic (SOCP: -3.51~Nm.s, SOCPV:1.80~ Nm.s, SOCPA: 1.70~Nm.s, SOCP+: -2.22~Nm.s) transcriptions.
@@ -596,7 +596,7 @@ The largest torque contribution came from the for open-loop (98.97\%) for the OC
 \label{fig:torques_contributions}
 \end{figure}
 
-\subsection{Optimal sensory acquisition strategies}
+\subsection{Sensory acquisition strategies}
 
 For all implementations, the feedback gains decreased shortly before landing (Fig.~\ref{fig:sensory_strategies} a)).
 The hip feedback gains were maximal when fully tucked and fully extended during the middle part of the acrobatics.
@@ -626,19 +626,79 @@ SOCP+: 0.030).
 
 
 \section{Discussion}\label{sec:discussion}
-As observed in other stochastic simulation studies \citep{van2022approximate, berret2024co}, including uncertainty in the optimal control problem formulation allowed generating optimal kinematics matching more closely human behavior.
-In the current context, this was ...
-In continuation with previous findings [REF], this study suggests that athletes consider their own motor variability during acrobatic movement planning to chose a technique that is both robust and energy efficient.
+
+\subsection{Kinematics}
+The optimal kinematics generated in this study generally match athletes' technique with flexion and extension of the hips ans knees accompanied with arms lowering \cite{bradley2020comparison, leboeuf2012optimal}.
+Interestingly, the OCP optimal kinematics resembles the technique used by novice gymnasts in their early phase of learning of the backward somersault, whereas the SOCP+ optimal kinematics resembles the technique used by more experienced gymnasts.
+This difference was noticeable through a looser tuck position in the OCP compared to SOCP+ simulations, as observed in beginner compared to expert in \cite{kikuchi2006kinematical}.
+This looser tuck position was caused by a smaller hip flexion and a later knee flexion. 
+In addition, the OCP kinematics presented a neck extension during the eevation phase, whereas the SOCP+ presented a neck flexion stabilizing their head (see Sec.~\ref{sec:head_stabilization} for further dicussion on the head stabilization).
+This discrepancy is also analogous to athletes behavior modification through learning process.
+Natrup et al. \cite{natrup2021gaze} observed that less experienced athletes presented a neck extension and more experienced athletes did not during a backward somersault with a twist on the trampoline.
+In continuation with previous findings \cite{harris1998signal, todorov2002optimal}, this study suggests that athletes learn to adapt their motor strategy to consider their own motor variability.
 
 
-sensorymotor
-ref looking a the floor, head stabilization
-and the accuracy of their senses .
+\subsection{Head stabilization strategy}\label{sec:head_stabilization}
+Berthoz & Pozzo \cite{berthoz1994head} highlighted that athletes exhibit two periods of head stabilization: during the elevation phase after take off and in preparation for landing.
+These two periods are characterized by a neck flexion compensating for the body's backward rotation.
+Berthoz & Pozzo \cite{berthoz1994head} explain that the first head stabilization allows the brain to use a combination of visual and vestibular cues to guide the movement and control the upcoming backward rotation velocity and acceleration.
+Similarly, the second head stabilization would help landing coordination, using visual and vestibular information.
+Between the two head stabilization periods, the neck is rapidly extend (referred as head saccade).
+This behavior prevents the use of visual information, but allows to reposition the head to increase the neck flexion range of motion allowing for a longer head stabilization period.
+Our optimal SOCP+ technique replicated this neck kinematics and head stabilization strategy.
+This suggests that our modelling method is appropriate to allow the emergence of sensory acquisition strategies used by athletes.
+
+Interestingly, our SOCPV simulation also replicated this neck kinematics even though it only had access to vestibular feedback and not visual feedback.
+In the literature, the head stabilization periods are often though to be mainly driven by the need for visual feedback \cite{sanders1994head, luis2008visual, heinen2011evidence}.
+However, here we show that head stabilization still occurs when only vestibular information is available.
+This is in agreement with \cite{davlin2004gymnasts}, where it was found that athletes still exhibited head stabilization periods in darkness conditions.
+As our SOCPV simulation models vestibular acuity through sensory noise modulation as a function of the head angular velocity, our results suggest that head stabilization would be used by athletes to increase the acuity of vestibular feedback information.
+Thus, this study strengthens, through a new methodology, the idea that head stabilization would allow increasing acuity of multiple sensory feedback, not only vision.
+
+\comEC{However, our SOCPA simulation also exhibited this head stabilization behavior, which we could not explain from a sensory point of view. Thus more studies are needed to better isolate the sensory or motor mechanisms responsible for the head stabilization strategy. Mickael, je prendrais de l'aide ici si tu as une idée... Sinon, est-ce qu'on peut juste balayer sous le tapis ?}
+
+\subsection{Landing variability}
+As observed in other stochastic simulation studies \citep{van2022approximate, berret2024co}, including uncertainty in the optimal control problem formulation allowed generating optimal techniques more robust to motor noise. 
+Indeed, all stochastic formulations (SOCP, SOCPV, SOCPA, SOCP+) outperformed the deterministic formulation (OCP) in terms of landing variability, the main performance indicator in this study.
+Furthermore, the SOCPA and SOCP+ simulations exhibited the smallest landing variability, showing that the addition of anticipatory feedback helped increase robustness to motor noise.
+The beneficial role of anticipatory feedback (also called prospective regulation) during the backward somersault was also suggested by Bardy & Laurent \cite{bardy1998body}, based on experimental evidence showing that landing variability is increased in darkness condition.   
+The prospective regulation of landing variability in SOCPA and SOCP+ simulations was mainly achieved by making adjustments to the shoulder joint kinematics.
+This strategy was also observed in trampolinists, where the upper-limb variability was increased during the last part of the acrobatics to allow reducing the body orientation variability at landing \cite{bourgeois2025motor}.
+Modifying the upper-limbs technique offer an efficient way to regulate the body rotation velocity through moment of inertia modifications, as these segments are less constrained by the acrobatic task (lower-limbs are constrained by the need for the center of mass to be placed above the feet).
+In agreement with the measurement of athletes' variability regulation,  this study suggests that athletes use an internal model to predict their future state and make appropriate anticipatory corrections.
 
 
-- Each strategies (sensorymotor)
-- Robustness of the approach (number of episodes)
-- Future research + implication for optim-biomech community
+\subsection{Sensorimotor strategies}
+Like for previous studies on the reaching task \cite{van2022approximate, yeo2016optimal}, we obtained motor strategies composed of both open-loop control and feedback control (Fig.~\ref{fig:torques_contributions} b)).
+The use of feedbacks was modulated across the duration of the movement in our optimal solutions.
+Direct feedback control was mainly used from 30\% to 90\% of the acrobatic and anticipatory feedback was mainly used from 50\% to 80\%.
+A similar phenomenon was observed experimentally during the reaching task, where feedback was modulated across the movement, with the feedback gains peaking in the middle of the movement \cite{dimitriou2013temporal}.
+Our optimal techniques present a more complex modulation of the feedback gains due to the increased complexity of the task.
+The direct feedback gains were increased during hip flexions, showing that these actions must be precisely executed as they are key to achieving a controlled landing.
+In addition, the knee direct and anticipatory feedback gains were high during the whole movement.
+Flexing/extending the knees is a simple and effective way to modify the somersault velocity as the shanks are far from the center of mass and thus have a large impact on the moment of inertia of the body.
+In general, the anticipatory feedback gains were increased during the periods of higher sensory acuity (head stabilization and eyes on the floor) in the SOCP+ optimal techniques.
+This suggests that these kinematic feature have a sensory acquisition origin.
+Unexpectedly, the anticipatory feedback gains in the SOCPA technique present a similar temporal evolution, although the sensory acuity was not state dependent, so the head stabilization and eyes on the floor did not have any effect on the sensory noise.
+This might indicate that the instants when the sensory acquisition strategies are performed (head stabilization and eyes on the floor) is also important.
+This might be true as these instants correspond to the timing of the hip flexions.
+Future research is needed to confirm or infirm this last hypothesis.
+
+
+\subsection{Limits as perspectives}
+The modeling method suggested in this study allowed matching more closely elite athletes' behavior than a traditional optimal control formulation.
+However, some limitations could still be adressed to further increase the realism of the optimal sensorimotor techniques generated:
+
+\textit{i)} Grasping the shanks with the hands was not impose, nor encouraged, although it a behavior observed in athletes. This could be added to the stochastic optimal control problem using holonomic tucking constraints, as in \cite{farr2025including}.
+
+\textit{ii)} The number of episodes was chosen in agreement with \cite{koelewijn2020solution}, where it was shown that only 20 episodes were needed to accurately approximate the stochastic optimal control simulation of gait. However, the model rotating freely in space during the backward somersault induces a higher non-linearity in the system dynamics, thus a sensibility analysis should be conducted to determine the minimal number of episodes needed to approximate acrobatic tasks.
+
+\textit{iii)} Only one initial guess was tested for each formulation due to the large computational time needed to reach convergence (few weeks per problem). Thus, the optimal solutions presented in this study might be local minima rather than global minima. The stochastic problems were initialized with the solution from the deterministic version of the problem to mitigate this limitation.
+
+\section{Conclusion}
+This study introduces, for the first time, an approximate stochastic optimal control formulation for the simulation of acrobatic movements.
+The optimal techniques replicated key sensorimotor features of athletes' technique: sensory acquisition , .
+This offers promising perspectives for the optimization of complex human movements as intricate sensorimotor strategies could be optimized.
 
 
 \backmatter
