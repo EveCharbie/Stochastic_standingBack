@@ -190,7 +190,7 @@ Since there is evidence that anticipatory sensory feedback control is used by at
 % However, during rapid movements with large muscle contractions such as the backward somersault the amplitude modulation of the motor noise might influence the sensorimotor control strategy choices.
 
 Although a few simulation studies investigated the backward somersault in humans \cite{khosravi1987control, leboeuf2012optimal, pettersson2013optimisation, farr2025including}, none of them considered sensory feedback or motor variability.  
-Khosravi & al. \cite{khosravi1987control} used feedback torques to find the control strategy that best fits an athlete's technique.
+Khosravi \& al. \cite{khosravi1987control} used feedback torques to find the control strategy that best fits an athlete's technique.
 However, the feedback torques were used as a computational trick to find an optimal open-loop control strategy and do not represent a sensory feedback. 
 \comEC{Mickael svp confirmer cette dernière phrase, j'ai vraiment du mal à comprendre ce qu'ils ont fait dans cette étude}
 % Park & Park \cite{park2012backflips} used sensory feedbacks to stabilize the robot's motion.
@@ -239,6 +239,7 @@ F : \ddot{q} = M(q)^{-1} (\tau_{\text{total}} - N(q, \dot{q}) - v\dot{q}_{\text{
 
 
 \subsection{Discretized stochastic optimal control framework}
+\comEC{In this section remove some heavy math to put in appendix}
 To transcribe the stochastic optimal control problems into a solvable deterministic optimal control problem, the motor and sensory noises were sampled from a Gaussian distribution at 20 different instances as in \cite{koelewijn2020solution}.
 Analogically, it could be seen as if 20 optimal control problems were solved simultaneously with different noise values, and thus different state values, but with the same motor command.
 The number of noise samples (20) was chosen based on the analysis in \cite{koelewijn2020solution} showing that the cost function value varied less than 1\% when using 20 or more samples.
@@ -555,7 +556,7 @@ The complete approximate stochastic optimal control transcription was as follows
 
 \subsection{Comparison of the optimal solutions}
 The difference between the optimal kinematics from the different transcriptions of the problem were compared using statistical parametric mapping (SPM1D) \cite{pataky2012one}.
-The optimal joint torques were split into their components to analyze the contribution of open-loop control (\tau_{\text{voluntary}}), joint damping, direct feedback control (\tau_{\text{dfb}}), and anticipatory feedback control (\tau_{\text{afb}}).
+The optimal joint torques were split into their components to analyze the contribution of open-loop control ($\tau_{\text{voluntary}}$), joint damping, direct feedback control ($\tau_{\text{dfb}}$), and anticipatory feedback control ($\tau_{\text{afb}}$).
 The head rotation velocity and eye orientation were analyzed to extract sensory acquisition strategies from the optimal acrobatic techniques.
 
 \section{Results}\label{sec:results}
@@ -639,9 +640,9 @@ In continuation with previous findings \cite{harris1998signal, todorov2002optima
 
 
 \subsection{Head stabilization strategy}\label{sec:head_stabilization}
-Berthoz & Pozzo \cite{berthoz1994head} highlighted that athletes exhibit two periods of head stabilization: during the elevation phase after take off and in preparation for landing.
+Berthoz \& Pozzo \cite{berthoz1994head} highlighted that athletes exhibit two periods of head stabilization: during the elevation phase after take off and in preparation for landing.
 These two periods are characterized by a neck flexion compensating for the body's backward rotation.
-Berthoz & Pozzo \cite{berthoz1994head} explain that the first head stabilization allows the brain to use a combination of visual and vestibular cues to guide the movement and control the upcoming backward rotation velocity and acceleration.
+Berthoz \& Pozzo \cite{berthoz1994head} explain that the first head stabilization allows the brain to use a combination of visual and vestibular cues to guide the movement and control the upcoming backward rotation velocity and acceleration.
 Similarly, the second head stabilization would help landing coordination, using visual and vestibular information.
 Between the two head stabilization periods, the neck is rapidly extend (referred as head saccade).
 This behavior prevents the use of visual information, but allows to reposition the head to increase the neck flexion range of motion allowing for a longer head stabilization period.
@@ -661,7 +662,7 @@ Thus, this study strengthens, through a new methodology, the idea that head stab
 As observed in other stochastic simulation studies \citep{van2022approximate, berret2024co}, including uncertainty in the optimal control problem formulation allowed generating optimal techniques more robust to motor noise. 
 Indeed, all stochastic formulations (SOCP, SOCPV, SOCPA, SOCP+) outperformed the deterministic formulation (OCP) in terms of landing variability, the main performance indicator in this study.
 Furthermore, the SOCPA and SOCP+ simulations exhibited the smallest landing variability, showing that the addition of anticipatory feedback helped increase robustness to motor noise.
-The beneficial role of anticipatory feedback (also called prospective regulation) during the backward somersault was also suggested by Bardy & Laurent \cite{bardy1998body}, based on experimental evidence showing that landing variability is increased in darkness condition.   
+The beneficial role of anticipatory feedback (also called prospective regulation) during the backward somersault was also suggested by Bardy \& Laurent \cite{bardy1998body}, based on experimental evidence showing that landing variability is increased in darkness condition.   
 The prospective regulation of landing variability in SOCPA and SOCP+ simulations was mainly achieved by making adjustments to the shoulder joint kinematics.
 This strategy was also observed in trampolinists, where the upper-limb variability was increased during the last part of the acrobatics to allow reducing the body orientation variability at landing \cite{bourgeois2025motor}.
 Modifying the upper-limbs technique offer an efficient way to regulate the body rotation velocity through moment of inertia modifications, as these segments are less constrained by the acrobatic task (lower-limbs are constrained by the need for the center of mass to be placed above the feet).
