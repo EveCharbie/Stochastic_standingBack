@@ -197,7 +197,7 @@ Given evidence that athletes use anticipatory sensory feedback control during ba
 Although a few simulation studies investigated the backward somersault in humans \cite{khosravi1987control, leboeuf2012optimal, pettersson2013optimisation, farr2025including}, none of them considered sensory feedback or motor variability.  
 Khosravi \& al. \cite{khosravi1987control} used feedback torques to find the control strategy that best fits an athlete's technique.
 However, the feedback torques were only used as a computational trick to find an optimal open-loop control strategy and do not represent a sensory feedback. 
-\comEC{Mickael cette dernière phrase est à discuter, j'ai vraiment du mal à comprendre ce qu'ils ont fait dans cette étude}
+\comEC{Mickael cette derniere phrase est a discuter, j'ai vraiment du mal a comprendre ce qu'ils ont fait dans cette étude}
 % Park & Park \cite{park2012backflips} used sensory feedbacks to stabilize the robot's motion.
 Regarding open-loop control strategies, some studies \cite{khosravi1987control, leboeuf2012optimal} generated them by informing the optimization process with athletes' kinematic data.
 In this case, it is not surprising that the optimal solutions matched athletes' kinematics.
@@ -576,14 +576,14 @@ Notably, the knees were kept extended longer, and the initial hip flexion was le
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/kinograms.png}
+\includegraphics[width=1.0\linewidth]{figures/kinograms.png}
 \caption{Animation of the optimal kinematics for the backward somersault generated with the OCP (\textcolor{OCP_color}{green}), SOCP (\textcolor{SOCP_color}{pink}), SOCPV (\textcolor{SOCP_VARIABLE_color}{orange}), SOCPA (\textcolor{SOCP_FEEDFORWARD_color}{purple}), and SOCP+ (\textcolor{SOCP_plus_color}{blue}) formulations. The grayed avatars represent the optimal joint angles for each episode (except for the OCP version, where they represent a noisy reintegration of the deterministic optimal solution), and colored avatars represent the mean optimal joint angles across episodes.}
 \label{fig:kinograms}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/kinematics.png}
+\includegraphics[width=1.0\linewidth]{figures/kinematics.png}
 \caption{Optimal kinematics for the backward somersault generated with the OCP (\textcolor{OCP_color}{green}), SOCP (\textcolor{SOCP_color}{pink}), SOCPV (\textcolor{SOCP_VARIABLE_color}{orange}), SOCPA (\textcolor{SOCP_FEEDFORWARD_color}{purple}), and SOCP+ (\textcolor{SOCP_plus_color}{blue}) formulations. The dual-coloured bars below the graphs represent the time intervals during which each pair of techniques was significantly different.}
 \label{fig:kinematics}
 \end{figure}
@@ -597,7 +597,7 @@ The largest torque contribution came from the open-loop (98.97\%) for the OCP im
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/torques_contributions.png}
+\includegraphics[width=1.0\linewidth]{figures/torques_contributions.png}
 \caption{a) Each component of the motor command for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. The total torque used to actuate the avatar is presented on the last row. For the stochastic implementations, only the means of the joint friction, direct feedback, and anticipatory feedback are presented for clarity. b) The sum of the absolute value of the joint torques integrated for each component of the motor command: Open-loop control (red), joint friction (blue), direct feedback (green), and anticipatory feedback (pink).}
 \label{fig:torques_contributions}
 \end{figure}
@@ -611,7 +611,7 @@ The mean absolute eye orientation was smaller in the SOCP+ (77.56\degree) than i
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/sensory_strategies.png}
+\includegraphics[width=1.0\linewidth]{figures/sensory_strategies.png}
 \caption{a) The feedback gains (k) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. b) The head angular velocity in the global reference frame and the angle between the vertical and the eye orientation of the mean technique for the \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations.}
 \label{fig:sensory_strategies}
 \end{figure}
@@ -625,7 +625,7 @@ SOCP+: 0.030).
 
 \begin{figure}[H]
 \centering
-\includegraphics{figures/landing_variability.png}
+\includegraphics[width=1.0\linewidth]{figures/landing_variability.png}
 \caption{The three landing variability components (center of mass horizontal position, center of mass horizontal velocity, and body angular velocity) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCPV} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCPA} (purple), and \textcolor{SOCP_plus_color}{SOCP+} (blue) formulations. The value for each episode is depicted with a dot, the mean over all episodes is depicted with a square, the standard deviation range is depicted with a box, and the standard deviation is written above the box plot.}
 \label{fig:landing_variability}
 \end{figure}
@@ -717,7 +717,8 @@ This work was supported by Mitacs Globalink IT33527.
 \textbf{Micka\"{e}l Begon}: Conceptualization, Ressources, Supervision, Writing - review \& editing
 
 \bmhead{Supplementary material}
-The code to reproduce the results and videos of the optimal solutions can be found on the Github repository~\citep{Charbonneau2025software}.
+The code to reproduce the results and videos of the optimal solutions can be found on the Github repository TODO.
+\comEC{Add to Zenodo Charbonneau2025software}
 
 \bmhead{Statements and declarations}
 The authors declare that they have no conflict of interest.
