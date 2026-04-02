@@ -56,6 +56,31 @@ segment	Head_ocp
 	meshcolor 0.36 0.79 0.38
 endsegment
 
+segment Eyes_ocp
+	parent Head_ocp
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+marker eyes_vect_start_ocp
+	parent Eyes_ocp
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_ocp
+	parent Eyes_ocp
+	position 0 -1 0
+endmarker
+
 segment	Arm_ocp
 	parent	Thorax_ocp
 	RTinMatrix	1
@@ -264,6 +289,31 @@ segment	Head_socp
 	meshcolor 0.67 0.15 0.58
 endsegment
 
+segment Eyes_socp
+	parent Head_socp
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+	meshcolor 0.67 0.15 0.58
+endsegment
+
+marker eyes_vect_start_socp
+	parent Eyes_socp
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_socp
+	parent Eyes_socp
+	position 0 -1 0
+endmarker
+
 segment	Arm_socp
 	parent	Thorax_socp
 	RTinMatrix	1
@@ -471,6 +521,31 @@ segment	Head_variable
 	meshfile mesh/head.stl
 	meshcolor 0.945 0.561 0.004
 endsegment
+
+segment Eyes_variable
+	parent Head_variable
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+	meshcolor 0.945 0.561 0.004
+endsegment
+
+marker eyes_vect_start_variable
+	parent Eyes_variable
+	position 0 0 0
+endmarker
+
+marker eyes_vect_end_variable
+	parent Eyes_variable
+	position 0 -1 0
+endmarker
 
 segment	Arm_variable
 	parent	Thorax_variable
