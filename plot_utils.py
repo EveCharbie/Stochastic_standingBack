@@ -13,6 +13,13 @@ def box_plot(position, data, color, ax, box_width=0.05):
         Rectangle((position - box_width, np.mean(data) - np.std(data)), 2 * box_width, 2 * np.std(data), color=color, alpha=0.3)
     )
 
+def add_std_to_box_plot(position, data, ax):
+    ax.text(position, np.max(data) + (np.max(data)-np.min(data)) * 0.05, f"{np.std(data):.2f}", ha='center', va='bottom')
+
+def step_plot(time_vector, data, color, ax, label=None):
+    appended_data = np.append(data, data[-1])
+    ax.step(time_vector, appended_data, where='post', color=color, label=label)
+
 def get_q_qdot_from_data(n_shooting, nb_random, q_roots, q_joints, qdot_roots, qdot_joints):
     n_root = 3
     n_joints = q_joints.shape[0] // nb_random

@@ -243,8 +243,10 @@ def noisy_integrate_ocp(
 
     for i_random in range(nb_random):
         q_all_ocp[
-            n_q * (i_random + 1) : n_q * (i_random + 2), :
+            n_q * i_random : n_q * (i_random + 1), :
         ] = q_ocp_integrated[:, :, i_random]
+
+    q_all_ocp[n_q * nb_random : n_q * (nb_random + 1)] = q_ocp
 
     return (
         q_ocp_integrated,
