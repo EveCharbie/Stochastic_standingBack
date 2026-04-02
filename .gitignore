@@ -184,3 +184,7 @@ models/cachette/
 *.gz
 
 graphs/
+
+*.bbl
+
+*.blg

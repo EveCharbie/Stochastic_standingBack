@@ -1358,7 +1358,7 @@ def plot_gains_per_dof(
     k_fb_socp_plus = k_socp_plus_matrix[:, : socp_plus.nlp[0].model.n_feedbacks, :]
     k_ff_socp_plus = k_socp_plus_matrix[:, socp_plus.nlp[0].model.n_feedbacks :, :]
 
-    fig, axs = plt.subplots(2, 5, figsize=(15, 6))
+    fig, axs = plt.subplots(2, 5, figsize=(15, 4))
     for i in range(5):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1424,7 +1424,7 @@ def plot_gains_per_dof(
     axs[0, 2].set_title("Shoulder")
     axs[0, 3].set_title("Hips")
     axs[0, 4].set_title("Knees")
-    
+
     for i_ax in range(5):
         axs[0, i_ax].get_xaxis().set_visible(False)
         axs[1, i_ax].set_xticks([0, 0.25, 0.5, 0.75, 1.0])
@@ -1454,7 +1454,8 @@ def plot_gains_per_dof(
         eye_orientation_socp_feedforward[i_shooting] = eye_orientation_fcn_8(q_mean_socp_feedforward[:, i_shooting], qdot_mean_socp_feedforward[:, i_shooting])
         eye_orientation_socp_plus[i_shooting] = eye_orientation_fcn_8(q_mean_socp_plus[:, i_shooting], qdot_mean_socp_plus[:, i_shooting])
 
-    fig, axs = plt.subplots(2, 1, figsize=(15, 6))
+    fig, axs = plt.subplots(2, 1, figsize=(15, 4))
+    axs[0].plot(normalized_time_vector_MS, np.zeros_like(normalized_time_vector_MS), '--k', alpha=0.5)
     axs[0].plot(normalized_time_vector_MS, head_velocity_ocp * 180 / np.pi, color=OCP_color, label="OCP")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp * 180 / np.pi, color=SOCP_color, label="SOCP")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp_variable * 180 / np.pi, color=SOCP_VARIABLE_color, label=r"SOCP$_{\text{VN}}$")
@@ -1481,8 +1482,17 @@ def plot_gains_per_dof(
     axs[1].set_xlabel("Normalized time")
 
     plt.subplots_adjust(hspace=0.1)
-    plt.savefig("graphs/head_velocity_eye_orinetation.png", dpi=300)
+    plt.savefig("graphs/head_velocity_eye_orientation.png", dpi=300)
     # plt.show()
+
+    print("Mean absolute head velocity OCP:", np.mean(np.abs(head_velocity_ocp)))
+    print("Mean absolute head velocity SOCP:", np.mean(np.abs(head_velocity_socp)))
+    print("Mean absolute head velocity SOCPV:", np.mean(np.abs(head_velocity_socp_variable)))
+    print("Mean absolute head velocity SOCPA:", np.mean(np.abs(head_velocity_socp_feedforward)))
+    print("Mean absolute head velocity SOCP+:", np.mean(np.abs(head_velocity_socp_plus)))
+
+    print("Mean absolute eye orientation SOCPA:", np.mean(np.abs(180 - eye_orientation_socp_feedforward * 180 / np.pi)))
+    print("Mean absolute eye orientation SOCP+:", np.mean(np.abs(180 - eye_orientation_socp_plus * 180 / np.pi)))
 
 def plot_mean_comparison(
     q_ocp,
@@ -1910,10 +1920,15 @@ def plot_landing_variability(
     axs[2].set_title(r"Body angular velocity [$^\circ$]")
 
     box_plot(0, CoM_y_ocp, OCP_color, axs[0], box_width=0.1)
+    axs[0].text(0, 0.995 * np.max(CoM_y_ocp), f"{np.std(CoM_y_ocp):.4f}", horizontalalignment='center')
     box_plot(0.5, CoM_y_socp, SOCP_color, axs[0], box_width=0.1)
+    axs[0].text(0.5, 0.995 * np.max(CoM_y_socp), f"{np.std(CoM_y_socp):.4f}", horizontalalignment='center')
     box_plot(1, CoM_y_socp_variable, SOCP_VARIABLE_color, axs[0], box_width=0.1)
+    axs[0].text(1, 0.995 * np.max(CoM_y_socp_variable), f"{np.std(CoM_y_socp_variable):.4f}", horizontalalignment='center')
     box_plot(1.5, CoM_y_socp_feedforward, SOCP_FEEDFORWARD_color, axs[0], box_width=0.1)
+    axs[0].text(1.5, 0.995 * np.max(CoM_y_socp_feedforward), f"{np.std(CoM_y_socp_feedforward):.4f}", horizontalalignment='center')
     box_plot(2, CoM_y_socp_plus, SOCP_PLUS_color, axs[0], box_width=0.1)
+    axs[0].text(2, 0.995 * np.max(CoM_y_socp_plus), f"{np.std(CoM_y_socp_plus):.4f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, CoM_y_ocp, axs[0])
     add_std_to_box_plot(0.5, CoM_y_socp, axs[0])
@@ -1922,10 +1937,15 @@ def plot_landing_variability(
     add_std_to_box_plot(2, CoM_y_socp_plus, axs[0])
 
     box_plot(0, CoM_dot_y_ocp, OCP_color, axs[1], box_width=0.1)
+    axs[1].text(0, 0.999 * np.max(CoM_dot_y_ocp), f"{np.std(CoM_dot_y_ocp):.4f}", horizontalalignment='center')
     box_plot(0.5, CoM_dot_y_socp, SOCP_color, axs[1], box_width=0.1)
+    axs[1].text(0.5, 0.999 * np.max(CoM_dot_y_socp), f"{np.std(CoM_dot_y_socp):.4f}", horizontalalignment='center')
     box_plot(1, CoM_dot_y_socp_variable, SOCP_VARIABLE_color, axs[1], box_width=0.1)
+    axs[1].text(1, 0.999 * np.max(CoM_dot_y_socp_variable), f"{np.std(CoM_dot_y_socp_variable):.4f}", horizontalalignment='center')
     box_plot(1.5, CoM_dot_y_socp_feedforward, SOCP_FEEDFORWARD_color, axs[1], box_width=0.1)
+    axs[1].text(1.5, 0.999 * np.max(CoM_dot_y_socp_feedforward), f"{np.std(CoM_dot_y_socp_feedforward):.4f}", horizontalalignment='center')
     box_plot(2, CoM_dot_y_socp_plus, SOCP_PLUS_color, axs[1], box_width=0.1)
+    axs[1].text(2, 0.999 * np.max(CoM_dot_y_socp_plus), f"{np.std(CoM_dot_y_socp_plus):.4f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, CoM_dot_y_ocp, axs[1])
     add_std_to_box_plot(0.5, CoM_dot_y_socp, axs[1])
@@ -1934,10 +1954,15 @@ def plot_landing_variability(
     add_std_to_box_plot(2, CoM_dot_y_socp_plus, axs[1])
 
     box_plot(0, BodyVelocity_ocp, OCP_color, axs[2], box_width=0.1)
+    axs[2].text(0, 1.005 * np.max(BodyVelocity_ocp), f"{np.std(BodyVelocity_ocp):.3f}", horizontalalignment='center')
     box_plot(0.5, BodyVelocity_socp, SOCP_color, axs[2], box_width=0.1)
+    axs[2].text(0.5, 1.005 * np.max(BodyVelocity_socp), f"{np.std(BodyVelocity_socp):.3f}", horizontalalignment='center')
     box_plot(1, BodyVelocity_socp_variable, SOCP_VARIABLE_color, axs[2], box_width=0.1)
+    axs[2].text(1, 1.005 * np.max(BodyVelocity_socp_variable), f"{np.std(BodyVelocity_socp_variable):.3f}", horizontalalignment='center')
     box_plot(1.5, BodyVelocity_socp_feedforward, SOCP_FEEDFORWARD_color, axs[2], box_width=0.1)
+    axs[2].text(1.5, 1.005 * np.max(BodyVelocity_socp_feedforward), f"{np.std(BodyVelocity_socp_feedforward):.3f}", horizontalalignment='center')
     box_plot(2, BodyVelocity_socp_plus, SOCP_PLUS_color, axs[2], box_width=0.1)
+    axs[2].text(2, 1.005 * np.max(BodyVelocity_socp_plus), f"{np.std(BodyVelocity_socp_plus):.3f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, BodyVelocity_ocp, axs[2])
     add_std_to_box_plot(0.5, BodyVelocity_socp, axs[2])
