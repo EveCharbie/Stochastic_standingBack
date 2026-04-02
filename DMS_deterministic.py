@@ -87,6 +87,7 @@ def prepare_ocp(
     pose_at_last_node = np.array(
         [-0.0346, 0.1207, 5.8292, -0.1801, 0.5377, 0.8506, -0.6856]
     )  # Final position approx from bioviz
+    initial_velocity = np.array([0, 2, 2.5 * np.pi, 0, 0, 0, 0])
 
     x_bounds = BoundsList()
     q_roots_min = bio_model.bounds_from_ranges("q_roots").min
@@ -104,14 +105,11 @@ def prepare_ocp(
     q_joints_max[:, 0] = pose_at_first_node[n_root:]
     q_roots_min[2, 2] = pose_at_last_node[2] - 0.5
     q_roots_max[2, 2] = pose_at_last_node[2] + 0.5
-    qdot_roots_min[:, 0] = 0
-    qdot_roots_max[:, 0] = 0
-    qdot_joints_min[:, 0] = 0
-    qdot_joints_max[:, 0] = 0
-    qdot_roots_min[1, 0] = 2
-    qdot_roots_max[1, 0] = 2
-    qdot_roots_min[2, 0] = 2.5 * np.pi
-    qdot_roots_max[2, 0] = 2.5 * np.pi
+
+    qdot_roots_min[:, 0] = initial_velocity[:n_root]
+    qdot_roots_max[:, 0] = initial_velocity[:n_root]
+    qdot_joints_min[:, 0] = initial_velocity[n_root:]
+    qdot_joints_max[:, 0] = initial_velocity[n_root:]
 
     x_bounds.add(
         "q_roots",
