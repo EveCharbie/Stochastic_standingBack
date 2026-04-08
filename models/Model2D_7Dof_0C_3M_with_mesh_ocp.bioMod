@@ -55,6 +55,21 @@ segment	Head
 	meshcolor 0.36 0.79 0.38
 endsegment
 
+segment Eyes
+	parent Head
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshcolor 0.36 0.79 0.38
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm
 	parent	Thorax
 	RTinMatrix	1

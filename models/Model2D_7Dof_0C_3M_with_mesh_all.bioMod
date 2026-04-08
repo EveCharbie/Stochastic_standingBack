@@ -52,6 +52,20 @@ segment	Head_1
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_1
+	parent Head_1
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_1
 	parent	Thorax_1
 	RTinMatrix	1
@@ -248,6 +262,20 @@ segment	Head_2
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_2
+	parent Head_2
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_2
@@ -451,6 +479,20 @@ segment	Head_3
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_3
+	parent Head_3
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_3
 	parent	Thorax_3
 	RTinMatrix	1
@@ -648,6 +690,20 @@ segment	Head_4
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_4
+	parent Head_4
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_4
@@ -848,6 +904,20 @@ segment	Head_5
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_5
+	parent Head_5
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_5
@@ -1051,6 +1121,20 @@ segment	Head_6
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_6
+	parent Head_6
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_6
 	parent	Thorax_6
 	RTinMatrix	1
@@ -1248,6 +1332,20 @@ segment	Head_7
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_7
+	parent Head_7
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_7
@@ -1452,6 +1550,20 @@ segment	Head_8
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_8
+	parent Head_8
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_8
 	parent	Thorax_8
 	RTinMatrix	1
@@ -1651,6 +1763,20 @@ segment	Head_9
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_9
+	parent Head_9
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_9
@@ -1854,6 +1980,20 @@ segment	Head_10
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_10
+	parent Head_10
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_10
 	parent	Thorax_10
 	RTinMatrix	1
@@ -2052,6 +2192,20 @@ segment	Head_11
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_11
+	parent Head_11
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_11
@@ -2255,6 +2409,20 @@ segment	Head_12
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_12
+	parent Head_12
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_12
 	parent	Thorax_12
 	RTinMatrix	1
@@ -2453,6 +2621,20 @@ segment	Head_13
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_13
+	parent Head_13
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_13
@@ -2655,6 +2837,20 @@ segment	Head_14
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_14
+	parent Head_14
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_14
 	parent	Thorax_14
 	RTinMatrix	1
@@ -2853,6 +3049,20 @@ segment	Head_15
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_15
+	parent Head_15
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_15
@@ -3056,6 +3266,20 @@ segment	Head_16
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_16
+	parent Head_16
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_16
 	parent	Thorax_16
 	RTinMatrix	1
@@ -3253,6 +3477,20 @@ segment	Head_17
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_17
+	parent Head_17
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_17
@@ -3457,6 +3695,20 @@ segment	Head_18
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_18
+	parent Head_18
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_18
 	parent	Thorax_18
 	RTinMatrix	1
@@ -3656,6 +3908,20 @@ segment	Head_19
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+endsegment
+
+segment Eyes_19
+	parent Head_19
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 endsegment
 
 segment	Arm_19
@@ -3859,6 +4125,20 @@ segment	Head_20
 	meshfile mesh/head.stl
 endsegment
 
+segment Eyes_20
+	parent Head_20
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
+endsegment
+
 segment	Arm_20
 	parent	Thorax_20
 	RTinMatrix	1
@@ -4058,6 +4338,21 @@ segment	Head_mean
 		0.0	0.0	0.0156
 	com	0.0	0.0	0.0853
 	meshfile mesh/head.stl
+	meshcolor 0.36 0.79 0.38
+endsegment
+
+segment Eyes_mean
+	parent Head_mean
+	rt 0.0 0.0 0.0 xyz 0.0 0.055 0.085
+	com 0.0 0.0 0.0
+	mass 0.015 
+	inertia
+		0.0001 0.0 0.0
+		0.0 0.0001 0.0
+		0.0 0.0 0.0001
+	meshfile mesh/cone.stl
+	meshrt 3.14 0 0 xyz 0 1.5 0
+	meshscale 0.01 1 0.01
 	meshcolor 0.36 0.79 0.38
 endsegment
 
