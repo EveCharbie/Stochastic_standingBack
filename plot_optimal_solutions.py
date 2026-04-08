@@ -229,7 +229,7 @@ def plot_motor_command(
 ):
 
     # Plot the motor command
-    fig, axs = plt.subplots(5, 5, figsize=(15, 15))
+    fig, axs = plt.subplots(5, 5, figsize=(10, 10))
     for i in range(5):
         for j in range(5):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -239,70 +239,70 @@ def plot_motor_command(
     step_plot(normalized_time_vector, tau_joints_socp_variable[0, :], color=SOCP_VARIABLE_color, ax=axs[0, 0], label=r"SOCP$_{\text{VN}}$")
     step_plot(normalized_time_vector, tau_joints_socp_feedforward[0, :], color=SOCP_FEEDFORWARD_color, ax=axs[0, 0], label=r"SOCP$^{\text{AF}}$")
     step_plot(normalized_time_vector, tau_joints_socp_plus[0, :], color=SOCP_PLUS_color, ax=axs[0, 0], label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
-    axs[0, 0].set_title("Neck")
+    axs[0, 0].set_ylabel("Neck")
     # axs[0, 0].legend(ncol=3)
     # Eyes
-    step_plot(normalized_time_vector, tau_joints_socp_feedforward[1, :], color=SOCP_FEEDFORWARD_color, ax=axs[0, 1], label=r"SOCP$^{\text{AF}}$")
-    step_plot(normalized_time_vector, tau_joints_socp_plus[1, :], color=SOCP_PLUS_color, ax=axs[0, 1], label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
-    axs[0, 1].set_title("Eyes")
-    axs[0, 1].plot([0, 1], [0, 0], color="black", linestyle="--")
+    step_plot(normalized_time_vector, tau_joints_socp_feedforward[1, :], color=SOCP_FEEDFORWARD_color, ax=axs[1, 0], label=r"SOCP$^{\text{AF}}$")
+    step_plot(normalized_time_vector, tau_joints_socp_plus[1, :], color=SOCP_PLUS_color, ax=axs[1, 0], label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
+    axs[1, 0].set_ylabel("Eyes")
+    axs[1, 0].plot([0, 1], [0, 0], color="black", linestyle="--")
     # Other joints
     for i_dof in range(2, 5):
-        step_plot(normalized_time_vector, tau_joints_ocp[i_dof - 1, :], color=OCP_color, ax=axs[0, i_dof], label="OCP")
-        step_plot(normalized_time_vector, tau_joints_socp[i_dof - 1, :], color=SOCP_color, ax=axs[0, i_dof], label="SOCP")
-        step_plot(normalized_time_vector, tau_joints_socp_variable[i_dof - 1, :], color=SOCP_VARIABLE_color, ax=axs[0, i_dof], label=r"SOCP$_{\text{VN}}$")
-        step_plot(normalized_time_vector, tau_joints_socp_feedforward[i_dof, :], color=SOCP_FEEDFORWARD_color, ax=axs[0, i_dof], label=r"SOCP$^{\text{AF}}$")
-        step_plot(normalized_time_vector, tau_joints_socp_plus[i_dof, :], color=SOCP_PLUS_color, ax=axs[0, i_dof], label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
+        step_plot(normalized_time_vector, tau_joints_ocp[i_dof - 1, :], color=OCP_color, ax=axs[i_dof, 0], label="OCP")
+        step_plot(normalized_time_vector, tau_joints_socp[i_dof - 1, :], color=SOCP_color, ax=axs[i_dof, 0], label="SOCP")
+        step_plot(normalized_time_vector, tau_joints_socp_variable[i_dof - 1, :], color=SOCP_VARIABLE_color, ax=axs[i_dof, 0], label=r"SOCP$_{\text{VN}}$")
+        step_plot(normalized_time_vector, tau_joints_socp_feedforward[i_dof, :], color=SOCP_FEEDFORWARD_color, ax=axs[i_dof, 0], label=r"SOCP$^{\text{AF}}$")
+        step_plot(normalized_time_vector, tau_joints_socp_plus[i_dof, :], color=SOCP_PLUS_color, ax=axs[i_dof, 0], label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
 
-    axs[0, 2].set_title("Shoulder")
-    axs[0, 3].set_title("Hips")
-    axs[0, 4].set_title("Knees")
-    axs[0, 0].set_ylabel("Open-loop\n" + r"($\tau_{voluntary}$) [Nm]")
+    axs[2, 0].set_ylabel("Shoulder")
+    axs[3, 0].set_ylabel("Hips")
+    axs[4, 0].set_ylabel("Knees")
+    axs[0, 0].set_title("Open-loop\n" + r"($\tau_{voluntary}$) [Nm]")
 
     # Joint friction
     for i_dof in range(5):
         if i_dof == 0:
-            step_plot(normalized_time_vector, -joint_friction_ocp[0, :], color=OCP_color, ax=axs[1, 0])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp[0, :, :], axis=1), color=SOCP_color, ax=axs[1, 0])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_variable[0, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[1, 0])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_feedforward[0, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[1, 0])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_plus[0, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[1, 0])
+            step_plot(normalized_time_vector, -joint_friction_ocp[0, :], color=OCP_color, ax=axs[0, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp[0, :, :], axis=1), color=SOCP_color, ax=axs[0, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_variable[0, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[0, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_feedforward[0, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[0, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_plus[0, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[0, 1])
         elif i_dof == 1:
             step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_feedforward[1, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[1, 1])
             step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_plus[1, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[1, 1])
         else:
-            step_plot(normalized_time_vector, -joint_friction_ocp[i_dof - 1, :], color=OCP_color, ax=axs[1, i_dof])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp[i_dof - 1, :, :], axis=1), color=SOCP_color, ax=axs[1, i_dof])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_variable[i_dof - 1, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[1, i_dof])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_feedforward[i_dof, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[1, i_dof])
-            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_plus[i_dof, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[1, i_dof])
+            step_plot(normalized_time_vector, -joint_friction_ocp[i_dof - 1, :], color=OCP_color, ax=axs[i_dof, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp[i_dof - 1, :, :], axis=1), color=SOCP_color, ax=axs[i_dof, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_variable[i_dof - 1, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[i_dof, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_feedforward[i_dof, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[i_dof, 1])
+            step_plot(normalized_time_vector, -np.mean(joint_frictions_socp_plus[i_dof, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[i_dof, 1])
 
-    axs[1, 0].set_ylabel("Joint friction\n[Nm]")
+    axs[0, 1].set_title("Joint damping\n[Nm]")
 
     # Feedback
     for i_dof in range(5):
         if i_dof == 0:
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp[0, :, :], axis=1), color=SOCP_color, ax=axs[2, 0])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_variable[0, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[2, 0])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[0, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[2, 0])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[0, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[2, 0])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp[0, :, :], axis=1), color=SOCP_color, ax=axs[0, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_variable[0, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[0, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[0, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[0, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[0, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[0, 2])
         elif i_dof == 1:
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[1, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[2, 1])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[1, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[2, 1])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[1, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[1, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[1, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[1, 2])
         else:
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp[i_dof - 1, :, :], axis=1), color=SOCP_color, ax=axs[2, i_dof])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_variable[i_dof - 1, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[2, i_dof])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[i_dof, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[2, i_dof])
-            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[i_dof, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[2, i_dof])
-    axs[2, 0].set_ylabel("Direct\nfeedback\n" + r"($\tau_{dfb}$) [Nm]")
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp[i_dof - 1, :, :], axis=1), color=SOCP_color, ax=axs[i_dof, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_variable[i_dof - 1, :, :], axis=1), color=SOCP_VARIABLE_color, ax=axs[i_dof, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_feedforward[i_dof, :, :], axis=1), color=SOCP_FEEDFORWARD_color, ax=axs[i_dof, 2])
+            step_plot(normalized_time_vector, np.mean(feedbacks_socp_plus[i_dof, :, :], axis=1), color=SOCP_PLUS_color, ax=axs[i_dof, 2])
+    axs[0, 2].set_title("Direct\nfeedback\n" + r"($\tau_{dfb}$) [Nm]")
 
     # Feedforward
     for i_dof in range(5):
         step_plot(normalized_time_vector, np.mean(feedforwards_socp_feedforward[i_dof, :, :], axis=1), color=SOCP_FEEDFORWARD_color,
-                  ax=axs[3, i_dof])
+                  ax=axs[i_dof, 3])
         step_plot(normalized_time_vector, np.mean(feedforwards_socp_plus[i_dof, :, :], axis=1), color=SOCP_PLUS_color,
-                  ax=axs[3, i_dof])
-    axs[3, 0].set_ylabel("Anticipatory\nfeedback\n" + r"($\tau_{afb}$) [Nm]")
+                  ax=axs[i_dof, 3])
+    axs[0, 3].set_title("Anticipatory\nfeedback\n" + r"($\tau_{afb}$) [Nm]")
 
     # Sum
     for i_dof in range(5):
@@ -313,7 +313,7 @@ def plot_motor_command(
                 - joint_friction_ocp[0, :],
                 # + motor_noises_ocp[0, :, :],            ,
                 color=OCP_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             step_plot(
                 normalized_time_vector,
@@ -322,7 +322,7 @@ def plot_motor_command(
                 # + motor_noises_socp[0, :, :]
                 + feedbacks_socp[0, :, :], axis=1),
                 color=SOCP_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             step_plot(
                 normalized_time_vector,
@@ -331,7 +331,7 @@ def plot_motor_command(
                 # + motor_noises_socp_variable[0, :, :]
                 + feedbacks_socp_variable[0, :, :], axis=1),
                 color=SOCP_VARIABLE_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             step_plot(
                 normalized_time_vector,
@@ -341,7 +341,7 @@ def plot_motor_command(
                 + feedbacks_socp_feedforward[0, :, :]
                 + feedforwards_socp_feedforward[0, :, :], axis=1),
                 color=SOCP_FEEDFORWARD_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             step_plot(
                 normalized_time_vector,
@@ -351,7 +351,7 @@ def plot_motor_command(
                 + feedbacks_socp_plus[0, :, :]
                 + feedforwards_socp_plus[0, :, :], axis=1),
                 color=SOCP_PLUS_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
         elif i_dof == 1:
             step_plot(
@@ -362,7 +362,7 @@ def plot_motor_command(
                 + feedbacks_socp_feedforward[1, :, :]
                 + feedforwards_socp_feedforward[1, :, :], axis=1),
                 color=SOCP_FEEDFORWARD_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             step_plot(
                 normalized_time_vector,
@@ -372,14 +372,14 @@ def plot_motor_command(
                 + feedbacks_socp_plus[1, :, :]
                 + feedforwards_socp_plus[1, :, :], axis=1),
                 color=SOCP_PLUS_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
         else:
             step_plot(
                 normalized_time_vector,
                 tau_joints_ocp[i_dof - 1, :] - joint_friction_ocp[i_dof - 1, :],
                 color=OCP_color,
-                ax=axs[4, i_dof],
+                ax=axs[i_dof, 4],
             )
             for i_random in range(nb_random):
                 step_plot(
@@ -389,7 +389,7 @@ def plot_motor_command(
                     # + motor_noises_socp[i_dof - 1, :, :]
                     + feedbacks_socp[i_dof - 1, :, :], axis=1),
                     color=SOCP_color,
-                    ax=axs[4, i_dof],
+                    ax=axs[i_dof, 4],
                 )
                 step_plot(
                     normalized_time_vector,
@@ -398,7 +398,7 @@ def plot_motor_command(
                     # + motor_noises_socp_variable[i_dof - 1, :, :]
                     + feedbacks_socp_variable[i_dof - 1, :, :], axis=1),
                     color=SOCP_VARIABLE_color,
-                    ax=axs[4, i_dof],
+                    ax=axs[i_dof, 4],
                 )
                 step_plot(
                     normalized_time_vector,
@@ -408,7 +408,7 @@ def plot_motor_command(
                     + feedbacks_socp_feedforward[i_dof, :, :]
                     + feedforwards_socp_feedforward[i_dof, :, :], axis=1),
                     color=SOCP_FEEDFORWARD_color,
-                    ax=axs[4, i_dof],
+                    ax=axs[i_dof, 4],
                 )
                 step_plot(
                     normalized_time_vector,
@@ -418,19 +418,32 @@ def plot_motor_command(
                     + feedbacks_socp_plus[i_dof, :, :]
                     + feedforwards_socp_plus[i_dof, :, :], axis=1),
                     color=SOCP_PLUS_color,
-                    ax=axs[4, i_dof],
+                    ax=axs[i_dof, 4],
                 )
-    axs[4, 0].set_ylabel("Total\n" + r"($\tau_{total}$) [Nm]")
+    axs[0, 4].set_title("Total\n" + r"($\tau_{total}$) [Nm]")
 
+    axis_ranges = [
+        [-150, 75],
+        [-0.2, 0.12],
+        [-200, 110],
+        [-115, 250],
+        [-530, 125],
+    ]
     for i_ax in range(5):
         for i_ax2 in range(4):
             axs[i_ax2, i_ax].get_xaxis().set_visible(False)
-        axs[4, i_ax].set_xticks([0, 0.25, 0.5, 0.75, 1.0])
-        axs[4, i_ax].set_xticklabels(["0%", "25%", "50%", "75%", "100%"])
+        axs[4, i_ax].set_xticks([0, 0.33, 0.66, 1.0])
+        axs[4, i_ax].set_xticklabels([" 0%", "33%", "66%", "100% "])
         axs[4, i_ax].set_xlabel("Normalized time")
 
+    for i_ax in range(5):
+        for i_ax2 in range(5):
+            if i_ax != 0:
+                axs[i_ax2, i_ax].get_yaxis().set_visible(False)
+            axs[i_ax2, i_ax].set_ylim(axis_ranges[i_ax2])
+
     # plt.tight_layout()
-    plt.subplots_adjust(hspace=0.1, wspace=0.3)
+    plt.subplots_adjust(hspace=0.1, wspace=0.1)
     plt.savefig("graphs/controls.png", dpi=300)
     # plt.show()
 
@@ -440,7 +453,7 @@ def plot_motor_command(
     total_joint_friction_ocp = np.sum(np.trapezoid(np.abs(joint_friction_ocp), time_vector_ocp[:-1], axis=1))
     total_ocp = total_tau_joint_ocp + total_joint_friction_ocp
     print(f"Total torque OCP: {np.sum(np.trapezoid(np.abs(tau_joints_ocp - joint_friction_ocp), time_vector_ocp[:-1], axis=1))} : "
-          f"(tau: {total_tau_joint_ocp/total_ocp * 100}%, friction: {total_joint_friction_ocp/total_ocp * 100}%)")
+          f"(tau: {total_tau_joint_ocp/total_ocp * 100}%, damping: {total_joint_friction_ocp/total_ocp * 100}%)")
     total_tau_joint_socp = np.sum(np.trapezoid(np.abs(tau_joints_socp), time_vector_socp[:-1], axis=1))
     total_joint_friction_socp = np.sum(np.trapezoid(np.abs(joint_frictions_socp), time_vector_socp[:-1], axis=1)) / nb_tests
     total_feedbacks_socp = np.sum(np.trapezoid(np.abs(feedbacks_socp), time_vector_socp[:-1], axis=1)) / nb_tests
@@ -448,7 +461,7 @@ def plot_motor_command(
     print(f"Total torque SOCP: {np.sum(np.trapezoid(np.abs(tau_joints_socp[:, :, np.newaxis]
                                         - joint_frictions_socp[:, :, :]
                                         + feedbacks_socp[:, :, :]), time_vector_socp[:-1], axis=1)) / nb_tests} : "
-          f"(tau: {total_tau_joint_socp/total_socp * 100}%, friction: {total_joint_friction_socp/total_socp * 100}%, "
+          f"(tau: {total_tau_joint_socp/total_socp * 100}%, damping: {total_joint_friction_socp/total_socp * 100}%, "
           f"feedback: {total_feedbacks_socp/total_socp * 100}")
     total_tau_joint_socp_variable = np.sum(np.trapezoid(np.abs(tau_joints_socp_variable), time_vector_socp_variable[:-1], axis=1))
     total_joint_friction_socp_variable = np.sum(np.trapezoid(np.abs(joint_frictions_socp_variable), time_vector_socp_variable[:-1], axis=1)) / nb_tests
@@ -457,7 +470,7 @@ def plot_motor_command(
     print(f"Total torque SOCP VARIABLE: {np.sum(np.trapezoid(np.abs(tau_joints_socp_variable[:, :, np.newaxis]
                      - joint_frictions_socp_variable[:, :, :]
                      + feedbacks_socp_variable[:, :, :]), time_vector_socp_variable[:-1], axis=1)) / nb_tests} : "
-          f"(tau: {total_tau_joint_socp_variable/total_socp_variable * 100}%, friction: {total_joint_friction_socp_variable/total_socp_variable * 100}%, "
+          f"(tau: {total_tau_joint_socp_variable/total_socp_variable * 100}%, damping: {total_joint_friction_socp_variable/total_socp_variable * 100}%, "
             f"feedback: {total_feedbacks_socp_variable/total_socp_variable * 100}")
     total_tau_joint_socp_feedforward = np.sum(np.trapezoid(np.abs(tau_joints_socp_feedforward), time_vector_socp_feedforward[:-1], axis=1))
     total_joint_friction_socp_feedforward = np.sum(np.trapezoid(np.abs(joint_frictions_socp_feedforward), time_vector_socp_feedforward[:-1], axis=1)) / nb_tests
@@ -470,7 +483,7 @@ def plot_motor_command(
                     + feedbacks_socp_feedforward[:, :, :]
                     + feedforwards_socp_feedforward[:, :, :]), time_vector_socp_feedforward[:-1], axis=1)) / nb_tests} : "
           f"(tau: {total_tau_joint_socp_feedforward/total_socp_feedforward * 100}%, "
-          f"friction: {total_joint_friction_socp_feedforward/total_socp_feedforward * 100}%, "
+          f"damping: {total_joint_friction_socp_feedforward/total_socp_feedforward * 100}%, "
           f"feedback: {total_feedbacks_socp_feedforward/total_socp_feedforward * 100}%, "
           f"feedforward: {total_feedforwards_socp_feedforward/total_socp_feedforward * 100}%")
     total_tau_joint_socp_plus = np.sum(np.trapezoid(np.abs(tau_joints_socp_plus), time_vector_socp_plus[:-1], axis=1))
@@ -484,12 +497,12 @@ def plot_motor_command(
                     + feedbacks_socp_plus[:, :, :]
                     + feedforwards_socp_plus[:, :, :]), time_vector_socp_plus[:-1], axis=1)) / nb_tests} : "
           f"(tau: {total_tau_joint_socp_plus/total_socp_plus * 100}%, "
-          f"friction: {total_joint_friction_socp_plus/total_socp_plus * 100}%, "
+          f"damping: {total_joint_friction_socp_plus/total_socp_plus * 100}%, "
           f"feedback: {total_feedbacks_socp_plus/total_socp_plus * 100}%, "
           f"feedforward: {total_feedforwards_socp_plus/total_socp_plus * 100}%")
 
 
-    plt.figure(figsize=(15, 3))
+    plt.figure(figsize=(10, 3))
 
     total = 0
     plt.bar(0, total_tau_joint_ocp, bottom=total, width=0.4, color="tab:red") #, label="Open-loop")
@@ -535,7 +548,7 @@ def plot_motor_command(
     plt.bar(4, total_tau_joint_socp_plus, bottom=total, width=0.4, color="tab:red", label="Open-loop")
     plt.text(3.8, total + total_tau_joint_socp_plus / 2, f"{(total_tau_joint_socp_plus/total_socp_plus) * 100:.2f}%", ha="right", va="center")
     total += total_tau_joint_socp_plus
-    plt.bar(4, total_joint_friction_socp_plus, bottom=total, width=0.4, color="tab:blue", label="Joint friction")
+    plt.bar(4, total_joint_friction_socp_plus, bottom=total, width=0.4, color="tab:blue", label="Joint damping")
     plt.text(3.8, total + total_joint_friction_socp_plus / 2, f"{(total_joint_friction_socp_plus/total_socp_plus) * 100:.2f}%", ha="right", va="center")
     total += total_joint_friction_socp_plus
     plt.bar(4, total_feedbacks_socp_plus, bottom=total, width=0.4, color="tab:green", label="Direct feedback")
@@ -585,7 +598,7 @@ def plot_tau_and_delta_tau(normalized_time_vector,
                             ):
 
     # All DoFs individually -----------------------------------------------
-    fig, axs = plt.subplots(2, 5, figsize=(15, 5))
+    fig, axs = plt.subplots(2, 5, figsize=(10, 5))
     for i in range(2):
         for j in range(5):
             axs[i, j].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -894,7 +907,7 @@ def plot_tau_and_delta_tau(normalized_time_vector,
 
     # All DoFs together ---------------------------------------------------
     # Plot tau and delta tau
-    fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
     for i in range(2):
         axs[i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
     # Tau
@@ -1066,7 +1079,7 @@ def plot_gains(
 
     # Plot the gains
     n_k_fb = socp_plus.nlp[0].model.n_noised_controls + socp_plus.nlp[0].model.n_references
-    fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+    fig, axs = plt.subplots(2, 4, figsize=(10, 8))
     for i in range(2):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1089,7 +1102,7 @@ def plot_gains(
 
 
     # Plot the gains
-    fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+    fig, axs = plt.subplots(2, 4, figsize=(10, 8))
     for i in range(2):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1112,7 +1125,7 @@ def plot_gains(
 
     # Plot the delta gains
     delta_time_vector = (normalized_time_vector[1:] + normalized_time_vector[:-1]) / 2
-    fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
     for i in range(2):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1152,7 +1165,7 @@ def plot_gains(
 
 
     # Plot the delta gains
-    fig, axs = plt.subplots(2, 4, figsize=(15, 10))
+    fig, axs = plt.subplots(2, 4, figsize=(10, 8))
     for i in range(2):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1220,7 +1233,7 @@ def plot_gains(
     # plt.show()
 
     # Plot the FF gains vs acuity
-    fig, axs = plt.subplots(4, 1, figsize=(15, 10))
+    fig, axs = plt.subplots(4, 1, figsize=(10, 8))
     for i in range(4):
         axs[i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
 
@@ -1358,7 +1371,7 @@ def plot_gains_per_dof(
     k_fb_socp_plus = k_socp_plus_matrix[:, : socp_plus.nlp[0].model.n_feedbacks, :]
     k_ff_socp_plus = k_socp_plus_matrix[:, socp_plus.nlp[0].model.n_feedbacks :, :]
 
-    fig, axs = plt.subplots(2, 5, figsize=(15, 4))
+    fig, axs = plt.subplots(2, 5, figsize=(12, 4))
     for i in range(5):
         for j in range(2):
             axs[j, i].plot([0, 1], [0, 0], color="black", linestyle="--", alpha=0.5)
@@ -1454,14 +1467,14 @@ def plot_gains_per_dof(
         eye_orientation_socp_feedforward[i_shooting] = eye_orientation_fcn_8(q_mean_socp_feedforward[:, i_shooting], qdot_mean_socp_feedforward[:, i_shooting])
         eye_orientation_socp_plus[i_shooting] = eye_orientation_fcn_8(q_mean_socp_plus[:, i_shooting], qdot_mean_socp_plus[:, i_shooting])
 
-    fig, axs = plt.subplots(2, 1, figsize=(15, 4))
+    fig, axs = plt.subplots(2, 1, figsize=(12, 4))
     axs[0].plot(normalized_time_vector_MS, np.zeros_like(normalized_time_vector_MS), '--k', alpha=0.5)
     axs[0].plot(normalized_time_vector_MS, head_velocity_ocp * 180 / np.pi, color=OCP_color, label="OCP")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp * 180 / np.pi, color=SOCP_color, label="SOCP")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp_variable * 180 / np.pi, color=SOCP_VARIABLE_color, label=r"SOCP$_{\text{VN}}$")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp_feedforward * 180 / np.pi, color=SOCP_FEEDFORWARD_color, label=r"SOCP$^{\text{AF}}$")
     axs[0].plot(normalized_time_vector_MS, head_velocity_socp_plus * 180 / np.pi, color=SOCP_PLUS_color, label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
-    axs[0].set_ylabel(r"Head velocity [$^\circ/s$]")
+    axs[0].set_ylabel(r"Head angular velocity [$^\circ/s$]")
     axs[1].plot(normalized_time_vector_MS, np.zeros_like(normalized_time_vector_MS), '--k', alpha=0.5)
     axs[1].fill_between(
         normalized_time_vector_MS,
@@ -1477,9 +1490,11 @@ def plot_gains_per_dof(
     axs[1].set_ylim(-10, 180)
 
     axs[0].get_xaxis().set_visible(False)
+    axs[0].set_xlim(0, 1)
     axs[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
     axs[1].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
     axs[1].set_xlabel("Normalized time")
+    axs[1].set_xlim(0, 1)
 
     plt.subplots_adjust(hspace=0.1)
     plt.savefig("graphs/head_velocity_eye_orientation.png", dpi=300)
@@ -1531,7 +1546,7 @@ def plot_mean_comparison(
     socp_feedforward_reintegration_mean = np.mean(q_socp_feedforward_integrated["20random"], axis=2)
     socp_plus_reintegration_mean = np.mean(q_socp_plus_integrated["20random"], axis=2)
 
-    fig, axs = plt.subplots(7, 5, figsize=(15, 10))
+    fig, axs = plt.subplots(7, 5, figsize=(10, 8))
     for i_dof in range(7):
         axs[i_dof, 0].plot(time_vector_ocp, q_ocp[i_dof, :], color=OCP_color, linewidth=2)
         axs[i_dof, 1].plot(time_vector_socp, q_mean_socp[i_dof, :], color=SOCP_color, linewidth=2)
@@ -1614,7 +1629,7 @@ def plot_comparison_nb_random(q_ocp_integrated,
         box_plot(current_position, q_integrated[2, -1, :], color, ax, box_width=0.3)
         return
 
-    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     position_all_random = np.random.random((q_socp_integrated.shape[2], 1)) * 0.1
     ax.plot(position_all_random - 3, q_ocp_integrated[2, -1, :], 'o', color=OCP_color)
     box_plot(-2, q_ocp_integrated[2, -1, :], OCP_color, ax)
@@ -1638,7 +1653,7 @@ def plot_comparison_kinematics_nb_random(
     nb_random_list = [5, 10, 15, 20]
     colors_random = ["tab:red", "tab:green", "tab:blue", "tab:orange"]
 
-    fig, axs = plt.subplots(n_q-2, 5, figsize=(15, 10))
+    fig, axs = plt.subplots(n_q-2, 5, figsize=(10, 8))
 
     # # Reintegrated
     # for i_dof in range(n_q):
@@ -1831,7 +1846,7 @@ def plot_landing_variability(
         SOCP_PLUS_color,
 ):
 
-    fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+    fig, axs = plt.subplots(1, 3, figsize=(12, 3))
     CoM_y_ocp = np.zeros((nb_random, 1))
     CoM_y_socp = np.zeros((nb_random, 1))
     CoM_y_socp_variable = np.zeros((nb_random, 1))
@@ -1915,20 +1930,15 @@ def plot_landing_variability(
                     color=SOCP_FEEDFORWARD_color)
         axs[2].plot(2 + np.random.random(1) * 0.2-0.1, BodyVelocity_socp_plus[i_random], ".", color=SOCP_PLUS_color)
 
-    axs[0].set_title(r"Center of mass horizontal position ($CoM$) [mm]")
-    axs[1].set_title(r"Center of mass horizontal velocity ($\dot{CoM}$) [mm/s]")
-    axs[2].set_title(r"Body angular velocity [$^\circ$]")
+    axs[0].set_title("Center of mass horizontal position ($CoM$)\n" + r"[mm]")
+    axs[1].set_title("Center of mass horizontal velocity ($\dot{CoM}$)\n" + r"[mm/s]")
+    axs[2].set_title("Body angular velocity\n" + r"[$^\circ$]")
 
     box_plot(0, CoM_y_ocp, OCP_color, axs[0], box_width=0.1)
-    axs[0].text(0, 0.995 * np.max(CoM_y_ocp), f"{np.std(CoM_y_ocp):.4f}", horizontalalignment='center')
     box_plot(0.5, CoM_y_socp, SOCP_color, axs[0], box_width=0.1)
-    axs[0].text(0.5, 0.995 * np.max(CoM_y_socp), f"{np.std(CoM_y_socp):.4f}", horizontalalignment='center')
     box_plot(1, CoM_y_socp_variable, SOCP_VARIABLE_color, axs[0], box_width=0.1)
-    axs[0].text(1, 0.995 * np.max(CoM_y_socp_variable), f"{np.std(CoM_y_socp_variable):.4f}", horizontalalignment='center')
     box_plot(1.5, CoM_y_socp_feedforward, SOCP_FEEDFORWARD_color, axs[0], box_width=0.1)
-    axs[0].text(1.5, 0.995 * np.max(CoM_y_socp_feedforward), f"{np.std(CoM_y_socp_feedforward):.4f}", horizontalalignment='center')
     box_plot(2, CoM_y_socp_plus, SOCP_PLUS_color, axs[0], box_width=0.1)
-    axs[0].text(2, 0.995 * np.max(CoM_y_socp_plus), f"{np.std(CoM_y_socp_plus):.4f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, CoM_y_ocp, axs[0])
     add_std_to_box_plot(0.5, CoM_y_socp, axs[0])
@@ -1937,15 +1947,10 @@ def plot_landing_variability(
     add_std_to_box_plot(2, CoM_y_socp_plus, axs[0])
 
     box_plot(0, CoM_dot_y_ocp, OCP_color, axs[1], box_width=0.1)
-    axs[1].text(0, 0.999 * np.max(CoM_dot_y_ocp), f"{np.std(CoM_dot_y_ocp):.4f}", horizontalalignment='center')
     box_plot(0.5, CoM_dot_y_socp, SOCP_color, axs[1], box_width=0.1)
-    axs[1].text(0.5, 0.999 * np.max(CoM_dot_y_socp), f"{np.std(CoM_dot_y_socp):.4f}", horizontalalignment='center')
     box_plot(1, CoM_dot_y_socp_variable, SOCP_VARIABLE_color, axs[1], box_width=0.1)
-    axs[1].text(1, 0.999 * np.max(CoM_dot_y_socp_variable), f"{np.std(CoM_dot_y_socp_variable):.4f}", horizontalalignment='center')
     box_plot(1.5, CoM_dot_y_socp_feedforward, SOCP_FEEDFORWARD_color, axs[1], box_width=0.1)
-    axs[1].text(1.5, 0.999 * np.max(CoM_dot_y_socp_feedforward), f"{np.std(CoM_dot_y_socp_feedforward):.4f}", horizontalalignment='center')
     box_plot(2, CoM_dot_y_socp_plus, SOCP_PLUS_color, axs[1], box_width=0.1)
-    axs[1].text(2, 0.999 * np.max(CoM_dot_y_socp_plus), f"{np.std(CoM_dot_y_socp_plus):.4f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, CoM_dot_y_ocp, axs[1])
     add_std_to_box_plot(0.5, CoM_dot_y_socp, axs[1])
@@ -1954,15 +1959,10 @@ def plot_landing_variability(
     add_std_to_box_plot(2, CoM_dot_y_socp_plus, axs[1])
 
     box_plot(0, BodyVelocity_ocp, OCP_color, axs[2], box_width=0.1)
-    axs[2].text(0, 1.005 * np.max(BodyVelocity_ocp), f"{np.std(BodyVelocity_ocp):.3f}", horizontalalignment='center')
     box_plot(0.5, BodyVelocity_socp, SOCP_color, axs[2], box_width=0.1)
-    axs[2].text(0.5, 1.005 * np.max(BodyVelocity_socp), f"{np.std(BodyVelocity_socp):.3f}", horizontalalignment='center')
     box_plot(1, BodyVelocity_socp_variable, SOCP_VARIABLE_color, axs[2], box_width=0.1)
-    axs[2].text(1, 1.005 * np.max(BodyVelocity_socp_variable), f"{np.std(BodyVelocity_socp_variable):.3f}", horizontalalignment='center')
     box_plot(1.5, BodyVelocity_socp_feedforward, SOCP_FEEDFORWARD_color, axs[2], box_width=0.1)
-    axs[2].text(1.5, 1.005 * np.max(BodyVelocity_socp_feedforward), f"{np.std(BodyVelocity_socp_feedforward):.3f}", horizontalalignment='center')
     box_plot(2, BodyVelocity_socp_plus, SOCP_PLUS_color, axs[2], box_width=0.1)
-    axs[2].text(2, 1.005 * np.max(BodyVelocity_socp_plus), f"{np.std(BodyVelocity_socp_plus):.3f}", horizontalalignment='center')
 
     add_std_to_box_plot(0, BodyVelocity_ocp, axs[2])
     add_std_to_box_plot(0.5, BodyVelocity_socp, axs[2])
@@ -1974,8 +1974,8 @@ def plot_landing_variability(
     axs[1].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
     axs[2].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
 
-    axs[0].set_ylim(-265, -205)
-    axs[1].set_ylim(-416, -395)
+    axs[0].set_ylim(-265, -200)
+    axs[1].set_ylim(-416, -390)
     axs[2].set_ylim(650, 795)
 
     plt.tight_layout()
@@ -2035,7 +2035,7 @@ def plot_inertia_ang_mom(
         SOCP_PLUS_color,
 ):
     n_shooting = normalized_time_vector.shape[0]
-    fig, axs = plt.subplots(2, 1, figsize=(15, 6))
+    fig, axs = plt.subplots(2, 1, figsize=(12, 4))
 
     inertia_ocp = np.zeros((nb_random, n_shooting))
     inertia_socp = np.zeros((nb_random, n_shooting))
@@ -2135,13 +2135,15 @@ def plot_inertia_ang_mom(
 
     axs[0].get_xaxis().set_visible(False)
     axs[0].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    axs[0].set_xlim(0, 1)
     axs[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
     axs[1].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
     axs[1].set_xlabel("Normalized time")
+    axs[1].set_xlim(0, 1)
 
     axs[0].set_ylabel("Transverse moment\nof inertia " +  r"[kg.m$^2$]")
     # axs[1].set_ylabel("Transverse angular\nmomentum " + r"[kg.m$^2$/s]")
-    axs[1].set_ylabel("Transverse body\nrotation rate " + r"[^\circ/s]")
+    axs[1].set_ylabel("Transverse body\nrotation rate " + r"[$^\circ$/s]")
 
     plt.subplots_adjust(hspace=0.1)
     plt.savefig("graphs/inertia_ang_mom.png", dpi=300)

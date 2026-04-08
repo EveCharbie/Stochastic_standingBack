@@ -150,7 +150,7 @@ sensory_noise_magnitude = cas.DM(
 
 if RUN_SOCP:
 
-    path_to_results = f"results/{model_name}_ocp_DMS_CVG_1e-8.pkl"
+    path_to_results = f"results/deterministic/{model_name}_ocp_DMS_CVG_1e-8.pkl"
     with open(path_to_results, "rb") as file:
         data = pickle.load(file)
         q_roots_last = data["q_roots_sol"]
