@@ -1846,7 +1846,7 @@ def plot_landing_variability(
         SOCP_PLUS_color,
 ):
 
-    fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+    fig, axs = plt.subplots(1, 4, figsize=(12, 3))
     CoM_y_ocp = np.zeros((nb_random, 1))
     CoM_y_socp = np.zeros((nb_random, 1))
     CoM_y_socp_variable = np.zeros((nb_random, 1))
@@ -1930,8 +1930,8 @@ def plot_landing_variability(
                     color=SOCP_FEEDFORWARD_color)
         axs[2].plot(2 + np.random.random(1) * 0.2-0.1, BodyVelocity_socp_plus[i_random], ".", color=SOCP_PLUS_color)
 
-    axs[0].set_title("Center of mass horizontal position ($CoM$)\n" + r"[mm]")
-    axs[1].set_title("Center of mass horizontal velocity ($\dot{CoM}$)\n" + r"[mm/s]")
+    axs[0].set_title("Center of mass horizontal\n position " + r"($CoM$) [mm]")
+    axs[1].set_title("Center of mass horizontal\n velocity " + r"($\dot{CoM}$) [mm/s]")
     axs[2].set_title("Body angular velocity\n" + r"[$^\circ$]")
 
     box_plot(0, CoM_y_ocp, OCP_color, axs[0], box_width=0.1)
@@ -1970,43 +1970,55 @@ def plot_landing_variability(
     add_std_to_box_plot(1.5, BodyVelocity_socp_feedforward, axs[2])
     add_std_to_box_plot(2, BodyVelocity_socp_plus, axs[2])
 
-    axs[0].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
-    axs[1].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
-    axs[2].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
-
-    axs[0].set_ylim(-265, -200)
-    axs[1].set_ylim(-416, -390)
-    axs[2].set_ylim(650, 795)
-
-    plt.tight_layout()
-    plt.savefig("graphs/landing_variability.png")
-    # plt.show()
-
     OCP_phi_1 = (1e4 * np.sum((CoM_y_ocp/m_to_mm_factor - np.mean(CoM_y_ocp/m_to_mm_factor))**2) +
             1e4 * np.sum((CoM_dot_y_ocp/m_to_mm_factor - np.mean(CoM_dot_y_ocp/m_to_mm_factor))**2) +
             1e4 * np.sum((BodyVelocity_ocp*np.pi/180 - np.mean(BodyVelocity_ocp*np.pi/180 ))**2))
     print(f"OCP landing variability: {OCP_phi_1}")
-    print(f"SOCP landing variability: {
-        1e4 * np.sum((CoM_y_socp/m_to_mm_factor - np.mean(CoM_y_socp/m_to_mm_factor))**2) + 
+    SOCP_phi_1 = (1e4 * np.sum((CoM_y_socp/m_to_mm_factor - np.mean(CoM_y_socp/m_to_mm_factor))**2) +
         1e4 * np.sum((CoM_dot_y_socp/m_to_mm_factor - np.mean(CoM_dot_y_socp/m_to_mm_factor))**2) +
-        1e4 * np.sum((BodyVelocity_socp*np.pi/180  - np.mean(BodyVelocity_socp*np.pi/180 ))**2)
-    }")
-    print(f"SOCP VARIABLE landing variability: {
-        1e4 * np.sum((CoM_y_socp_variable/m_to_mm_factor - np.mean(CoM_y_socp_variable/m_to_mm_factor))**2) + 
+        1e4 * np.sum((BodyVelocity_socp*np.pi/180  - np.mean(BodyVelocity_socp*np.pi/180 ))**2))
+    print(f"SOCP landing variability: {SOCP_phi_1}")
+    SOCP_VARIABLE_phi_1 = (1e4 * np.sum((CoM_y_socp_variable/m_to_mm_factor - np.mean(CoM_y_socp_variable/m_to_mm_factor))**2) +
         1e4 * np.sum((CoM_dot_y_socp_variable/m_to_mm_factor - np.mean(CoM_dot_y_socp_variable/m_to_mm_factor))**2) +
-        1e4 * np.sum((BodyVelocity_socp_variable*np.pi/180  - np.mean(BodyVelocity_socp_variable*np.pi/180 ))**2)
-    }")
-    print(f"SOCP FEEDFORWARD landing variability: {
-        1e4 * np.sum((CoM_y_socp_feedforward/m_to_mm_factor - np.mean(CoM_y_socp_feedforward/m_to_mm_factor))**2) + 
+        1e4 * np.sum((BodyVelocity_socp_variable*np.pi/180  - np.mean(BodyVelocity_socp_variable*np.pi/180 ))**2))
+    print(f"SOCP VARIABLE landing variability: {SOCP_VARIABLE_phi_1}")
+    SOCP_FEEDFORWARD_phi_1 = (1e4 * np.sum((CoM_y_socp_feedforward/m_to_mm_factor - np.mean(CoM_y_socp_feedforward/m_to_mm_factor))**2) +
         1e4 * np.sum((CoM_dot_y_socp_feedforward/m_to_mm_factor - np.mean(CoM_dot_y_socp_feedforward/m_to_mm_factor))**2) +
-        1e4 * np.sum((BodyVelocity_socp_feedforward*np.pi/180  - np.mean(BodyVelocity_socp_feedforward*np.pi/180 ))**2)
-    }")
+        1e4 * np.sum((BodyVelocity_socp_feedforward*np.pi/180  - np.mean(BodyVelocity_socp_feedforward*np.pi/180 ))**2))
+    print(f"SOCP FEEDFORWARD landing variability: {SOCP_FEEDFORWARD_phi_1}")
     SOCP_plus_phi_1 = (1e4 * np.sum((CoM_y_socp_plus/m_to_mm_factor - np.mean(CoM_y_socp_plus/m_to_mm_factor))**2) +
         1e4 * np.sum((CoM_dot_y_socp_plus/m_to_mm_factor - np.mean(CoM_dot_y_socp_plus/m_to_mm_factor))**2) +
         1e4 * np.sum((BodyVelocity_socp_plus*np.pi/180  - np.mean(BodyVelocity_socp_plus*np.pi/180 ))**2))
     print(f"SOCP+ landing variability: {SOCP_plus_phi_1}")
 
     print(f"OCP / SOCP+ landing variability: {OCP_phi_1 / SOCP_plus_phi_1}")
+
+    axs[3].bar(0, OCP_phi_1, width=0.3, color=OCP_color)
+    axs[3].bar(0.5, SOCP_phi_1, width=0.3, color=SOCP_color)
+    axs[3].bar(1, SOCP_VARIABLE_phi_1, width=0.3, color=SOCP_VARIABLE_color)
+    axs[3].bar(1.5, SOCP_FEEDFORWARD_phi_1, width=0.3, color=SOCP_FEEDFORWARD_color)
+    axs[3].bar(2, SOCP_plus_phi_1, width=0.3, color=SOCP_PLUS_color)
+    axs[3].set_title("Weighted sum of landing\n variability terms " + r"($\phi_1$)")
+    axs[3].set_yscale("log")
+
+    axs[0].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
+    axs[0].tick_params(axis='x', labelsize=9)
+    axs[1].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
+    axs[1].tick_params(axis='x', labelsize=9)
+    axs[2].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
+    axs[2].tick_params(axis='x', labelsize=9)
+    axs[3].set_xticks([0, 0.5, 1, 1.5, 2], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
+    axs[3].tick_params(axis='x', labelsize=9)
+
+    axs[0].set_ylim(-265, -200)
+    axs[1].set_ylim(-416, -390)
+    axs[2].set_ylim(650, 795)
+
+    # plt.tight_layout()
+    fig.subplots_adjust(left=0.05, right=0.98, top=0.8, wspace=0.2)
+    plt.savefig("graphs/landing_variability.png")
+    # plt.show()
+
     return
 
 def plot_inertia_ang_mom(
