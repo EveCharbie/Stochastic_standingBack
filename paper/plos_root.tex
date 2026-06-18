@@ -304,7 +304,7 @@ Realistic human movements were generated for daily living tasks, such as walking
 For sporting tasks, however, the agreement between techniques generated through deterministic optimal control and experimental data is sometimes less convincing.
 This disagreement likely comes from maximizing only performance criterion during the optimization rather than maximizing for performance consistency.  
 % as the optimal techniques lack the motor-variability regulation strategies exhibited by humans.  
-For example, Hiley \& Yeadon \cite{hiley2016investigating} used a planar four-segment model to show that the technique used by athletes to perform giant circles before a double layout somersault dismount on high bars matched more closely the predictive simulations when maximizing task success in the presence of uncertainty (\textit{i.e.}, robust technique) rather than minimizing joint torques.
+For example, Hiley \& Yeadon \cite{hiley2016investigating} used a planar four-segment model to show that the technique used by athletes to perform giant circles before a double layout somersault dismount on high bars \hl{matched the predictive simulations more closely} when maximizing task success in the presence of uncertainty (\textit{i.e.}, robust technique) rather than minimizing joint torques.
 Thus, to generate realistic movements, predictive simulations should account for the noisy nature of motor commands, ensuring that simulated techniques are less sensitive to execution errors.
 
 
@@ -312,7 +312,7 @@ One way humans cope with neuromuscular noise is by relying on sensory feedback t
 Leveraging optimal feedback control theory, these motor corrections have been incorporated into biomechanical predictive simulations by modelling motor noise and noisy sensory feedback \cite{todorov2004optimality}. 
 More recently, this stochastic optimal control framework was extended to complex musculoskeletal models with non-linear dynamics \cite{van2022approximate}. 
 This approach helped explain more complex motor control phenomena, such as how muscle co-contraction can be energy-efficient by helping cope with uncertainty \cite{van2022approximate, berret2024co}.
-However, even with these advances, current biomechanical stochastic predictive simulations still fall short of modelling sensory-acquisition strategies because they either assume that the magnitude of sensory noise remains constant throughout the movement \cite{van2022approximate} or they linearize the system's dynamics \cite{todorov2005stochastic}.
+However, even with these advances, current biomechanical stochastic predictive simulations still fall short of modelling sensory-acquisition strategies because \hl{the modelling of either the relationship between the states and sensory noise \mbox{\cite{van2022approximate}} or the system's dynamics \mbox{\cite{todorov2005stochastic}} is simplified}.
 
 
 Although sensory noise is difficult to measure experimentally, there is still evidence that sensory sensitivity depends on the state of the body \cite{mallery2010human, demer1993dynamic, kaptein2004interpretation}.
@@ -335,7 +335,7 @@ Proprioceptive information would be used by athletes to estimate their current j
 Visual information would be used to estimate the remaining time before ground contact \cite{bardy1998body}, and vestibular information would be used to estimate the athlete's somersault velocity.
 Combining these two pieces of information with proprioceptive information would enable anticipatory sensory feedback control through a forward model predicting the somersault angle at landing.
 These two types of feedback help athletes land with more balance by modifying inertia to adjust the somersault rotation velocity.
-To the authors' knowledge, only open-loop control and direct sensory feedback control have been used to actuate a skeletal model through stochastic optimal control \cite{van2022approximate, berret2024co}, leaving aside anticipatory sensory feedback control.
+\hl{Stochastic optimal control simulations generally only rely on open-loop control and direct sensory feedback control to actuate the skeletal model \mbox{\cite{van2022approximate, berret2024co}}, leaving aside anticipatory sensory feedback control.}
 Given evidence that athletes use anticipatory sensory feedback control during backward somersaults, predictive simulations must account for such control mechanisms.
 
 % Another shortcoming of the current implementations of stochastic optimal control is that they consider constant motor noise.
@@ -358,8 +358,9 @@ To better match and thus better understand athletes' behaviour, further predicti
 
 
 The primary aim of this study was to produce a predictive simulation from which an optimal sensorimotor strategy for the backward somersault would emerge.
-A torque-driven multi-body model governed by nonlinear dynamics under uncertainty. 
-To cope with the motor noise, the avatar could use noisy vestibular, visual and proprioceptive information to make direct and anticipatory corrections.
+A torque-driven multi-body model governed by nonlinear dynamics under uncertainty was used.
+\hl{To cope with the motor noise, the avatar could use noisy vestibular, visual and proprioceptive information.
+These sensory information were used for direct and anticipatory feedback corrections.}
 We hypothesized that 
 \begin{itemize}
 	\item[\textbf{H1}] allowing the avatar to use direct sensory feedback would enable reducing landing variability;
@@ -374,7 +375,7 @@ Interestingly, our most advanced stochastic implementation enabled the emergence
  
 \section{Results}\label{sec:results}
 
-To test our hypothesis, five different implementations of the problem were solved to generate optimal techniques for the aerial phase of a backward somersault (Tab.~\ref{tab:formulations}).
+To test our hypothesis, five different implementations of the problem were solved to generate optimal techniques for the aerial phase of a backward somersault (Tab.~\ref{tab:formulations})\hl{: deterministic optimal control (OCP), basic stochastic optimal control (SOCP), stochastic optimal control with anticipatory feedback (\mbox{SOCP$^{\text{AF}}$}), stochastic optimal control with variable-dependent noise (\mbox{SOCP$_{\text{VN}}$}), and stochastic optimal control with anticipatory feedback and variable-dependent noise (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$}).}
 
 \begin{table}[h]
 \centering
@@ -397,16 +398,26 @@ To test our hypothesis, five different implementations of the problem were solve
 
 All implementations (see Sec.~\ref{sec:methods} for details) considered a rigid planar free-floating based athletic avatar composed of five segments (Fig.~\ref{fig:model}): trunk, head, arms, upper legs, and lower legs.
 The digital athlete was torque-actuated and governed by the non-linear multibody dynamics equations.
-The optimal policies were computed using a composite cost function, where the main objective was to minimize landing condition variability.
-Other terms minimized the expected efforts and the expected efforts rate of change.
-Finally, regularization terms encouraged a realistic motion: minimizing the duration of the movement, the direct feedback gains, and the direct feedback gains rate of change.
-The optimal cost differed between implementation (OCP: 331.25, SOCP: 4928.34, SOCP$_{\text{VN}}$: 106.26, SOCP$^{\text{AF}}$: 98.52, SOCP$_{\text{VN}}^{\text{AF}}$: 87.70), with SOCP$_{\text{VN}}^{\text{AF}}$ reaching the lowest cost function value.
+\hl{The total torques were composed of }
+\begin{itemize}
+	\item[\textbf{OCP}] \hl{open-loop joint torques}
+	\item[\textbf{SOCP}] \hl{open-loop joint torques, direct feedbacks based on proprioceptive and vestibular information corrupted by random sensory noise of predefined magnitude, and random motor noise of predefined magnitude}
+	\item[\textbf{SOCP}$\mathbf{_{\text{VN}}}$] \hl{open-loop joint torques, direct feedbacks based on proprioceptive and vestibular information corrupted by random sensory noise modulated by the head angular velocity, and random motor noise modulated by the joint torque actuation}
+	\item[\textbf{SOCP}$\mathbf{^{\text{AF}}}$] \hl{open-loop joint torques, direct feedbacks based on proprioceptive and vestibular information corrupted by random sensory noise of predefined magnitude, anticipatory feedbacks based on vestibular and visual information corrupted by random sensory noise of predefined magnitude, and random motor noise of predefined magnitude}
+	\item[\textbf{SOCP}$\mathbf{_{\text{VN}}^{\text{AF}}}$] \hl{open-loop joint torques, direct feedbacks based on proprioceptive and vestibular information corrupted by random sensory noise modulated by the head angular velocity, anticipatory feedbacks based on vestibular and visual information corrupted by random sensory noise modulated by the head angular velocity and gaze orientation, and random motor noise modulated by the joint torque actuation.}
+\end{itemize}
+\hl{For the deterministic implementation (OCP), a single unperturbed technique was optimized.
+Whereas for the stochastic implementations (SOCP, \mbox{SOCP$_{\text{VN}}$}, \mbox{SOCP$^{\text{AF}}$}, \mbox{SOCP$_{\text{VN}}^{\text{AF}}$}) multiple techniques corrupted by different noise values were optimized simultaneously to find a unique control strategy (open-loop joint torques and feedback gains) that optimizes the performance of all techniques.}
+	
+The optimal policies were computed using a composite cost function, where the main objective was to minimize landing condition variability \hl{(\mbox{$\phi_1$})}, measured as the sum of the variances (n=20) of the CoM horizontal position \hl{in \mbox{$m$}}, CoM horizontal velocity in \hl{\mbox{$\nicefrac{m}{s}$}}, and body angular velocity \hl{(computed as the angular momentum divided by the moment of inertia)} in \mbox{$\nicefrac{rad}{s}$} at the end of the movement.
+Other terms minimized the expected efforts \hl{(\mbox{$\phi_2$})}; \hl{joint torques in \mbox{$Nm$}}) and the expected \hl{time derivative of} efforts \hl{(\mbox{$\phi_3$})}; \hl{joint torques derivative in \mbox{$\nicefrac{Nm}{s}$}}).
+Finally, regularization terms encouraged a realistic motion: minimizing the direct feedback gains \hl{(\mbox{$\phi_4$})}, the \hl{time derivative of the} direct feedback gains \hl{(\mbox{$\phi_5$})}, and the duration of the movement \hl{in \mbox{$s$}} to avoid landing in a crouched posture \hl{(\mbox{$\phi_6$})}.
+\hl{For the deterministic implementation (OCP), the landing condition variability (\mbox{$\phi_1$}), feedback gains (\mbox{$\phi_4$}), and time derivative of the direct feedback gains (\mbox{$\phi_5$}) terms were set to zero in the cost function. However, to compare the robustness of this technique with the other implementations, the landing condition variability was computed post-optimization. Motor noise was randomly sampled and added to the optimal joint torques and a series of forward simulations were performed.}
 
-
-An optimal solution was reached for all implementations, despite the large problem sizes (OCP: 303 variables, SOCP: 5625 variables, SOCP$_{\text{VN}}$: 5625 variables, SOCP$^{\text{AF}}$: 6562 variables, SOCP$_{\text{VN}}^{\text{AF}}$: 6562 variables).
-The optimal solutions were reached in a few seconds for the deterministic version (OCP), and in a few weeks for the stochastic versions (SOCP, SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, SOCP$_{\text{VN}}^{\text{AF}}$).
-
-
+An optimal solution was reached for all implementations.
+%, despite the large problem sizes (OCP: 303 variables, SOCP: 5625 variables, SOCP$_{\text{VN}}$: 5625 variables, SOCP$^{\text{AF}}$: 6562 variables, SOCP$_{\text{VN}}^{\text{AF}}$: 6562 variables).
+The optimization lasted a few seconds for the deterministic version (OCP), and in a few weeks for the stochastic versions (SOCP, SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, SOCP$_{\text{VN}}^{\text{AF}}$).
+\hl{The optimal cost differed between implementation (OCP: 331.25, SOCP: 4928.34, \mbox{SOCP$_{\text{VN}}$}: 106.26, \mbox{SOCP$^{\text{AF}}$}: 98.52, \mbox{SOCP$_{\text{VN}}^{\text{AF}}$}: 87.70), with \mbox{SOCP$_{\text{VN}}^{\text{AF}}$} reaching the lowest cost function value.}
 
 
 \begin{figure}[H]
@@ -419,15 +430,16 @@ The optimal solutions were reached in a few seconds for the deterministic versio
 
 \subsection{Landing variability performance}
 
-The main performance objective of the task considered in this study was to minimize landing variability ($\phi_1$), measured as the sum of the variances (n=20) of the CoM horizontal position, CoM horizontal velocity, and body angular velocity at the end of the movement.
-All stochastic implementations outperformed the deterministic one in terms of landing variability (OCP: 14115.4, SOCP: 62.2, SOCP$_{\text{VN}}$: 27.5, SOCP$^{\text{AF}}$: 21.2,
+The main performance objective of the task considered in this study was to minimize landing variability.
+All stochastic implementations outperformed the deterministic one in terms of landing variability (\hl{Fig.~\mbox{\ref{fig:landing_variability}}}; OCP: 14115.4, SOCP: 62.2, SOCP$_{\text{VN}}$: 27.5, SOCP$^{\text{AF}}$: 21.2,
 SOCP$_{\text{VN}}^{\text{AF}}$: 21.2).
-The smallest landing variability was achieved with the SOCP$_{\text{VN}}^{\text{AF}}$ implementation, an improvement of more than two orders of magnitude compared to the OCP implementation.
+The smallest landing variability was achieved with the SOCP$_{\text{VN}}^{\text{AF}}$ implementation \hl{(SD of about $9.82$ mm for the CoM position, $3.11$ mm/s for the CoM velocity, and $0.02 \degree$ for the body angular velocity).}
+\hl{This improvement is mainly driven by the small variability of the body angular velocity, an improvement of more than two orders of magnitude compared to the OCP implementation.}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\linewidth]{figures/landing_variability.png}
-\caption{The three landing components (center of mass horizontal position, center of mass horizontal velocity, and body angular velocity) with their variability (n=20 episodes) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCP$_{\text{VN}}$} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCP$^{\text{AF}}$} (purple), and \textcolor{SOCP_plus_color}{SOCP$_{\text{VN}}^{\text{AF}}$} (blue) implementations. The value for each episode is depicted with a dot, the mean over all episodes is depicted with a square, and the standard deviation range is depicted with a box and written above the box plot.}
+\caption{The three landing components (\hl{a)} center of mass horizontal position, \hl{b)} center of mass horizontal velocity, and \hl{c)} body angular velocity) with their variability (n=20 episodes) for the backward somersault generated with the \textcolor{OCP_color}{OCP} (green), \textcolor{SOCP_color}{SOCP} (pink), \textcolor{SOCP_VARIABLE_color}{SOCP$_{\text{VN}}$} (orange), \textcolor{SOCP_FEEDFORWARD_color}{SOCP$^{\text{AF}}$} (purple), and \textcolor{SOCP_plus_color}{SOCP$_{\text{VN}}^{\text{AF}}$} (blue) implementations. The value for each episode is depicted with a dot, the mean over all episodes is depicted with a square, and the standard deviation range is depicted with a box and written above the box plot. \hl{d) The weighted sum of all landing variability terms for each implementation.}}
 \label{fig:landing_variability}
 \end{figure}
 
@@ -459,7 +471,8 @@ The landing posture was similar across implementations except for the shoulder a
 \subsection{Motor strategies}
 
 The motor command differed between implementations (Fig.~\ref{fig:torques_contributions}~a)).
-The total torque actuation (integral of the absolute total torque) was larger in the deterministic (OCP: 136.81~Nm.s) than in the stochastic (SOCP: 79.28~Nm.s, SOCP$_{\text{VN}}$: 23.83~ Nm.s, SOCP$^{\text{AF}}$: 29.43~Nm.s, SOCP$_{\text{VN}}^{\text{AF}}$: 36.77~Nm.s) transcriptions.
+The total \hl{expected} torque actuation (integral of the absolute total torque) was larger in the deterministic (OCP: 136.81~Nm.s) than in the stochastic (SOCP: 79.28~Nm.s, SOCP$_{\text{VN}}$: 23.83~ Nm.s, SOCP$^{\text{AF}}$: 29.43~Nm.s, SOCP$_{\text{VN}}^{\text{AF}}$: 36.77~Nm.s) implementations.
+\hl{This result is unexpected, see \mbox{Sec.~\ref{subsec:limits}~\textit{iv)}}.}
 The largest torque contribution came from open-loop control (98.97\%) for the OCP implementation, from direct feedback (65.15\%) for the SOCP implementation, from direct feedback (58.78\%) for the SOCP$_{\text{VN}}$ implementation, from open-loop control (38.80\%) and anticipatory feedback (38.38\%) for the SOCP$^{\text{AF}}$ implementation, and from open-loop control (39.51\%) and anticipatory feedback (35.75\%) for the SOCP$_{\text{VN}}^{\text{AF}}$ implementation (Fig.~\ref{fig:torques_contributions}~b)).
 
 \begin{figure}[H]
@@ -471,11 +484,13 @@ The largest torque contribution came from open-loop control (98.97\%) for the OC
 
 \subsection{Sensory acquisition strategies}
 
+Direct feedback control was mainly used up to 90\% of the acrobatics, and anticipatory feedback was mainly used from 50\% to 80\% (Fig.~\ref{fig:torques_contributions} a)).
+For \hl{\mbox{SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, and SOCP$_{\text{VN}}^{\text{AF}}$}} implementations, the feedback gains decreased before landing (Fig.~\ref{fig:sensory_strategies} a)).
 The hip feedback gains were maximal when fully tucked and fully extended during the middle part of the acrobatics.
 When anticipatory feedback was available, its gain on the knees DoF reached the maximum bound (saturation) for most of the acrobatics duration.
-For all implementations, the feedback gains decreased before landing (Fig.~\ref{fig:sensory_strategies} a)).
-Direct feedback control was mainly used from 30\% to 90\% of the acrobatics, and anticipatory feedback was mainly used from 50\% to 80\%.
-The mean absolute eye orientation was smaller ($\sim 3\degree$) in the SOCP$_{\text{VN}}^{\text{AF}}$ (77.56\degree) than in the SOCP$_{\text{VN}}$ (80.34\degree), especially at the end of the acrobatics, when visual anticipatory feedback is available.
+\hl{At the beginning of the acrobatics, the head angular velocity was smaller in the \mbox{SOCP$_{\text{VN}}$ and SOCP$_{\text{VN}}^{\text{AF}}$} than in the OCP technique (\mbox{Fig.~\ref{fig:sensory_strategies}} b)), improving the accuracy of the vestibular information.}
+The mean absolute eye orientation was smaller ($\sim 3\degree$) in the SOCP$_{\text{VN}}^{\text{AF}}$ (77.56\degree) than in the SOCP$_{\text{VN}}$ (80.34\degree), especially at the end of the acrobatics, when visual anticipatory feedback is available (Fig.~\ref{fig:sensory_strategies} b)).
+\hl{Thus, the addition of anticipatory feedback encouraged looking at the landing surface.}
 
 \begin{figure}[H]
 \centering
@@ -488,62 +503,64 @@ The mean absolute eye orientation was smaller ($\sim 3\degree$) in the SOCP$_{\t
 
 \section{Discussion}\label{sec:discussion}
 
-Optimal techniques were generated for the aerial phase (from take-off to landing) of the backward somersault using a deterministic transcription of an optimal control problem and four variations of stochastic transcriptions. 
+Optimal techniques were generated for the aerial phase (from take-off to landing) of the backward somersault using a \hl{deterministic implementation and four variations of stochastic implementations}. 
 The landing conditions were compared across implementations to test our hypothesis that using direct sensory feedback would reduce landing variability (H1) and that using anticipatory sensory feedback would further reduce it (H2).
-The first hypothesis was confirmed as the OCP transcription, the only implementation without direct sensory feedback, had a landing variability (SD of about $8.5$ mm for the CoM position, $3.3$ mm/s for the CoM velocity, and $15.2 \degree$ for the body angular velocity) larger by two orders of magnitude compared to stochastic transcriptions.
-The second hypothesis was also confirmed as the SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$, the two only implementations with anticipatory sensory feedback, had the lowest landing variability (SD of about $10$ mm for the CoM position, $3.1$ mm/s for the CoM velocity, and $0.02 \degree$ for the body angular velocity). 
-The kinematics of optimal solutions were compared across implementations to test our hypothesis that sensorimotor strategies would emerge from implementations that consider state-dependent sensory noise (H3) and that the most advanced implementation would generate techniques that more closely resemble those used by athletes (H4).
-The third hypothesis was confirmed, as the SOCP$_{\text{VN}}$ and SOCP$_{\text{VN}}^{\text{AF}}$ presented the head stabilization (spotting) strategy used by athletes.
-The fourth hypothesis was also confirmed as the gaze stabilization strategy emerged from the SOCP$_{\text{VN}}^{\text{AF}}$ transcription.
-Interestingly, the technique generated with the OCP transcription resembled the technique used by athletes during their learning process, a period during which the technique is not mature yet.  
+The first hypothesis was confirmed as the \hl{deterministic implementation}, the only \hl{one} without direct sensory feedback, had a landing variability larger by two orders of magnitude compared to stochastic implementations.
+The second hypothesis was also confirmed as \hl{modeling anticipatory sensory feedback (\mbox{SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$}), allowed lowering landing variability}. 
+\hl{The head stabilization strategy used by athletes (spotting) emerged from our implementations that considered state-dependent sensory noise (\mbox{SOCP$_{\text{VN}}$ and SOCP$_{\text{VN}}^{\text{AF}}$}), confirming our third hypothesis (H3).}
+\hl{Our most advanced implementation (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$}) generated techniques that more closely resembled those used by athletes, including gaze stabilization on the floor before landing, confirming our fourth hypothesis (H4).}
+Interestingly, the technique generated with the deterministic (OCP) implementation resembled the technique used by athletes during their learning process, a period during which the technique is not mature yet.  
 
 
 \subsection{Landing variability}
 
 As observed in previous stochastic simulation studies \cite{van2022approximate, berret2024co}, including uncertainty in the optimal control problem implementation enabled the generation of optimal techniques more robust to motor noise. 
 In line with our first hypothesis (H1), all our stochastic implementations (SOCP, SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, SOCP$_{\text{VN}}^{\text{AF}}$) outperformed our deterministic implementation (OCP) in terms of landing variability, the main performance indicator in this study.
-Furthermore, the SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$ simulations exhibited the smallest landing variability.
-This finding confirms our second hypothesis (H2), as the addition of anticipatory feedback helped increase robustness to motor noise.
+Furthermore, the \hl{smaller landing variability exhibited when including anticipatory feedback (\mbox{SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$}) confirms our second hypothesis (H2).
+It shows that anticipatory feedback helps increase robustness to motor noise.}
 The beneficial role of anticipatory feedback (also called prospective regulation) during the backward somersault was also suggested by Bardy \& Laurent \cite{bardy1998body}.
-They that landing variability was increased in darkness (\textit{i.e.}, no vision) condition.   
-The prospective regulation of landing variability in SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$ simulations was mainly achieved by making adjustments to the shoulder joint kinematics (Fig.~\ref{fig:kinematics} detail \circled{1}).
+They \hl{observed} that landing variability was increased in darkness (\textit{i.e.}, no vision) condition.   
+The prospective regulation of landing variability \hl{in simulations with anticipatory feedback (\mbox{SOCP$^{\text{AF}}$ and SOCP$_{\text{VN}}^{\text{AF}}$})} was mainly achieved by making adjustments to the shoulder joint kinematics (Fig.~\ref{fig:kinematics} detail \circled{1}).
 This strategy was also previously observed in trampolinists, where the upper-limb variability was increased during the last part of the acrobatics to allow reducing the body orientation variability at landing \cite{bourgeois2025motor}.
 This upper-limb adjustment strategy offers an efficient way to regulate body rotation velocity by adjusting the moment of inertia, as these segments are less constrained by the acrobatic task ($g_2$: lower-limbs are constrained by the need to keep the center of mass above the feet).
-In agreement with the measurement of athletes' variability regulation,  this study suggests that athletes use an internal model to predict their future state and make appropriate anticipatory corrections.
+In agreement with the measurement of athletes' variability regulation,  this study suggests that athletes use an internal model to predict their future state \hl{at landing} and make appropriate anticipatory corrections.
 
 
 \subsection{Kinematics}
 
 The optimal kinematics generated in this study generally reproduce athletes' key strategies with flexion and extension of the hips and knees, accompanied by arms lowering \cite{bradley2020comparison, leboeuf2012optimal}.
 The kinematic differences between implementations are subtle, yet some of them are meaningful.
-Interestingly, the OCP optimal kinematics resembles the technique used by novice gymnasts and SOCP$_{\text{VN}}^{\text{AF}}$ more experienced ones, although both implementations shared the same dynamical model and variable bounds (range of motion and joint torques).
-This difference was noticeable in a looser tuck position in the OCP compared to SOCP$_{\text{VN}}^{\text{AF}}$ simulations, as observed in beginners compared to experts in \cite{kikuchi2006kinematical}.
+Interestingly, the \hl{deterministic (OCP)} optimal kinematics resembles the technique used by novice gymnasts and \hl{the most advanced stochastic simulation \mbox{SOCP$_{\text{VN}}^{\text{AF}}$}} more experienced ones, although both implementations shared the same dynamical model and variable bounds (range of motion and joint torques).
+This difference was noticeable in a looser tuck position in the \hl{deterministic (OCP)} compared to the \hl{most advanced stochastic (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$})} simulation, as observed in beginners compared to experts in \cite{kikuchi2006kinematical}.
 This looser tuck position was caused by a smaller hip flexion and a later knee flexion (Fig.~\ref{fig:kinematics} detail \circled{2}). 
 In addition, a neck extension was observed during the elevation phase in the OCP kinematics (Fig.~\ref{fig:kinematics} detail \circled{3}). 
 This neck elevation is often noticeable in the technique of novice athletes as early as during the propulsion phase.
 % Seul article où on voit ce lancé de tête, mais athlète charactérisé d'"élite" --' : IDENTIFICATION OF INTERNAL LOADS AT THE SELECTED JOINTS DURING PERFORMANCE OF A BACKWARD SOMERSAULT
 In the current study, the propulsion phase was not simulated, leading to only a subtle neck extension.
-In contrast, the SOCP$_{\text{VN}}^{\text{AF}}$ presented neck flexion, stabilizing the head (see Sec.~\ref{sec:head_stabilization} for further discussion of head stabilization).
+In contrast, the \hl{most advanced stochastic (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$})} simulation presented neck flexion, stabilizing the head (see Sec.~\ref{sec:head_stabilization} for further discussion of head stabilization).
 This discrepancy is also analogous to an athlete's behaviour modification through the learning process.
 Natrup et al. \cite{natrup2021gaze} observed that less experienced athletes presented a neck extension and more experienced athletes did not during a backward somersault with a twist on the trampoline.
 In continuation of previous findings \cite{harris1998signal, todorov2002optimal}, the present study suggests that athletes learn to adapt their motor strategy to account for their own motor variability.
 
 
 \subsection{Head stabilization strategy}\label{sec:head_stabilization}
-Berthoz \& Pozzo \cite{berthoz1994head} highlighted that athletes exhibit two head stabilization phases: during the elevation phase after take off and in preparation for landing.
+\hl{Our most advanced stochastic (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$}) technique replicated the neck kinematics and head stabilization strategy used by athletes.
+This suggests that our modelling method is appropriate to allow the emergence of real-world sensory acquisition strategies.
+Indeed, }Berthoz \& Pozzo \cite{berthoz1994head} highlighted that athletes exhibit two head stabilization phases: during the elevation phase after take off and in preparation for landing.
 These two periods are characterized by a neck flexion compensating for the body's backward rotation.
 Berthoz \& Pozzo \cite{berthoz1994head} interpreted that the first head stabilization allows the brain to use a combination of visual and vestibular cues to guide the movement and control the upcoming backward rotation velocity and acceleration.
 Similarly, the second head stabilization would help landing coordination, using visual and vestibular information.
 Between the two head stabilization periods, the neck is rapidly extended (referred to as head saccade).
 This behaviour prevents the use of visual information but allows head repositioning to increase the duration of the period during which head stabilization is possible.
-Our SOCP$_{\text{VN}}^{\text{AF}}$ technique replicated this neck kinematics and head stabilization strategy, suggesting that our modelling method is appropriate to allow the emergence of sensory acquisition strategies used by athletes.
 
-Interestingly, SOCP$_{\text{VN}}$ simulation also replicated this neck kinematics, even though it had only vestibular feedback and not visual feedback.
-In the literature, the head stabilization periods are often thought to be mainly driven by the need for visual feedback \cite{sanders1994head, luis2008visual, heinen2011evidence}.
-However, we showed that head stabilization still occurs when only vestibular information is available, which is in agreement with \cite{davlin2004gymnasts}.
+\hl{Interestingly, our results suggest that athletes use head stabilization to enhance the acuity of vestibular feedback.
+In the literature, the head stabilization periods are often thought to be mainly driven by the need for visual feedback \mbox{\cite{sanders1994head, luis2008visual, heinen2011evidence}}.
+However, we observed that the stochastic implementation with only variable-dependent noise (\mbox{SOCP$_{\text{VN}}$})} and no visual feedback still presented this head stabilization technique.
+In our simulations, head stabilization occurred when vestibular noise was modulated as a function of head angular velocity, which is in agreement with \mbox{\cite{davlin2004gymnasts}}.
 They found that athletes still exhibited head stabilization periods in darkness conditions.
-As SOCP$_{\text{VN}}$ simulation models vestibular acuity through sensory noise modulation as a function of head angular velocity, our results suggest that athletes use head stabilization to enhance the acuity of vestibular feedback.
-Thus, this study strengthens, through a new numerical approach, the idea that head stabilization would allow increasing acuity of multiple sensory feedback, not only vision.
+Thus, the current study strengthens, through a new numerical approach, the idea that head stabilization would allow increasing acuity of multiple sensory feedback, not only vision.
+However, \hl{the stochastic simulation with only variable-dependent noise (\mbox{SOCP$_{\text{VN}}$})} also replicated this neck kinematics, even though it had only vestibular feedback and not visual feedback. 
+\hl{Therefore, further research is needed validate the link between vestibular acuity and the head stabilization strategy.}
 
 
 \subsection{Sensorimotor strategies}
@@ -552,32 +569,32 @@ Feedback use was modulated throughout the movement in our optimal solutions: dir
 A similar phenomenon was observed experimentally during the reaching task in a virtual reality setting, where feedback was modulated across the movement, with the feedback gains peaking in the middle of the movement \cite{dimitriou2013temporal}.
 Our optimal techniques involve a more complex modulation of the feedback gains due to the increased task complexity.
 The direct feedback gains were high for the shoulders at the beginning of the movement and for the hips during hip flexions ($\sim 25\%$ and $\sim 75\%$). 
-These high gains indicate that these actions must be precisely executed to achieve a controlled landing.
+These high gains indicate that these actions \hl{have the most impact on achieving} a controlled landing.
 In addition, the knee's direct and anticipatory feedback gains were high throughout the movement.
 Flexing/extending the knees and shoulders is a simple and effective way to modify the somersault velocity (Fig.~\ref{fig:kinematics} detail \circled{4}), as the shanks and lower arms are far from the CoM and thus have a large impact on the body's moment of inertia.
 
-In line with our fourth hypothesis (H4), SOCP$_{\text{VN}}^{\text{AF}}$ optimal technique presented a more pronounced gaze stabilization on the floor, reducing the uncertainty associated with the visual sensory information (Fig.~\ref{fig:sensory_strategies} b) and Fig.~\ref{fig:kinematics} detail \circled{4}).
-Generally, anticipatory feedback gains increased during periods of higher visual and vestibular acuity.
-The higher vestibular acuity was provided by the head stabilization strategy and the higher visual acuity was provided by the gaze on the floor strategy.
-This suggests that these kinematic feature might have a sensory acquisition origin.
-However, the SOCP$^{\text{AF}}$ technique exhibit a similar anticipatory feedback gains temporal evolution.
-During the SOCP$^{\text{AF}}$ technique, head stabilization and gaze on the floor strategies do not affect the sensory noise as the sensory acuity was not state-dependent.
-This unexpected result might indicate that the anticipatory feedback gain temporal evolution also has a biomechanical origin. 
+In line with our fourth hypothesis (H4), \hl{the optimal technique of our most advanced stochastic implementation (\mbox{SOCP$_{\text{VN}}^{\text{AF}}$})} presented a more pronounced gaze stabilization on the floor, reducing the uncertainty associated with the visual sensory information (Fig.~\ref{fig:sensory_strategies} b) and Fig.~\ref{fig:kinematics} detail \circled{4}).
+\hl{Anticipatory feedback gains generally increased during periods of higher visual and vestibular acuity, the former provided by the gaze-on-floor strategy and the latter by the head stabilization strategy. This suggests that these kinematic features may have a sensory acquisition origin.}
+
+\hl{However, a contradictory result emerged from the stochastic implementation with only anticipatory feedback (\mbox{SOCP$^{\text{AF}}$}).
+It exhibited a similar temporal evolution of anticipatory feedback gains, despite sensory acuity being modelled as independent from the state variables.
+Thus, head stabilization and gaze-on-floor strategies have no effect on sensory noise in this condition. 
+This unexpected result indicates that the anticipatory feedback gain temporal evolution may also have a biomechanical origin. 
 Notably, high gains coincided with hip flexion moments, which must be precisely executed to achieve consistent landing.
-Future research is required to validate or challenge this last hypothesis.
+Future research is required to validate or challenge this last hypothesis.}
 
 
-\subsection{Limits and perspectives}
-The modelling method proposed in this study better reproduced elite athletes' behaviour than a traditional optimal control implementation.
+\subsection{Limits and perspectives}\label{subsec:limits}
+The modelling method proposed in this study better reproduced elite athletes' behaviour than a traditional \hl{deterministic} optimal control implementation.
 However, some limitations could still be addressed to further increase the realism of the optimal sensorimotor techniques generated:
 
-\textit{i)} Grasping the shanks with the hands was neither imposed nor encouraged, although it is a behaviour observed in athletes and recommended by coached. This could be added to the stochastic optimal control problem using holonomic tucking constraints, as in \cite{farr2025including}. However, it would largely increase the already long computational time.
+\textit{i)} Grasping the shanks with the hands was neither imposed nor encouraged, although it is a behaviour observed in athletes and recommended by coached. \hl{To better match athletes' behaviour, } this could be added to the stochastic optimal control problem using holonomic tucking constraints, as in \cite{farr2025including}. However, it would largely increase the already long computational time.
 
 \textit{ii)} As the first stochastic optimal control study applied to acrobatic movements, we only focused on the aerial phase of the acrobatics. However, future studies should also consider the propulsion and landing phases, as they are likely also largely affected by motor variability.
 
-\textit{iii)} The number of episodes was chosen in agreement with \cite{koelewijn2020solution}, where it was shown that only 20 episodes were needed to approximate the stochastic optimal control simulation of gait accurately. Although the model rotating freely in space during the backward somersault induces greater nonlinearity in the system dynamics, reintegration with different noise values remained consistent with the optimal solutions.
+\textit{iii)} The number of episodes was chosen in agreement with \cite{koelewijn2020solution}, where it was shown that only 20 episodes were needed to approximate the stochastic optimal control simulation of gait accurately. Although the model rotating freely in space during the backward somersault induces greater nonlinearity in the system dynamics, reintegration with different noise values remained consistent with the optimal solutions \hl{(\mbox{Fig.~\ref{fig:reintegration} in Appendix~\ref{subsec:reintegration}})}.
 
-\textit{iv)} Only one initial guess was tested for each implementation due to the large computational time needed to reach convergence (a few weeks per problem). Thus, the optimal solutions presented in this study might be local minima rather than global minima. The stochastic problems were initialized with the solution from the deterministic version of the problem to mitigate this limitation. Moreover, we observed a surprisingly low cost function value for the SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, and SOCP$_{\text{VN}}^{\text{AF}}$ compared with the OCP implementation, considering that the OCP cost function does not include variability ($\phi_1$) and gain ($\phi_4$ and $\phi_5$) terms. Thus, we hypothesize that using 20 episodes simultaneously in the stochastic implementations has a similar effect as multi-starting the problem and allows to avoid some less optimal local minima. Further studies are needed to confirm this hypothesis.
+\textit{iv)} Only one initial guess was tested for each implementation due to the large computational time needed to reach convergence (a few weeks per problem). Thus, \hl{different initial guesses might have yielded better local optima. However, to make sure to compare implementations fairly (near solution regions), all stochastic problems were equally initialized (\textit{i.e.,} the solution from the deterministic version of the problem).} Moreover, we observed a surprisingly low cost function value for the SOCP$_{\text{VN}}$, SOCP$^{\text{AF}}$, and SOCP$_{\text{VN}}^{\text{AF}}$ compared with the OCP implementation, considering that the OCP cost function does not include variability ($\phi_1$) and gain ($\phi_4$ and $\phi_5$) terms. Thus, we hypothesize that using 20 episodes simultaneously in the stochastic implementations has a similar effect as multi-starting the problem and allows to avoid some less optimal local minima. Further studies are needed to confirm this hypothesis.
 
 
 \subsection{Conclusion}
@@ -590,10 +607,10 @@ Being able to solve such a complex optimization problem opens promising avenues 
 \section{Materials and methods}\label{sec:methods}
 
 \subsection{Athletic avatar}
-The athletic avatar's inertial characteristics were set to match those of a national male trampolinist determined using Yeadon's anthropometric model \cite{yeadon1990simulation2}.
-the generalized coordinates ($q$) comprised unactuated (forward translation, upward translation, and somersault rotation) and torque-actuated degrees of freedom (DoFs).
-All actuated joints but the eyes (neck, shoulder, hip, and knee) were dampened ($N_D =- 0.1~\dot{q}$).
+The athletic avatar's generalized coordinates ($q$) comprised unactuated (forward translation, upward translation, and somersault rotation) and torque-actuated \hl{(neck, shoulder, hip, and knee)} degrees of freedom (DoFs).
+All actuated joints but the eyes were dampened ($N_D =- 0.1~\dot{q}$).
 The torque applied on each actuated DoF ($\tau_{\text{total}}$) was composed of different components depending on the implementation considered (see Sec.~\ref{subsec:OCP}-\ref{subsec:SOCP_plus}).
+The  inertial characteristics were set to match those of a national male trampolinist determined using Yeadon's anthropometric model \cite{yeadon1990simulation2}.
 The avatar was governed by the non-linear multibody dynamics equation:
 
 \begin{equation}
@@ -625,25 +642,103 @@ F(q, \dot{q}) :
 
 \subsection{Discretized stochastic optimal control framework}\label{subsec:methods_DSOCP}
 
-To transcribe the stochastic optimal control problems into a solvable deterministic optimal control problem, the motor and sensory noises were sampled from a Gaussian distribution at 20 different instances, as in Koelewijn \& Van den Bogert \cite{koelewijn2020solution}.
-Analogously, it could be viewed as 20 optimal control problems being solved simultaneously, each with different random motor and sensory noise values and thus different state values, but with the same motor command.
+To transcribe the stochastic optimal control problems into a solvable deterministic optimal control problem, the motor and sensory noises were sampled from a Gaussian distribution at 20 different instances, as in \cite{afschrift2018increased, koelewijn2020solution}.
+\hl{In other words, we solved for a common motor plan (\mbox{$\textcolor{gray}{\tau_{\text{voluntary}}}$} and \mbox{$\textcolor{gray}{K}$}} \footnote{\hl{To simplify interpretation, each optimization variable is presented in colour.}}) \hl{controlling 20 executions of the task, each with different random motor and sensory noise values and thus different state values.}
 The number of noise samples (referred to as episodes) was chosen based on the analysis in Koelewijn \& Van den Bogert \cite{koelewijn2020solution}.
-They showed that the cost function value varied by less than 1\% when using 20 or more samples.
-The constant part of the motor and sensory noises ($w_{\circ}$) were sampled from a Gaussian distribution with a standard deviation of $5$ for the joint torque motor noise, $0.0005$ for the joint angle proprioception, $0.0045$ for the joint velocity proprioception inputs, $0.0005$ for the vestibular input, and $0.0005$ for the visual inputs. 
+They showed that the cost function value varied by less than 1\% when using 20 or more samples.The constant part of the motor and sensory noises ($w_{\circ}$) were sampled from a Gaussian distribution with a standard deviation of \hl{\mbox{$0.125~Nm\sqrt{s}$}} for the joint torque motor noise, \hl{\mbox{$\num{7.16e-4}\degree\sqrt{s}$}} for the joint angle proprioception, \hl{\mbox{$\num{6.45e-3}\degree/\sqrt{s}$}} for the joint velocity proprioception inputs, \hl{\mbox{$\num{7.16e-4}\degree\sqrt{s}$}} and \hl{\mbox{$\num{7.16e-4}\degree/\sqrt{s}$}} for the vestibular input, and \hl{\mbox{$\num{1.25e-5}~s^{\nicefrac{3}{2}}$}} for the visual inputs. 
 
-The optimal policies were computed using a composite cost function, where the main objective was to minimize landing condition variability.
-Other terms were added to the cost function to minimize the expected effort and its time derivative.
-Finally, regularization terms were added to encourage a realistic motion: minimizing the movement duration, the direct feedback gains, and the rate of change of the direct feedback gains (Sec.~\ref{subsec:optimization_problem}).
-The optimization problems were implemented in Bioptim \cite{michaud2022bioptim} using the automatic differentiation provided by CasADi \cite{Andersson2019}, and solved using IPOPT \cite{wachter2006implementation} and the linear solver MA97 \cite{hogg2011hsl_ma97} with a tolerance of \num{1e-6}.
-Each stochastic optimal control problem was warm-started with the optimal generalized coordinates, velocities and torques obtained from the deterministic solution.
+The optimal policies were computed using a composite cost function to generate a realistic acrobatic movement, while ensuring numerical stability.
+The main objective of the stochastic optimal control problems was to minimize landing variability\hl{ as athletes aim for a consistent performance.}
+\hl{Here, we defined landing variability} as the variance in \hl{horizontal} center of mass position, \hl{horizontal} center of mass velocity, and \hl{somersault} body angular velocity at landing.
+\begin{eqnarray}
+\phi_1 = \num{1e+4}~ \quad \big( \sum_{n}^{episodes}{(CoM(\textcolor{gray}{q_n})_y -\overline{CoM(\textcolor{gray}{q})})_y^2} +\\
+ \quad \sum_{n}^{episodes}{(\dot{CoM}(\textcolor{gray}{q_n})_y -\overline{\dot{CoM}(\textcolor{gray}{q})})_y^2} +\\
+ \quad \sum_{n}^{episodes}{(L(\textcolor{gray}{q_n}, \textcolor{gray}{\dot{q}_n})/I(q_n) -\overline{L(\textcolor{gray}{q}, \textcolor{gray}{\dot{q}})/I(\textcolor{gray}{q})})^2} \big)
+\end{eqnarray}
+\noindent where $n$ is the number of the episode, $L$ is the whole body angular momentum, and $I$ is the whole body transverse moment of inertia.
+An additional term was added to minimize the expected efforts needed to complete the acrobatics:
+\begin{equation}
+\phi_2 = 0.01~\int_{0}^{\textcolor{gray}{T}}{\tau_{\text{total}}^2~dt}
+\end{equation}
+Another term minimized the expected time derivative of efforts to promote a psychophysiological motor command:
+\begin{equation}
+\phi_3 = 0.01~\int_{0}^{\textcolor{gray}{T}}{{\dot{\tau}_{\text{total}}}^2~dt}
+\end{equation}
+Regularization terms were also added to ensure that the feedback gains, the time derivative of the feedback gains, and the total movement duration remained within acceptable ranges:
+\begin{eqnarray}
+\phi_4 = \num{1e-5}~\int_{0}^{\textcolor{gray}{T}}{\textcolor{gray}{K}^2~dt} \\
+\phi_5 = 1~\int_{0}^{\textcolor{gray}{T}}{\dot{\textcolor{gray}{K}}^2~dt} \\
+\phi_6 = 0.01~\textcolor{gray}{T}
+\end{eqnarray}
+The weights of the objective terms were chosen to achieve a solution that \hl{looked realistic enough}. % and \textit{ii)} had enough variability in the SOCP solution to leave room for improvement in the other implementations, but not so much as to compromise convergence.
+The manual adjustment of the weights was limited to a few trial-and-errors due to the long computational time needed to achieve convergence.
 
-All implementations of optimal control problems are detailed in the following sections (Sec.~\ref{subsec:OCP}~to~\ref{subsec:SOCP_plus}).
-To simplify interpretation, each optimization variable is presented in colour.
+Specific constraints were also added to ensure the athlete avatar landed the backward somersault on the floor ($g_1$) with its center of mass (CoM) above its forefeet ($g_2$).
+%
+\begin{eqnarray}
+g_1 : P(\textcolor{gray}{q_i}, \textcolor{gray}{T})_z = 0 \\
+g_2: P(\textcolor{gray}{q_i}, \textcolor{gray}{T})_y - CoM(\textcolor{gray}{q_i}, \textcolor{gray}{T})_y = 0
+\end{eqnarray}
+%
+\noindent where $P$ is the position of the forefoot marker, $._y$ and $._z$ subscripts refer to the projection on the anteroposterior and vertical axes, respectively.
+For all simulations, an initial standing posture with extended body and arms upward, vertical velocity ($2~m/s$) and somersault velocity ($450\degree/s$) were imposed to match real athletes' take-off conditions.
+For the stochastic version, an additional constraint was added so that the reference ($\textcolor{gray}{ref}$) sensory input was equal to the mean sensory input ($S$) over all episodes.
+\begin{equation}
+g_3: \textcolor{gray}{ref_i} - \overline{S}(\textcolor{gray}{q_i}, \textcolor{gray}{\dot{q}_i}, t_i) = 0
+\end{equation} 
+
+It is worth noticing that the backward somersault is a highly constrained movement, limiting the number of viable techniques.
+This movement was chosen because the sensorimotor strategies involved are well established \cite{bardy1998body, heinen2011evidence, davlin2004gymnasts, luis2008visual, natrup2021gaze}. 
+
+
+The optimization problems were implemented in Bioptim \cite{michaud2022bioptim} \hl{in direct multiple-shooting with a five step \mbox{$4^{th}$} order Runge-Kutta integrator}, using the automatic differentiation provided by CasADi \cite{Andersson2019}, and solved using IPOPT \cite{wachter2006implementation} and the linear solver MA97 \cite{hogg2011hsl_ma97} with a tolerance of \num{1e-6}.
+The total duration of the aerial phase of the backward somersault ($\textcolor{gray}{T}$) was included in the optimal control problem as an optimization variable.
+\hl{The movement time was discretized into 16 equal-duration time intervals, over which the controls (\mbox{$\textcolor{gray}{\tau_{\text{voluntary}}}$} and \mbox{$K$}) were constant.}
+Continuity constraints ($g_{\text{DMS}}$) were imposed at each time interval transitions to ensure continuous generalized coordinates and velocities in each of the 20 episodes:
+%
+\begin{equation}
+g_{\text{DMS}} :  
+\begin{bmatrix}
+\textcolor{gray}{q_{j+1}} \\ 
+\textcolor{gray}{\dot{q}_{i+1}}
+\end{bmatrix} - \int_{t_i}^{t_{i+1}}{
+\begin{bmatrix}
+\textcolor{gray}{\dot{q}_i} \\ 
+F(\textcolor{gray}{q_i}, \textcolor{gray}{\dot{q}_i}, \tau_{{\text{total}}_i})
+\end{bmatrix}
+dt} = 0
+\end{equation}
+
+\pagebreak
+The complete approximate stochastic optimal control implementation was as follows:
+\colorbox{yellow}{%
+    \parbox{\linewidth}{%
+\begin{equation}
+\begin{array}{ll@{}ll}
+\underset{\textcolor{gray}{q}, \textcolor{gray}{\dot{q}}, \textcolor{gray}{\tau_{\text{voluntary}}}, \textcolor{gray}{\text{ref}}, \textcolor{gray}{K}, \textcolor{gray}{T}}{\min} & \phi_1 + \phi_2 + \phi_3 + \phi_4 + \phi_5 + \phi_6 \\
+\text{~~~~~~~~~s.t.} & g_{\text{DMS}}=0 \\
+            & g_1 = 0 \\
+            & g_2 = 0 \\
+            & g_3 = 0 \\
+            & \textcolor{gray}{q} = \left[ \begin{matrix}-0.03~m \\ 0.12~m\\ 13\degree\\ 0\degree\\ 0\degree\\ 178\degree\\ -10\degree\\ 0\degree \end{matrix} \right]~\text{for}~t = 0, ~~~~ \left[ \begin{matrix} -2.5~m\\ -1~m\\ -172\degree\\ -70\degree\\ -30\degree\\ -40\degree\\ -23\degree\\ -132\degree \end{matrix} \right] \leq \textcolor{gray}{q} \leq \left[ \begin{matrix} 2.5~m\\ 3~m\\ 516\degree\\ -22\degree\\ 22\degree\\ 178\degree\\ 149\degree\\ -1\degree \end{matrix} \right]~\text{for}~t > 0 \\ 
+            & \textcolor{gray}{\dot{q}} = \left[ \begin{matrix} 0~m/s\\ 2~m/s\\ 143\degree/s\\ 0\degree/s\\ 0\degree/s\\ 0\degree/s\\ 0\degree/s\\ 0\degree/s \end{matrix} \right]~\text{for}~t = 0, ~~~~ \left[ \begin{matrix} -100~m/s\\ -100~m/s\\ -5730\degree\\ -5730\degree\\ -5730\degree\\ -5730\degree\\ -5730\degree\\ -5730\degree \end{matrix} \right] \leq \textcolor{gray}{\dot{q}} \leq \left[ \begin{matrix} 100~m/s\\ 100~m/s\\ 5730\degree\\ 5730\degree\\ 5730\degree\\ 5730\degree\\ 5730\degree\\ 5730\degree \end{matrix} \right]~\text{for}~t > 0 \\
+            &  \mathbf{-500Nm}_{5\times1} \leq \textcolor{gray}{\tau_{\text{voluntary}}} \leq \mathbf{500Nm}_{5\times1} \\
+            & \left[ \begin{matrix} -57300\degree\\ -57300\degree\\ -57300\degree\\ -57300\degree\\ -57300\degree\\ -57300\degree/s\\ -57300\degree/s\\ -57300\degree/s\\ -57300\degree/s\\ -57300\degree/s\\ 270\degree \end{matrix} \right] \leq \textcolor{gray}{\text{ref}} \leq \left[ \begin{matrix} 57300\degree\\ 57300\degree\\ 57300\degree\\ 57300\degree\\ 57300\degree\\ 57300\degree/s\\ 57300\degree/s\\ 57300\degree/s\\ 57300\degree/s\\ 57300\degree/s\\ 360\degree \end{matrix} \right] \\
+            & \mathbf{-50}_{5\times11} \leq \textcolor{gray}{K} \leq \mathbf{50}_{5\times11} \\
+            & 0.1~s \leq \textcolor{gray}{T} \leq 1~s \\
+\end{array}
+\end{equation}
+    }%
+}
+
+Each stochastic optimal control problem was warm-started with the optimal generalized coordinates, velocities, and torques obtained from the deterministic solution.
+All implementations are detailed in the following sections (Sec.~\ref{subsec:OCP}~to~\ref{subsec:SOCP_plus}).
 
 
 \subsubsection{Deterministic optimal control problem (\textcolor{OCP_color}{OCP})}\label{subsec:OCP}
 The deterministic implementation did not account for motor or sensory noise and consisted of a single episode (Fig.~\ref{fig:ocp}).
 The torques applied to the joints were only composed of the voluntary motor command ($\textcolor{OCP_color}{\tau_{\text{voluntary}}}$).
+\hl{Please note that in this implementation, the landing variability, feedback gains and time derivative of the feedback gains terms in the cost function were null as only a single episode was considered without feedbacks.}
 
 % \begin{equation}
 % \tau_{\text{total}} = \textcolor{OCP_color}{\tau_{\text{voluntary}}}
@@ -660,12 +755,14 @@ The torques applied to the joints were only composed of the voluntary motor comm
 \newpage
 \subsubsection{Stochastic optimal control problem (\textcolor{SOCP_color}{SOCP})}\label{subsec:SOCP}
 The basic stochastic implementation was composed of 20 episodes (Fig.~\ref{fig:socp}). 
-For each episode, motor and sensory noises were directly sampled from a Gaussian distribution (Sec.~\ref{subsec:methods_DSOCP}).
 The torques applied to the joints were composed of the voluntary motor command ($\textcolor{SOCP_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), and motor noise ($\tau_{\text{noise}}$).
-The direct feedback corrections were based on proprioceptive (joint positions and velocities) and vestibular (body spatial orientation) information. 
-The direct feedback corrections applied to the joint torques ($\tau_{\text{dfb}}$ defined in Eq.~\figeq{fig:socp}{4}) were a linear combination (feedback gain matrix: $\textcolor{SOCP_color}{K_{\text{dfb}}}$) of the differences between the current noisy sensory information and a sensory reference ($\textcolor{SOCP_color}{\text{ref}_{\text{dfb}}}$).
+The direct feedback corrections were based on proprioceptive (joint positions and velocities) and vestibular (body spatial orientation\hl{, defined as whole-body somersault angular momentum divided by whole-body moment of inertia}) information. 
+The direct feedback corrections on joint torques ($\tau_{\text{dfb}}$ defined in Eq.~\figeq{fig:socp}{4}) were a linear combination of the differences between the current noisy sensory information and a sensory reference ($\textcolor{SOCP_color}{\text{ref}_{\text{dfb}}}$)\hl{, such that each joint torque received contributions from all sensory inputs.}
+\hl{These direct feedbacks were weighted by a feedback gain matrix ($\textcolor{SOCP_color}{K_{\text{dfb}}}$), which was part of the optimization variables.} 
+
 The sensory reference was constrained to represent the mean sensory information across all episodes.
-The sensory information was corrupted by random noise ($w_{\text{p}}$ and $w_{\text{v}}$) sampled from a Gaussian distribution of constant magnitude.
+The sensory information was corrupted by random noise (\hl{proprioceptive noise} $w_{\text{p}}$ and \hl{vestibular noise} $w_{\text{v}}$) sampled from a Gaussian distribution of constant magnitude.
+\hl{For each episode, motor and sensory noises were directly sampled from a Gaussian distribution (\mbox{Sec.~\ref{subsec:methods_DSOCP}}).}
 
 % \begin{equation}
 % \textcolor{SOCP_color}{K_{\text{dfb}}} \left({\text{ref}}_{\text{dfb}} 
@@ -785,10 +882,10 @@ The motor command was corrupted by signal-dependent random noise ($c_{motor}$) t
 
 \newpage
 \subsubsection{Stochastic optimal control problem with anticipatory feedback (\textcolor{SOCP_FEEDFORWARD_color}{SOCP$^{\text{AF}}$})}\label{subsec:SOCPA}
-In a different direction, our second improvement to the SOCP implementation was to consider anticipatory feedback corrections ($\tau_{\text{afb}}$).
-The anticipatory feedback corrections were based on visual (time remaining until landing: $\textcolor{SOCP_FEEDFORWARD_color}{T} - t_i$) and vestibular (body spatial orientation: $\textcolor{SOCP_FEEDFORWARD_color}{{q_n}_\text{S}}$ and somersault velocity: $\dot{\theta}$) information. 
-An Euler integration was used as a forward model to estimate the body orientation at landing from the sensory information.
-The anticipatory feedback corrections applied to the joint torques ($\tau_{\text{afb}}$) were proportional (feedback gain vector: $\textcolor{SOCP_FEEDFORWARD_color}{K_{\text{afb}}}$) to the difference between the current noisy sensory information and a sensory reference ($2\pi$: a full somersault rotation at landing).
+\hl{On a separate front}, our second improvement to the SOCP implementation was to consider anticipatory feedback corrections ($\tau_{\text{afb}}$).
+The anticipatory feedback corrections were \hl{generated through a simple forward model to estimate the body orientation at landing from sensory information.}
+\hl{The forward model consisted in an Euler integration of the body spatial orientation, based on} visual (time remaining until landing: $\textcolor{SOCP_FEEDFORWARD_color}{T} - t_i$) and vestibular (body spatial orientation: $\textcolor{SOCP_FEEDFORWARD_color}{{q_n}_\text{S}}$ and somersault velocity: $\dot{\theta}$) information\hl{: \mbox{$\textcolor{SOCP_FEEDFORWARD_color}{{q_n}_{\text{S}}} + \dot{\theta}(\textcolor{SOCP_FEEDFORWARD_color}{q_n}, \textcolor{SOCP_FEEDFORWARD_color}{\dot{q}_n}) \centerdot T_{\text{remaining}}(\textcolor{SOCP_FEEDFORWARD_color}{T})$}}. 
+The anticipatory feedback corrections applied to the joint torques ($\tau_{\text{afb}}$) were proportional (feedback gain vector: $\textcolor{SOCP_FEEDFORWARD_color}{K_{\text{afb}}}$) to the difference between the current noisy sensory information and a sensory reference (somersault rotation at landing).
 The torques applied to the joints also comprised the voluntary motor command ($\textcolor{SOCP_FEEDFORWARD_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), and motor noise ($\tau_{\text{noise}}$).
 The direct feedback corrections were identical to those in the SOCP implementation.
 The sensory information was corrupted by random noise ($w_{\text{v/g}}$).
@@ -866,8 +963,8 @@ The random motor and sensory noise were directly sampled from a Gaussian distrib
 Our most advanced stochastic implementation considered signal-dependent ($\textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}}$) motor noise and state-dependent ($\textcolor{SOCP_plus_color}{q}, \textcolor{SOCP_plus_color}{\dot{q}}$) sensory noise (Fig.~\ref{fig:socp_plus}) and anticipatory feedback corrections ($\tau_{\text{afb}}$), \textit{i.e.}, the combination of the improvements from SOCP$_{\text{VN}}$ anf SOCP$^{\text{AF}}$.
 The torques applied to the joints were also composed of the voluntary motor command ($\textcolor{SOCP_plus_color}{\tau_{\text{voluntary}}}$), direct feedback corrections ($\tau_{\text{dfb}}$), and motor noise ($\tau_{\text{noise}}$).
 The direct feedback corrections were identical to those of the SOCP implementation, and the anticipatory feedback corrections were identical to those of the SOCP$^{\text{AF}}$ implementation.
-However, the vestibular information was corrupted by state-dependent random noise (${c_s}_{\text{v}}$) through an inverted Gaussian function, such that the corruption of the rotation rate information increased as the head angular velocity in the global reference frame ($H$) increased.
-Moreover, the visual information was corrupted by state-dependent random noise (${c_s}_{\text{g}}$) through a smoothed square function, such that the corruption of the remaining time until landing information largely increased when the landing area was not visible (large $\measuredangle_{\text{gaze}}^{\text{floor}}$).
+\hl{The sensory information was corrupted by state-dependent random noise identical to those of the SOCP$_{\text{VN}}$ implementation.}
+\hl{In addition, }the visual information was corrupted by state-dependent random noise (${c_s}_{\text{g}}$) through a smoothed square function, such that the corruption of the remaining time until landing information largely increased when the landing area was not visible (large $\measuredangle_{\text{gaze}}^{\text{floor}}$).
 The motor command was corrupted by signal-dependent random noise ($c_{motor}$) through an inverted Gaussian function, such that the precision of the joint torques decreased as the voluntary motor command increased.
 
 % \begin{equation}
@@ -944,93 +1041,12 @@ The motor command was corrupted by signal-dependent random noise ($c_{motor}$) t
 \end{figure}
 
 
-\subsection{Optimization problem implementation}\label{subsec:optimization_problem}
-\setcounter{equation}{26}
-The optimization problems were formulated using direct multiple-shooting.
-The total duration of the aerial phase of the backward somersault ($\textcolor{gray}{T}$) was included in the optimal control problem as an optimization variable.
-The movement time was discretized into 16 equal-duration time intervals.
-Continuity constraints ($g_{\text{DMS}}$) were imposed at each time interval transitions to ensure continuous generalized coordinates and velocities in each of the 20 episodes:
-%
-\begin{equation}
-g_{\text{DMS}} :  
-\begin{bmatrix}
-\textcolor{gray}{q_{j+1}} \\ 
-\textcolor{gray}{\dot{q}_{i+1}}
-\end{bmatrix} - \int_{t_i}^{t_{i+1}}{
-\begin{bmatrix}
-\textcolor{gray}{\dot{q}_i} \\ 
-F(\textcolor{gray}{q_i}, \textcolor{gray}{\dot{q}_i}, \tau_{{\text{total}}_i})
-\end{bmatrix}
-dt} = 0
-\end{equation}
-
-Specific constraints were also added to ensure the athlete avatar landed the backward somersault on the floor ($g_1$) with its center of mass (CoM) above its forefeet ($g_2$).
-%
-\begin{eqnarray}
-g_1 : P(\textcolor{gray}{q_i}, \textcolor{gray}{T})_z = 0 \\
-g_2: P(\textcolor{gray}{q_i}, \textcolor{gray}{T})_y - CoM(\textcolor{gray}{q_i}, \textcolor{gray}{T})_y = 0
-\end{eqnarray}
-%
-\noindent where $P$ is the position of the forefoot marker, $._y$ and $._z$ subscripts refer to the projection on the anteroposterior and vertical axes, respectively.
-For all simulations, an initial standing posture with extended body and arms upward, vertical velocity ($2~m/s$) and somersault velocity ($450\degree/s$) were imposed to match real athletes' take-off conditions.
-For the stochastic version, an additional constraint was added so that the reference ($\textcolor{gray}{ref}$) sensory input was equal to the mean sensory input ($S$) over all episodes.
-\begin{equation}
-g_3: \textcolor{gray}{ref_i} - \overline{S}(\textcolor{gray}{q_i}, \textcolor{gray}{\dot{q}_i}, t_i) = 0
-\end{equation} 
-
-It is worth noticing that the backward somersault is a highly constrained movement, limiting the number of viable techniques.
-This movement was chosen because the sensorimotor strategies involved are well established \cite{bardy1998body, heinen2011evidence, davlin2004gymnasts, luis2008visual, natrup2021gaze}. 
-
-
-The cost function was composed of multiple terms to generate a realistic acrobatic movement, while ensuring numerical stability.
-The main objective of the stochastic optimal control problems was to minimize landing variability, defined as the variance in center of mass position, center of mass velocity, and body angular velocity at landing.
-\begin{eqnarray}
-\phi_1 = \num{1e+4}~ \quad \big( \sum_{n}^{episodes}{(CoM(\textcolor{gray}{q_n})_y -\overline{CoM(\textcolor{gray}{q})})_y^2} +\\
- \quad \sum_{n}^{episodes}{(\dot{CoM}(\textcolor{gray}{q_n})_y -\overline{\dot{CoM}(\textcolor{gray}{q})})_y^2} +\\
- \quad \sum_{n}^{episodes}{(L(\textcolor{gray}{q_n}, \textcolor{gray}{\dot{q}_n})/I(q_n) -\overline{L(\textcolor{gray}{q}, \textcolor{gray}{\dot{q}})/I(\textcolor{gray}{q})})^2} \big)
-\end{eqnarray}
-\noindent where $n$ is the number of the episode, $L$ is the whole body angular momentum, and $I$ is the whole body transverse moment of inertia.
-An additional term was added to minimize the expected efforts needed to complete the acrobatics:
-\begin{equation}
-\phi_2 = 0.01~\int_{0}^{\textcolor{gray}{T}}{\tau_{\text{total}}^2~dt}
-\end{equation}
-Another term minimized the expected rate of change in effort to promote a psychophysiological motor command:
-\begin{equation}
-\phi_3 = 0.01~\int_{0}^{\textcolor{gray}{T}}{{\dot{\tau}_{\text{total}}}^2~dt}
-\end{equation}
-Regularization terms were also added to ensure that the feedback gains, the rate of change of the feedback gains, and the total movement duration remained within acceptable ranges:
-\begin{eqnarray}
-\phi_4 = \num{1e-5}~\int_{0}^{\textcolor{gray}{T}}{\textcolor{gray}{K}^2~dt} \\
-\phi_5 = 1~\int_{0}^{\textcolor{gray}{T}}{\dot{\textcolor{gray}{K}}^2~dt} \\
-\phi_6 = 0.01~\textcolor{gray}{T}
-\end{eqnarray}
-The weights of the objective terms were chosen to achieve a solution that \textit{i)} looked realistic enough and \textit{ii)} had enough variability in the SOCP implementation to leave room for improvement in the other implementations, but not so much as to compromise convergence.
-The manual adjustment of the weights was limited to a few trial-and-errors due to the long computational time needed to achieve convergence.
-
-
-The complete approximate stochastic optimal control transcription was as follows:
-\begin{equation}
-\begin{array}{ll@{}ll}
-\underset{\textcolor{gray}{q}, \textcolor{gray}{\dot{q}}, \textcolor{gray}{\tau_{\text{voluntary}}}, \textcolor{gray}{\text{ref}}, \textcolor{gray}{K}, \textcolor{gray}{T}}{\min} & \phi_1 + \phi_2 + \phi_3 + \phi_4 + \phi_5 + \phi_6 \\
-\text{~~~~~~~~~s.t.} & g_{\text{DMS}}=0 \\
-            & g_1 = 0 \\
-            & g_2 = 0 \\
-            & g_3 = 0 \\
-            & \textcolor{gray}{q} \in \mathcal{Q} \\
-            & \textcolor{gray}{\dot{q}} \in \dot{\mathcal{Q}} \\
-            & \textcolor{gray}{\tau_{\text{voluntary}}} \in \mathcal{\tau} \\
-            & \textcolor{gray}{\text{ref}} \in \mathcal{R} \\
-            & \textcolor{gray}{K} \in \mathcal{K} \\
-            & \textcolor{gray}{T} \in \mathcal{T} \\
-\end{array}
-\end{equation}
-
 \subsection{Comparison of the optimal solutions}
-The optimal kinematics generated with our five problem transcriptions were compared using statistical parametric mapping (SPM1D) \cite{pataky2012one}.
+The optimal kinematics generated with our five problem implementations were compared using statistical parametric mapping (SPM1D) \cite{pataky2012one}.
 For the stochastic implementations, the groups used for the SPM1D analysis were composed of all 20 episodes, and for the deterministic implementation the single episode formed its own group.
+\hl{For landing variability comparison, the solution from the OCP implementation was reintegrated 20 times using the same integrator (five steps \mbox{$4^{th}$} order Runge-Kutta) with the addition of motor noise on the joint torques.}
 The optimal joint torques were split into their components to analyze the contribution of open-loop control ($\textcolor{gray}{\tau_{\text{voluntary}}}$), joint damping, direct feedback control ($\tau_{\text{dfb}}$), and anticipatory feedback control ($\tau_{\text{afb}}$).
 The head angular velocity and gaze orientation were analyzed to extract sensory acquisition strategies from the optimal acrobatic techniques.
-
 
 
 \section*{Contributions}
@@ -1054,7 +1070,37 @@ After using these tools, the authors reviewed and edited the content as needed, 
 
 \bibliography{biblio}
 
+\clearpage
 
+\begingroup
+\let\clearpage\relax 
+\onecolumn 
+\appendix
+\section*{Appendices}
+\addcontentsline{toc}{section}{Appendices}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+
+\subsection{\hl{Reintegration of the optimal solutions}}\label{subsec:reintegration}
+\addcontentsline{toc}{chapter}{Appendix}
+\setcounter{figure}{0}
+\renewcommand\thefigure{A.\arabic{figure}}
+
+\hl{To confirm that 20 episodes were enough to capture the influence of motor and sensory noise on the optimal solution, the optimal techniques were reintegrated post-optimization.
+The same integrator as during the optimization was used (5 steps \mbox{$4^{th}$} order Runge-Kutta).
+A hundred reintegration were performed with different random noise values sampled from the same noise distribution as for the optimization.
+
+We concluded that 20 episodes were enough to capture the stochasticity of our problem as the reintegrations showed similar patterns to the optimal techniques (\mbox{Fig.~\ref{fig:reintegration}}). 
+Notably, the final state mean and distribution were almost the same between the optimal techniques (mean: black lines; optimal technique: bold and dark lines on \mbox{Fig.~\ref{fig:reintegration}}) and the reintegrations (box plots on \mbox{Fig.~\ref{fig:reintegration}}).}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/comparison_reintegration.png}
+\caption{\hl{Reintegration of the optimal solutions for the OCP (\mbox{\textcolor{OCP_color}{green}}), SOCP (\mbox{\textcolor{SOCP_color}{pink}}), \mbox{SOCP$_{\text{VN}}$} (\mbox{\textcolor{SOCP_VARIABLE_color}{orange}}), \mbox{SOCP$^{\text{AF}}$} (\mbox{\textcolor{SOCP_FEEDFORWARD_color}{purple}}), and \mbox{SOCP$_{\text{VN}}^{\text{AF}}$} (\mbox{\textcolor{SOCP_plus_color}{blue}}). Thin and pale lines represent the post-optimization reintegrations (n=100), bold and dark lines represent each episodes from the optimization (n=20), and black lines represent the mean across episodes. Box plots on the right of the graphs present the mean (square), standard deviation (box), and maximum range (whiskers) from the reintegrations.}}
+\label{fig:reintegration}
+\end{figure}
+
+\endgroup
+\renewcommand{\thefigure}{\arabic{figure}}
 
 \end{document}
 
