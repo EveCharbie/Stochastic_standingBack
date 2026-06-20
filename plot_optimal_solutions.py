@@ -45,6 +45,10 @@ from plot_reintegrate import (
 )
 from animation_utils import bioviz_animate
 
+darker_SOCP_color = "#80134b"
+darker_SOCP_VARIABLE_color = "#f15d01"
+darker_SOCP_FEEDFORWARD_color = "#6156c4"
+darker_SOCP_PLUS_color = "#0ca0a8"
 
 
 def plot_comparison_reintegration(
@@ -71,6 +75,8 @@ def plot_comparison_reintegration(
     nb_random,
     nb_reintegrations,
 ):
+
+    global darker_SOCP_color, darker_SOCP_VARIABLE_color, darker_SOCP_FEEDFORWARD_color, darker_SOCP_PLUS_color
 
     n_q = q_socp_plus_nominal.shape[0]
     fig, axs = plt.subplots(n_q-2, 5, figsize=(15, 10))
@@ -116,13 +122,13 @@ def plot_comparison_reintegration(
         # Optimzation variables
         for i_random in range(nb_random):
             if i_dof < 4 and i_dof > 1:
-                axs[i_ax, 1].plot(normalized_time_vector, q_all_socp[i_dof, :, i_random], color="#6C165C", linewidth=0.5)
-                axs[i_ax, 2].plot(normalized_time_vector, q_all_socp_variable[i_dof, :, i_random], color="#D15C02", linewidth=0.5)
+                axs[i_ax, 1].plot(normalized_time_vector, q_all_socp[i_dof, :, i_random], color=darker_SOCP_color, linewidth=0.5)
+                axs[i_ax, 2].plot(normalized_time_vector, q_all_socp_variable[i_dof, :, i_random], color=darker_SOCP_VARIABLE_color, linewidth=0.5)
             elif i_dof > 4:
-                axs[i_ax, 1].plot(normalized_time_vector, q_all_socp[i_dof - 1, :, i_random], color="#6C165C", linewidth=0.5)
-                axs[i_ax, 2].plot(normalized_time_vector, q_all_socp_variable[i_dof - 1, :, i_random], color="#D15C02", linewidth=0.5)
-            axs[i_ax, 3].plot(normalized_time_vector, q_all_socp_feedforward[i_dof, :, i_random], color="#400191", linewidth=0.5)
-            axs[i_ax, 4].plot(normalized_time_vector, q_all_socp_plus[i_dof, :, i_random], color="#016C93", linewidth=0.5)
+                axs[i_ax, 1].plot(normalized_time_vector, q_all_socp[i_dof - 1, :, i_random], color=darker_SOCP_color, linewidth=0.5)
+                axs[i_ax, 2].plot(normalized_time_vector, q_all_socp_variable[i_dof - 1, :, i_random], color=darker_SOCP_VARIABLE_color, linewidth=0.5)
+            axs[i_ax, 3].plot(normalized_time_vector, q_all_socp_feedforward[i_dof, :, i_random], color=darker_SOCP_FEEDFORWARD_color, linewidth=0.5)
+            axs[i_ax, 4].plot(normalized_time_vector, q_all_socp_plus[i_dof, :, i_random], color=darker_SOCP_PLUS_color, linewidth=0.5)
 
         # Nominal
         if i_dof < 4 and i_dof > 1:
@@ -163,15 +169,15 @@ def plot_comparison_reintegration(
     axs[0, 0].plot(0, 0, color=SOCP_VARIABLE_color, linewidth=0.5, label="SOCP VARIABLE reintegrated", alpha=0.5)
     axs[0, 0].plot(0, 0, color=SOCP_FEEDFORWARD_color, linewidth=0.5, label="SOCP FEEDFORWARD reintegrated", alpha=0.5)
     axs[0, 0].plot(0, 0, color=SOCP_PLUS_color, linewidth=0.5, label="SOCP+ reintegrated", alpha=0.5)
-    axs[0, 0].plot(0, 0, color="#6C165C", linewidth=0.5, label=f"SOCP {nb_random} models")
-    axs[0, 0].plot(0, 0, color="#D15C02", linewidth=0.5, label=f"SOCP VARIABLE {nb_random} models")
-    axs[0, 0].plot(0, 0, color="#400191", linewidth=0.5, label=f"SOCP FEEDFORWARD {nb_random} models")
-    axs[0, 0].plot(0, 0, color="#016C93", linewidth=0.5, label=f"SOCP+ {nb_random} models")
+    axs[0, 0].plot(0, 0, color=darker_SOCP_color, linewidth=0.5, label=f"SOCP {nb_random} models")
+    axs[0, 0].plot(0, 0, color=darker_SOCP_VARIABLE_color, linewidth=0.5, label=f"SOCP VARIABLE {nb_random} models")
+    axs[0, 0].plot(0, 0, color=darker_SOCP_FEEDFORWARD_color, linewidth=0.5, label=f"SOCP FEEDFORWARD {nb_random} models")
+    axs[0, 0].plot(0, 0, color=darker_SOCP_PLUS_color, linewidth=0.5, label=f"SOCP+ {nb_random} models")
     fig.subplots_adjust(right=0.8)
 
     axs[0, 0].set_ylabel("Somersault")
     axs[1, 0].set_ylabel("Neck")
-    axs[2, 0].set_ylabel("Eyes")
+    axs[2, 0].set_ylabel("Eyes", labelpad=20)
     axs[3, 0].set_ylabel("Shoulders")
     axs[4, 0].set_ylabel("Hips")
     axs[5, 0].set_ylabel("Knees")
@@ -188,13 +194,13 @@ def plot_comparison_reintegration(
         axs[-1, i_axs_2].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0], ["0%", "20%", "40%", "60%", "80%", "100%"])
         axs[-1, i_axs_2].set_xlabel("Normalized time")
 
-    axs[2, 0].get_yaxis().set_visible(False)
+    axs[2, 0].tick_params(left=False, labelleft=False)  # hide ticks & tick labels
     axs[2, 1].get_yaxis().set_visible(False)
     axs[2, 2].get_yaxis().set_visible(False)
 
     plt.subplots_adjust(bottom=0.05, top=0.95, right=0.95, left=0.05)
     # plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
-    plt.savefig(f"graphs/comparison_reintegration.png")
+    plt.savefig(f"graphs/comparison_reintegration.png", dpi=900)
     # plt.show()
 
     return
@@ -1536,6 +1542,8 @@ def plot_mean_comparison(
     SOCP_PLUS_color,
 ):
 
+    global darker_SOCP_color, darker_SOCP_VARIABLE_color, darker_SOCP_FEEDFORWARD_color, darker_SOCP_PLUS_color
+
     socp_mean = np.mean(q_socp, axis=2)
     socp_variable_mean = np.mean(q_socp_variable, axis=2)
     socp_feedforward_mean = np.mean(q_socp_feedforward, axis=2)
@@ -1560,10 +1568,10 @@ def plot_mean_comparison(
         axs[i_dof, 3].plot(time_vector_socp_feedforward, socp_feedforward_reintegration_mean[i_dof, :], color=SOCP_FEEDFORWARD_color, alpha=0.5)
         axs[i_dof, 4].plot(time_vector_socp_plus, socp_plus_reintegration_mean[i_dof, :], color=SOCP_PLUS_color, alpha=0.5)
 
-        axs[i_dof, 1].plot(time_vector_socp, socp_mean[i_dof, :], color="#6C165C", linewidth=0.5)
-        axs[i_dof, 2].plot(time_vector_socp_variable, socp_variable_mean[i_dof, :], color="#D15C02", linewidth=0.5)
-        axs[i_dof, 3].plot(time_vector_socp_feedforward, socp_feedforward_mean[i_dof, :], color="#400191", linewidth=0.5)
-        axs[i_dof, 4].plot(time_vector_socp_plus, socp_plus_mean[i_dof, :], color="#016C93", linewidth=0.5)
+        axs[i_dof, 1].plot(time_vector_socp, socp_mean[i_dof, :], color=darker_SOCP_color, linewidth=0.5)
+        axs[i_dof, 2].plot(time_vector_socp_variable, socp_variable_mean[i_dof, :], color=darker_SOCP_VARIABLE_color, linewidth=0.5)
+        axs[i_dof, 3].plot(time_vector_socp_feedforward, socp_feedforward_mean[i_dof, :], color=darker_SOCP_FEEDFORWARD_color, linewidth=0.5)
+        axs[i_dof, 4].plot(time_vector_socp_plus, socp_plus_mean[i_dof, :], color=darker_SOCP_PLUS_color, linewidth=0.5)
     return
 
 
