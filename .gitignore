@@ -188,3 +188,5 @@ graphs/
 *.bbl
 
 *.blg
+
+paper/plos_root.dvi
