@@ -175,24 +175,24 @@ def plot_comparison_reintegration(
     axs[0, 0].plot(0, 0, color=darker_SOCP_PLUS_color, linewidth=0.5, label=f"SOCP+ {nb_random} models")
     fig.subplots_adjust(right=0.8)
 
-    axs[0, 0].set_ylabel("Somersault")
-    axs[1, 0].set_ylabel("Neck")
-    axs[2, 0].set_ylabel("Eyes", labelpad=20)
-    axs[3, 0].set_ylabel("Shoulders")
-    axs[4, 0].set_ylabel("Hips")
-    axs[5, 0].set_ylabel("Knees")
+    axs[0, 0].set_ylabel("Somersault", fontsize=17)
+    axs[1, 0].set_ylabel("Neck", fontsize=17)
+    axs[2, 0].set_ylabel("Eyes", labelpad=20, fontsize=17)
+    axs[3, 0].set_ylabel("Shoulders", fontsize=17)
+    axs[4, 0].set_ylabel("Hips", fontsize=17)
+    axs[5, 0].set_ylabel("Knees", fontsize=17)
 
-    axs[0, 0].set_title("OCP")
-    axs[0, 1].set_title("SOCP")
-    axs[0, 2].set_title(r"SOCP$_{\text{VN}}$")
-    axs[0, 3].set_title(r"SOCP$^{\text{AF}}$")
-    axs[0, 4].set_title(r"SOCP$_{\text{VN}}^{\text{AF}}$")
+    axs[0, 0].set_title("OCP", fontsize=20)
+    axs[0, 1].set_title("SOCP", fontsize=20)
+    axs[0, 2].set_title(r"SOCP$_{\text{VN}}$", fontsize=20)
+    axs[0, 3].set_title(r"SOCP$^{\text{AF}}$", fontsize=20)
+    axs[0, 4].set_title(r"SOCP$_{\text{VN}}^{\text{AF}}$", fontsize=20)
 
     for i_axs_2 in range(5):
         for i_axs in range(n_q-3):
             axs[i_axs, i_axs_2].get_xaxis().set_visible(False)
         axs[-1, i_axs_2].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0], ["0%", "20%", "40%", "60%", "80%", "100%"])
-        axs[-1, i_axs_2].set_xlabel("Normalized time")
+        axs[-1, i_axs_2].set_xlabel("Normalized time", fontsize=20)
 
     axs[2, 0].tick_params(left=False, labelleft=False)  # hide ticks & tick labels
     axs[2, 1].get_yaxis().set_visible(False)
@@ -202,6 +202,37 @@ def plot_comparison_reintegration(
     # plt.suptitle("Comparison of nominal, integrated and reintegrated solutions")
     plt.savefig(f"graphs/comparison_reintegration.png", dpi=900)
     # plt.show()
+
+    print(f"OCP: "
+          f"{np.mean(q_ocp_integrated[2, -1, :])} +- "
+          f"{np.std(q_ocp_integrated[2, -1, :])} "
+          f"(min:{np.min(q_ocp_integrated[2, -1, :])}, "
+          f"max:{np.max(q_ocp_integrated[2, -1, :])}, "
+          f"range:{np.max(q_ocp_integrated[2, -1, :]) - np.min(q_ocp_integrated[2, -1, :])})")
+    print(f"SOCP: "
+          f"{np.mean(q_socp_integrated["20random"][2, -1, :])} +- "
+          f"{np.std(q_socp_integrated["20random"][2, -1, :])} "
+          f"(min:{np.min(q_socp_integrated["20random"][2, -1, :])}, "
+          f"max:{np.max(q_socp_integrated["20random"][2, -1, :])}, "
+          f"range:{np.max(q_socp_integrated["20random"][2, -1, :]) - np.min(q_socp_integrated["20random"][2, -1, :])})")
+    print(f"OCP VARIABLE: "
+          f"{np.mean(q_socp_variable_integrated["20random"][2, -1, :])} +- "
+          f"{np.std(q_socp_variable_integrated["20random"][2, -1, :])} "
+          f"(min:{np.min(q_socp_variable_integrated["20random"][2, -1, :])}, "
+          f"max:{np.max(q_socp_variable_integrated["20random"][2, -1, :])}, "
+          f"range:{np.max(q_socp_variable_integrated["20random"][2, -1, :]) - np.min(q_socp_variable_integrated["20random"][2, -1, :])})")
+    print(f"OCP FEEDFORWARD: "
+          f"{np.mean(q_socp_feedforward_integrated["20random"][2, -1, :])} +- "
+          f"{np.std(q_socp_feedforward_integrated["20random"][2, -1, :])} "
+          f"(min:{np.min(q_socp_feedforward_integrated["20random"][2, -1, :])}, "
+          f"max:{np.max(q_socp_feedforward_integrated["20random"][2, -1, :])}, "
+          f"range:{np.max(q_socp_feedforward_integrated["20random"][2, -1, :]) - np.min(q_socp_feedforward_integrated["20random"][2, -1, :])})")
+    print(f"OCP+: "
+          f"{np.mean(q_socp_plus_integrated["20random"][2, -1, :])} +- "
+          f"{np.std(q_socp_plus_integrated["20random"][2, -1, :])} "
+          f"(min:{np.min(q_socp_plus_integrated["20random"][2, -1, :])}, "
+          f"max:{np.max(q_socp_plus_integrated["20random"][2, -1, :])}, "
+          f"range:{np.max(q_socp_plus_integrated["20random"][2, -1, :]) - np.min(q_socp_plus_integrated["20random"][2, -1, :])})")
 
     return
 
@@ -506,6 +537,17 @@ def plot_motor_command(
           f"damping: {total_joint_friction_socp_plus/total_socp_plus * 100}%, "
           f"feedback: {total_feedbacks_socp_plus/total_socp_plus * 100}%, "
           f"feedforward: {total_feedforwards_socp_plus/total_socp_plus * 100}%")
+
+    total_tau_ocp = tau_joints_ocp - joint_friction_ocp
+    print(f"Total torque derivative OCP: {np.sum(np.trapezoid(np.abs(total_tau_ocp[1:, :] - total_tau_ocp[:-1]), time_vector_ocp[:-1], axis=1))}")
+    total_tau_socp = tau_joints_socp[:, :, np.newaxis] - joint_frictions_socp + feedbacks_socp
+    print(f"Total torque derivative SOCP: {np.sum(np.trapezoid(np.abs(total_tau_socp[1:] - total_tau_socp[:-1]), time_vector_socp[:-1], axis=1)) / nb_tests}")
+    total_tau_socp_variable = tau_joints_socp_variable[:, :, np.newaxis] - joint_frictions_socp_variable + feedbacks_socp_variable
+    print(f"Total torque derivative SOCP VARIABLE: {np.sum(np.trapezoid(np.abs(total_tau_socp_variable[1:] - total_tau_socp_variable[:-1]), time_vector_socp_variable[:-1], axis=1)) / nb_tests}")
+    total_tau_socp_feedforward = tau_joints_socp_feedforward[:, :, np.newaxis] - joint_frictions_socp_feedforward + feedbacks_socp_feedforward + feedforwards_socp_feedforward
+    print(f"Total torque derivative SOCP FEEDFORWARD: {np.sum(np.trapezoid(np.abs(total_tau_socp_feedforward[1:] - total_tau_socp_feedforward[:-1]), time_vector_socp_feedforward[:-1], axis=1)) / nb_tests}")
+    total_tau_socp_plus = tau_joints_socp_plus[:, :, np.newaxis] - joint_frictions_socp_plus + feedbacks_socp_plus + feedforwards_socp_plus
+    print(f"Total torque derivative SOCP+: {np.sum(np.trapezoid(np.abs(total_tau_socp_plus[1:] - total_tau_socp_plus[:-1]), time_vector_socp_plus[:-1], axis=1)) / nb_tests}")
 
 
     plt.figure(figsize=(10, 3))
@@ -908,7 +950,7 @@ def plot_tau_and_delta_tau(normalized_time_vector,
             )
     axs[1, 0].set_ylabel(r"Total $\Delta \tau$ [Nm]", fontsize=12)
 
-    plt.savefig("graphs/tau_and_delta_tau.png")
+    plt.savefig("graphs/tau_and_delta_tau.png", dpi=300)
     # plt.show()
 
     # All DoFs together ---------------------------------------------------
@@ -1063,7 +1105,7 @@ def plot_tau_and_delta_tau(normalized_time_vector,
     )
     axs[1].set_ylabel(r"Total $\sum{\Delta \tau}$ [Nm]", fontsize=12)
 
-    plt.savefig("graphs/sum_tau_and_delta_tau.png")
+    plt.savefig("graphs/sum_tau_and_delta_tau.png", dpi=300)
     # plt.show()
 
     return
@@ -1103,7 +1145,7 @@ def plot_gains(
     # axs[1, 1].set_ylim(-35, 35)
     axs[0, 0].set_ylabel("Direct feedback gains", fontsize=12)
     axs[1, 0].set_ylabel("Anticipatory feedback gains", fontsize=12)
-    plt.savefig("graphs/gains.png")
+    plt.savefig("graphs/gains.png", dpi=300)
     # plt.show()
 
 
@@ -1125,7 +1167,7 @@ def plot_gains(
     # axs[1, 1].set_ylim(0, 800)
     axs[0, 0].set_ylabel(r"$\sum{}$ Direct feedback gains", fontsize=12)
     axs[1, 0].set_ylabel(r"$\sum{}$ Anticipatory feedback gains", fontsize=12)
-    plt.savefig("graphs/sum_gains.png")
+    plt.savefig("graphs/sum_gains.png", dpi=300)
     # plt.show()
 
 
@@ -1167,7 +1209,7 @@ def plot_gains(
         axs[1, i_ax].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
         axs[1, i_ax].set_xlabel("Normalized time")
 
-    plt.savefig("graphs/delta_gains.png")
+    plt.savefig("graphs/delta_gains.png", dpi=300)
 
 
     # Plot the delta gains
@@ -1235,7 +1277,7 @@ def plot_gains(
     axs[0, 2].set_title(r"SOCP$^{\text{AF}}$")
     axs[0, 3].set_title(r"SOCP$_{\text{VN}}^{\text{AF}}$")
 
-    plt.savefig("graphs/sum_delta_gains.png")
+    plt.savefig("graphs/sum_delta_gains.png", dpi=300)
     # plt.show()
 
     # Plot the FF gains vs acuity
@@ -1325,7 +1367,7 @@ def plot_gains(
     axs[3].set_xticklabels(["0%", "20%", "40%", "60%", "80%", "100%"])
     axs[3].set_xlabel("Normalized time")
 
-    plt.savefig("graphs/ff_gains.png")
+    plt.savefig("graphs/ff_gains.png", dpi=300)
     # plt.show()
 
     return
@@ -1648,7 +1690,7 @@ def plot_comparison_nb_random(q_ocp_integrated,
     ax.set_ylabel("Final somersault angle [rad]")
     ax.set_xticks([-2, 5, 15, 25, 35])
     ax.set_xticklabels(["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
-    plt.savefig("graphs/comparison_nb_random.png")
+    plt.savefig("graphs/comparison_nb_random.png", dpi=300)
     # plt.show()
     return
 
@@ -1813,7 +1855,7 @@ def plot_comparison_kinematics_nb_random(
 
     plt.subplots_adjust(bottom=0.15, top=0.9, right=0.95, left=0.05, wspace=0.02, hspace=0.02)
     plt.suptitle("Comparison of solutions with different number of episodes")
-    plt.savefig(f"graphs/comparison_kinematics_nb_random.png")
+    plt.savefig(f"graphs/comparison_kinematics_nb_random.png", dpi=300)
     # plt.show()
     return
 
@@ -1826,7 +1868,7 @@ def plot_movement_duration(time_ocp, time_socp, time_socp_variable, time_socp_fe
     plt.bar(4, float(time_socp_plus), color=SOCP_PLUS_color, label=r"SOCP$_{\text{VN}}^{\text{AF}}$")
     plt.xticks([0, 1, 2, 3, 4], ["OCP", "SOCP", r"SOCP$_{\text{VN}}$", r"SOCP$^{\text{AF}}$", r"SOCP$_{\text{VN}}^{\text{AF}}$"])
     print("Movement durations: ", time_ocp, time_socp, time_socp_variable, time_socp_feedforward, time_socp_plus)
-    plt.savefig("graphs/movement_durations.png")
+    plt.savefig("graphs/movement_durations.png", dpi=300)
     # plt.show()
 
 def plot_landing_variability(
@@ -1940,7 +1982,7 @@ def plot_landing_variability(
 
     axs[0].set_title("Center of mass horizontal\n position " + r"($CoM$) [mm]")
     axs[1].set_title("Center of mass horizontal\n velocity " + r"($\dot{CoM}$) [mm/s]")
-    axs[2].set_title("Body angular velocity\n" + r"[$^\circ$]")
+    axs[2].set_title("Body angular velocity\n" + r"[$^\circ/s$]")
 
     box_plot(0, CoM_y_ocp, OCP_color, axs[0], box_width=0.1)
     box_plot(0.5, CoM_y_socp, SOCP_color, axs[0], box_width=0.1)
@@ -2024,7 +2066,7 @@ def plot_landing_variability(
 
     # plt.tight_layout()
     fig.subplots_adjust(left=0.05, right=0.98, top=0.8, wspace=0.2)
-    plt.savefig("graphs/landing_variability.png")
+    plt.savefig("graphs/landing_variability.png", dpi=300)
     # plt.show()
 
     return
@@ -2315,8 +2357,8 @@ def plot_kinematics(normalized_time_vector,
     fig2.tight_layout()
     fig1.subplots_adjust(hspace=0.05)
     fig2.subplots_adjust(hspace=0.05)
-    fig1.savefig("graphs/kinematics1.png")
-    fig2.savefig("graphs/kinematics2.png")
+    fig1.savefig("graphs/kinematics1.png", dpi=300)
+    fig2.savefig("graphs/kinematics2.png", dpi=300)
     # plt.show()
     return
 
