@@ -20,10 +20,9 @@ TODO: add ref to the paper when it is accepted.
 
 
 # Status
-TODO: Zenodo
 | Type | Status |
 |---|---|
-| Zenodo  | [![DOI](https://zenodo.org/badge/589623975.svg)](https://doi.org/10.5281/zenodo.14546204) |
+| Zenodo  | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21825054.svg)](https://doi.org/10.5281/zenodo.21825054) |
 
 
 # How to install dependencies
